@@ -2,6 +2,7 @@ use crate::{
     BufferTarget, Display, DrawOperation, InputState, Program, Result, RunOutcome,
     VirtualFileSystem, Vm,
 };
+use serde::{Deserialize, Serialize};
 
 const VM_SLICE_INSTRUCTIONS: usize = 1_001;
 const DEFAULT_FRAME_BUDGET: usize = 100_000;
@@ -31,7 +32,7 @@ pub(crate) enum HostAction {
     Halt(i32),
 }
 
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, Serialize, Deserialize)]
 pub(crate) struct TextConsole {
     cells: Vec<u8>,
     columns: usize,
@@ -131,7 +132,7 @@ impl TextConsole {
     }
 }
 
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct Emulator {
     pub(crate) vm: Vm,
     pub(crate) display: Display,

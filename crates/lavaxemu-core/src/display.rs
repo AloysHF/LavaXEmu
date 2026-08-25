@@ -1,5 +1,7 @@
 use crate::GraphicsMode;
 use encoding_rs::GBK;
+use serde::{Deserialize, Serialize};
+use serde_big_array::BigArray;
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum BufferTarget {
@@ -50,13 +52,14 @@ impl Transform {
     }
 }
 
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct Display {
     width: u16,
     height: u16,
     graphics_mode: GraphicsMode,
     background: u8,
     foreground: u8,
+    #[serde(with = "BigArray")]
     palette: [[u8; 3]; 256],
     front: Vec<u8>,
     back: Vec<u8>,

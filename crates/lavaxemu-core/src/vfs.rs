@@ -1,5 +1,7 @@
 use std::collections::{BTreeMap, BTreeSet};
 
+use serde::{Deserialize, Serialize};
+
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct FileInfo {
     pub path: String,
@@ -7,13 +9,13 @@ pub struct FileInfo {
     pub dirty: bool,
 }
 
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, Serialize, Deserialize)]
 struct FileEntry {
     data: Vec<u8>,
     dirty: bool,
 }
 
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, Serialize, Deserialize)]
 struct OpenFile {
     path: String,
     offset: usize,
@@ -21,7 +23,7 @@ struct OpenFile {
     writable: bool,
 }
 
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct VirtualFileSystem {
     files: BTreeMap<String, FileEntry>,
     directories: BTreeSet<String>,

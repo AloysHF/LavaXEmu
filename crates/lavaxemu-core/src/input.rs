@@ -1,13 +1,15 @@
 use std::collections::{BTreeSet, VecDeque};
 
-#[derive(Debug, Clone, Copy, Default, PartialEq, Eq)]
+use serde::{Deserialize, Serialize};
+
+#[derive(Debug, Clone, Copy, Default, PartialEq, Eq, Serialize, Deserialize)]
 pub struct PointerState {
     pub x: i16,
     pub y: i16,
     pub pressed: bool,
 }
 
-#[derive(Debug, Clone, Default)]
+#[derive(Debug, Clone, Default, Serialize, Deserialize)]
 pub struct InputState {
     pressed: BTreeSet<u8>,
     queued: VecDeque<u8>,

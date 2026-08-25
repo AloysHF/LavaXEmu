@@ -1,4 +1,5 @@
 use crate::{AddressWidth, Error, Program, Result};
+use serde::{Deserialize, Serialize};
 
 pub const GUEST_MEMORY_SIZE: usize = 0x0100_0000;
 pub const EVALUATION_STACK_ADDRESS: usize = 0x1b00;
@@ -22,7 +23,7 @@ pub enum RunOutcome {
     Halted(i32),
 }
 
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct Vm {
     program: Program,
     memory: Vec<u8>,

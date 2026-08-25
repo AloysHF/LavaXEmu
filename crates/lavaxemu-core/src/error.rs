@@ -24,4 +24,6 @@ pub enum Error {
     InvalidJump { target: usize },
     #[error("unsupported LavaX feature: {0}")]
     UnsupportedFeature(&'static str),
+    #[error("invalid save state: {0}")]
+    InvalidSaveState(String),
 }
