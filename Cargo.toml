@@ -1,0 +1,32 @@
+[workspace]
+resolver = "2"
+members = [
+    "crates/lavaxemu-core",
+    "crates/lavaxemu",
+    "crates/lavaxemu-libretro",
+]
+default-members = ["crates/lavaxemu-libretro"]
+
+[workspace.package]
+version = "0.1.0"
+edition = "2024"
+description = "A cross-platform LavaX virtual machine and emulator"
+license = "GPL-2.0-or-later"
+
+[workspace.dependencies]
+lavaxemu-core = { path = "crates/lavaxemu-core" }
+anyhow = "1"
+thiserror = "2"
+log = "0.4"
+serde = { version = "1", features = ["derive"] }
+bincode = "1"
+crc32fast = "1"
+clap = { version = "4", features = ["derive"] }
+minifb = "0.28"
+env_logger = "0.11"
+
+[profile.release]
+opt-level = 3
+lto = true
+strip = true
+

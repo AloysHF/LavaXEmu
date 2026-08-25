@@ -1,0 +1,19 @@
+[package]
+name = "lavaxemu"
+version.workspace = true
+edition.workspace = true
+description = "Standalone LavaX emulator"
+license.workspace = true
+
+[[bin]]
+name = "lavaxemu"
+path = "src/main.rs"
+
+[dependencies]
+lavaxemu-core.workspace = true
+anyhow.workspace = true
+clap.workspace = true
+minifb.workspace = true
+env_logger.workspace = true
+log.workspace = true
+

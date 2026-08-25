@@ -1,0 +1,16 @@
+[package]
+name = "lavaxemu-libretro"
+version.workspace = true
+edition.workspace = true
+description = "libretro core for LavaXEmu"
+license.workspace = true
+
+[lib]
+name = "lavaxemu"
+crate-type = ["cdylib"]
+path = "src/lib.rs"
+
+[dependencies]
+lavaxemu-core.workspace = true
+log.workspace = true
+

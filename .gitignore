@@ -1,0 +1,9 @@
+/target/
+/tmp/
+/CLAUDE.md
+*.dll
+*.so
+*.dylib
+*.pdb
+*.sav
+*.state
