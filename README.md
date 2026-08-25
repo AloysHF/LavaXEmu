@@ -49,6 +49,18 @@ cargo run --release -p lavaxemu -- game.lav --screenshot frame.png --frames 300 
 
 游戏参数放在 `--` 之后，例如 `lavaxemu game.lav -- first second`。
 
+## RetroArch 核心
+
+默认 release 构建会生成 libretro 动态库：
+
+```bash
+cargo build --release
+```
+
+将生成的动态库改名为平台对应的 `lavaxemu_libretro` 文件名并放入 RetroArch 的核心目录，同时把 `crates/lavaxemu-libretro/lavaxemu_libretro.info` 放入 `info` 目录。核心接受 `.lav` 内容，输出 60 Hz RGB565 画面并支持即时存档。
+
+手柄方向键对应方向键；A/B/X/Y 分别对应 LavaX 的 B/N/M/G 键，Select/Start 对应 H/J，L/R 对应 Page Up/Page Down。
+
 ## 许可证
 
 项目采用 `GPL-2.0-or-later`。格式研究结论见 [docs/lavax-format.md](docs/lavax-format.md)。本地测试资源由 Git 忽略，不进入源码或发行包。

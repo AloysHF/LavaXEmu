@@ -1,10 +1,32 @@
-display_name = "LavaXEmu"
+# Software Information
+display_name = "LavaX (LavaXEmu)"
 authors = "LavaXEmu contributors"
 supported_extensions = "lav"
-corename = "LavaXEmu"
+corename = "lavaxemu"
 categories = "Emulator"
-license = "GPLv2+"
+license = "GPL-2.0-or-later"
 permissions = ""
 display_version = "0.1.0"
-supports_no_game = "false"
 
+# Hardware Information
+manufacturer = "Various"
+systemname = "LavaX"
+systemid = "lavax"
+
+# Libretro Features
+database = "LavaX"
+supports_no_game = "false"
+firmware_count = 0
+savestate = "true"
+cheats = "false"
+input_descriptors = "true"
+memory_descriptors = "false"
+libretro_saves = "false"
+core_options = "false"
+load_subsystem = "false"
+hw_render = "false"
+needs_fullpath = "true"
+disk_control = "false"
+is_experimental = "true"
+
+description = "LavaXEmu runs LavaX .lav programs with indexed-color video, joypad input, companion files and save states."
