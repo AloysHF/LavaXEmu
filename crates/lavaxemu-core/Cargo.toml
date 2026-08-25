@@ -11,4 +11,5 @@ serde.workspace = true
 bincode.workspace = true
 crc32fast.workspace = true
 log.workspace = true
-
+encoding_rs.workspace = true
+unifont.workspace = true

@@ -1,4 +1,5 @@
 use crate::GraphicsMode;
+use encoding_rs::GBK;
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum BufferTarget {
@@ -305,6 +306,54 @@ impl Display {
         }
     }
 
+    pub fn draw_text(
+        &mut self,
+        target: BufferTarget,
+        x: i32,
+        y: i32,
+        text: &[u8],
+        large: bool,
+        operation: DrawOperation,
+    ) {
+        let (decoded, _, _) = GBK.decode(text);
+        let mut pen_x = x;
+        for character in decoded.chars() {
+            let Some(glyph) = unifont::get_glyph(character) else {
+                pen_x += if character.is_ascii() {
+                    if large { 8 } else { 6 }
+                } else if large {
+                    16
+                } else {
+                    12
+                };
+                continue;
+            };
+            let target_width = if character.is_ascii() {
+                if large { 8 } else { 6 }
+            } else if large {
+                16
+            } else {
+                12
+            };
+            let target_height = if large { 16 } else { 12 };
+            for target_y in 0..target_height {
+                let glyph_y = target_y * 16 / target_height;
+                for target_x in 0..target_width {
+                    let glyph_x = target_x * glyph.get_width() / target_width;
+                    if glyph.get_pixel(glyph_x, glyph_y) {
+                        self.draw_pixel(
+                            target,
+                            pen_x + target_x as i32,
+                            y + target_y as i32,
+                            operation,
+                        );
+                    }
+                }
+            }
+            pen_x += target_width as i32;
+        }
+    }
+
     #[allow(clippy::too_many_arguments)]
     pub fn blit(
         &mut self,
@@ -585,6 +634,20 @@ mod tests {
         );
         assert_eq!(display.palette()[254], [1, 2, 3]);
         assert_eq!(display.palette()[255], [4, 5, 6]);
+    }
+
+    #[test]
+    fn renders_ascii_and_gbk_text() {
+        let mut display = Display::new(160, 80, GraphicsMode::Mono);
+        display.draw_text(
+            BufferTarget::Front,
+            0,
+            0,
+            b"LavaX",
+            false,
+            DrawOperation::Set,
+        );
+        assert!(display.indexed_frame().iter().any(|&pixel| pixel != 0));
     }
 
     #[test]

@@ -123,6 +123,11 @@ impl Vm {
         self.running
     }
 
+    pub fn halt(&mut self, exit_code: i32) {
+        self.exit_code = exit_code;
+        self.running = false;
+    }
+
     pub const fn instructions_executed(&self) -> u64 {
         self.instructions_executed
     }
@@ -321,7 +326,7 @@ impl Vm {
             }
             0x0a => self.push_value(self.pointer_descriptor(address, 1) as i32),
             0x0b => self.push_value(self.pointer_descriptor(address, 2) as i32),
-            0x0c => self.push_value(self.pointer_descriptor(address, 4) as i32),
+            0x0c => self.push_value(self.pointer_descriptor(address, 0) as i32),
             _ => unreachable!(),
         }
     }
@@ -347,7 +352,7 @@ impl Vm {
             }
             0x14 => self.push_value(self.pointer_descriptor(address, 1) as i32),
             0x15 => self.push_value(self.pointer_descriptor(address, 2) as i32),
-            0x16..=0x19 => self.push_value(self.pointer_descriptor(address, 4) as i32),
+            0x16..=0x19 => self.push_value(self.pointer_descriptor(address, 0) as i32),
             _ => unreachable!(),
         }
     }
