@@ -1,7 +1,60 @@
 use crate::GraphicsMode;
-use encoding_rs::GBK;
 use serde::{Deserialize, Serialize};
 use serde_big_array::BigArray;
+
+/// Embedded LVM font resource (LVM.bin) with the exact glyph bitmaps used by
+/// the reference LavaX VM. Layout: 128x(6x12) ASCII, 128x(8x16) ASCII,
+/// GB2312 12x12 and GB2312 16x16.
+const LVM_FONT: &[u8] = include_bytes!("../assets/LVM.bin");
+const FONT_ASCII6: usize = 0;
+const FONT_ASCII8: usize = 1536;
+const FONT_GB12: usize = FONT_ASCII8 + 2048;
+const FONT_GB16: usize = FONT_GB12 + 81 * 94 * 24;
+const FONT_GB_COUNT: usize = 81 * 94;
+
+enum GlyphOrder {
+    Ascii,
+    Gbk,
+}
+
+fn font_ascii(character: u8, large: bool) -> (&'static [u8], u16, u16) {
+    static BLANK: [u8; 32] = [0; 32];
+    if character >= 128 {
+        return if large {
+            (&BLANK[..16], 8, 16)
+        } else {
+            (&BLANK[..12], 6, 12)
+        };
+    }
+    if large {
+        let offset = FONT_ASCII8 + usize::from(character) * 16;
+        (&LVM_FONT[offset..offset + 16], 8, 16)
+    } else {
+        let offset = FONT_ASCII6 + usize::from(character) * 12;
+        (&LVM_FONT[offset..offset + 12], 6, 12)
+    }
+}
+
+fn font_gbk(first: u8, second: u8, large: bool) -> Option<(&'static [u8], u16, u16)> {
+    if !(0xa1..=0xf7).contains(&first) || !(0xa1..=0xfe).contains(&second) {
+        return None;
+    }
+    let index = if first < 0xb0 {
+        usize::from(first - 0xa1) * 94 + usize::from(second - 0xa1)
+    } else {
+        usize::from(first - 0xa7) * 94 + usize::from(second - 0xa1)
+    };
+    if index >= FONT_GB_COUNT {
+        return None;
+    }
+    if large {
+        let offset = FONT_GB16 + index * 32;
+        Some((&LVM_FONT[offset..offset + 32], 16, 16))
+    } else {
+        let offset = FONT_GB12 + index * 24;
+        Some((&LVM_FONT[offset..offset + 24], 12, 12))
+    }
+}
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum BufferTarget {
@@ -164,6 +217,26 @@ impl Display {
         self.buffer_mut(target).fill(color);
     }
 
+    pub(crate) fn fill_region(
+        &mut self,
+        target: BufferTarget,
+        x: i32,
+        y: i32,
+        width: u16,
+        height: u16,
+        color: u8,
+    ) {
+        for row in 0..height {
+            for column in 0..width {
+                let Some(index) = self.pixel_index(x + i32::from(column), y + i32::from(row))
+                else {
+                    continue;
+                };
+                self.buffer_mut(target)[index] = color;
+            }
+        }
+    }
+
     pub fn present(&mut self) {
         self.front.copy_from_slice(&self.back);
     }
@@ -318,42 +391,106 @@ impl Display {
         large: bool,
         operation: DrawOperation,
     ) {
-        let (decoded, _, _) = GBK.decode(text);
         let mut pen_x = x;
-        for character in decoded.chars() {
-            let Some(glyph) = unifont::get_glyph(character) else {
-                pen_x += if character.is_ascii() {
-                    if large { 8 } else { 6 }
-                } else if large {
-                    16
+        let mut offset = 0;
+        while offset < text.len() {
+            let character = text[offset];
+            if character < 128 {
+                let (glyph, width, height) = font_ascii(character, large);
+                self.draw_glyph(
+                    target,
+                    pen_x,
+                    y,
+                    glyph,
+                    width,
+                    height,
+                    GlyphOrder::Ascii,
+                    operation,
+                );
+                pen_x += i32::from(width);
+                offset += 1;
+            } else if offset + 1 < text.len() {
+                let second = text[offset + 1];
+                if let Some((glyph, width, height)) = font_gbk(character, second, large) {
+                    self.draw_glyph(
+                        target,
+                        pen_x,
+                        y,
+                        glyph,
+                        width,
+                        height,
+                        GlyphOrder::Gbk,
+                        operation,
+                    );
+                    pen_x += i32::from(width);
+                    offset += 2;
                 } else {
-                    12
-                };
-                continue;
-            };
-            let target_width = if character.is_ascii() {
-                if large { 8 } else { 6 }
-            } else if large {
-                16
-            } else {
-                12
-            };
-            let target_height = if large { 16 } else { 12 };
-            for target_y in 0..target_height {
-                let glyph_y = target_y * 16 / target_height;
-                for target_x in 0..target_width {
-                    let glyph_x = target_x * glyph.get_width() / target_width;
-                    if glyph.get_pixel(glyph_x, glyph_y) {
-                        self.draw_pixel(
-                            target,
-                            pen_x + target_x as i32,
-                            y + target_y as i32,
-                            operation,
-                        );
-                    }
+                    let (glyph, width, height) = font_ascii(character, large);
+                    self.draw_glyph(
+                        target,
+                        pen_x,
+                        y,
+                        glyph,
+                        width,
+                        height,
+                        GlyphOrder::Ascii,
+                        operation,
+                    );
+                    pen_x += i32::from(width);
+                    offset += 1;
                 }
+            } else {
+                offset += 1;
             }
-            pen_x += target_width as i32;
+        }
+    }
+
+    /// Render one glyph bitmap with the exact LVM write_comm semantics used
+    /// by the console and TextOut: set bits draw the foreground color,
+    /// cleared bits draw the background color; inverting XORs the color.
+    #[allow(clippy::too_many_arguments)]
+    fn draw_glyph(
+        &mut self,
+        target: BufferTarget,
+        x: i32,
+        y: i32,
+        glyph: &[u8],
+        width: u16,
+        height: u16,
+        order: GlyphOrder,
+        operation: DrawOperation,
+    ) {
+        let foreground = self.foreground;
+        let background = self.background;
+        let invert_mask = self.max_color();
+        for row in 0..height {
+            for column in 0..width {
+                let bit = match order {
+                    GlyphOrder::Ascii => {
+                        glyph[usize::from(row)] & (0x80 >> (column & 7)) != 0
+                    }
+                    GlyphOrder::Gbk if width == 16 => {
+                        let byte = glyph[usize::from(row) * 2 + usize::from(column / 8)];
+                        byte & (0x80 >> (column & 7)) != 0
+                    }
+                    GlyphOrder::Gbk => {
+                        if column < 8 {
+                            glyph[usize::from(row) * 2] & (0x80 >> column) != 0
+                        } else {
+                            glyph[usize::from(row) * 2 + 1] & (0x80 >> (column - 8)) != 0
+                        }
+                    }
+                };
+                let mut color = if bit { foreground } else { background };
+                if matches!(operation, DrawOperation::Invert) {
+                    color ^= invert_mask;
+                }
+                let Some(index) = self.pixel_index(x + i32::from(column), y + i32::from(row))
+                else {
+                    continue;
+                };
+                self.buffer_mut(target)[index] = color;
+            }
         }
     }
 

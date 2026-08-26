@@ -23,7 +23,7 @@ impl Emulator {
             8 => self.system_write_block(),
             9 => {
                 self.display.present();
-                Ok(HostAction::Present)
+                Ok(HostAction::Continue)
             }
             10 => self.system_textout(),
             11 => self.system_rectangle(true),
@@ -68,7 +68,7 @@ impl Emulator {
             57 => self.system_makedir(),
             58 => self.system_delete(),
             59 => {
-                let value = ((self.elapsed_ms % 1_000) * 256 / 1_000) as i32;
+                let value = (((self.frame_index * 1_000 / 60) % 1_000) * 256 / 1_000) as i32;
                 self.vm.push_value(value)?;
                 Ok(HostAction::Continue)
             }
@@ -108,7 +108,7 @@ impl Emulator {
             79 => {
                 let amount = self.vm.pop_value()? as u8;
                 self.display.fade(amount);
-                Ok(HostAction::Present)
+                Ok(HostAction::Continue)
             }
             80 => self.system_exec(),
             81 => self.system_findfile(),
@@ -181,8 +181,9 @@ impl Emulator {
     }
 
     fn system_delay(&mut self) -> Result<HostAction> {
-        self.delay_remaining_ms = (self.vm.pop_value()? & 0x7fff) as u32;
-        if self.delay_remaining_ms == 0 {
+        let milliseconds = (self.vm.pop_value()? & 0x7fff) as u32;
+        self.delay_remaining_ticks = milliseconds * 256 / 1_000;
+        if self.delay_remaining_ticks == 0 {
             Ok(HostAction::Continue)
         } else {
             Ok(HostAction::Delay)
@@ -235,10 +236,10 @@ impl Emulator {
 
     fn system_rectangle(&mut self, filled: bool) -> Result<HostAction> {
         let mode = self.vm.pop_value()?;
-        let y1 = coordinate(self.vm.pop_value()?);
-        let x1 = coordinate(self.vm.pop_value()?);
-        let y0 = coordinate(self.vm.pop_value()?);
-        let x0 = coordinate(self.vm.pop_value()?);
+        let y1 = block_clamp(coordinate(self.vm.pop_value()?), i32::from(self.display.height()));
+        let x1 = block_clamp(coordinate(self.vm.pop_value()?), i32::from(self.display.width()));
+        let y0 = block_clamp(coordinate(self.vm.pop_value()?), i32::from(self.display.height()));
+        let x0 = block_clamp(coordinate(self.vm.pop_value()?), i32::from(self.display.width()));
         self.display.draw_rectangle(
             target_from_flag(mode as u8, true),
             x0,
@@ -265,7 +266,8 @@ impl Emulator {
 
     fn system_rand(&mut self) -> Result<HostAction> {
         self.random_seed = self.random_seed.wrapping_mul(0x015a_4e35).wrapping_add(1);
-        self.vm.push_value((self.random_seed >> 16) & 0x7fff)?;
+        let value = (self.random_seed >> 16) & 0x7fff;
+        self.vm.push_value(value)?;
         Ok(HostAction::Continue)
     }
 
@@ -331,10 +333,10 @@ impl Emulator {
     fn system_box(&mut self) -> Result<HostAction> {
         let mode = self.vm.pop_value()?;
         let filled = self.vm.pop_value()? != 0;
-        let y1 = coordinate(self.vm.pop_value()?);
-        let x1 = coordinate(self.vm.pop_value()?);
-        let y0 = coordinate(self.vm.pop_value()?);
-        let x0 = coordinate(self.vm.pop_value()?);
+        let y1 = block_clamp(coordinate(self.vm.pop_value()?), i32::from(self.display.height()));
+        let x1 = block_clamp(coordinate(self.vm.pop_value()?), i32::from(self.display.width()));
+        let y0 = block_clamp(coordinate(self.vm.pop_value()?), i32::from(self.display.height()));
+        let x0 = block_clamp(coordinate(self.vm.pop_value()?), i32::from(self.display.width()));
         self.display.draw_rectangle(
             BufferTarget::Front,
             x0,
@@ -623,7 +625,14 @@ impl Emulator {
         let value = if key < 0x80 {
             bool_value(self.input.is_pressed(key))
         } else {
-            self.input.first_pressed().map_or(0, i32::from)
+            // LVM scans physical key codes in ascending order and reports the
+            // first one that is pressed (mapped back to a LavaX key code).
+            (0..256u16)
+                .find_map(|vk| {
+                    let lava = lava_key_from_vk(vk);
+                    (lava != 0 && self.input.is_pressed(lava)).then_some(i32::from(lava))
+                })
+                .unwrap_or(0)
         };
         self.vm.push_value(value)?;
         Ok(HostAction::Continue)
@@ -729,10 +738,18 @@ impl Emulator {
     }
 
     fn system_integer_trig(&mut self, sine: bool) -> Result<HostAction> {
-        let degrees = (self.vm.pop_value()? as u16 % 360) as f64;
-        let radians = degrees.to_radians();
-        let value = if sine { radians.sin() } else { radians.cos() };
-        self.vm.push_value((value * 1_024.0).round() as i32)?;
+        let degrees = i32::from(self.vm.pop_value()? as u16) % 360;
+        let value = if sine {
+            sin_lookup(degrees)
+        } else {
+            let adjusted = if degrees >= 270 {
+                degrees - 270
+            } else {
+                degrees + 90
+            };
+            sin_lookup(adjusted)
+        };
+        self.vm.push_value(value)?;
         Ok(HostAction::Continue)
     }
 
@@ -825,7 +842,7 @@ impl Emulator {
             }
             29 => return self.system_findfile_extended(),
             30 => return self.system_getfilenum_extended(),
-            31 => (self.elapsed_ms.saturating_mul(256) / 1_000) as i32,
+            31 => (self.frame_index * 1_000 / 60 * 256 / 1_000) as i32,
             32 => {
                 self.pop_values(2)?;
                 0
@@ -1162,6 +1179,64 @@ fn coordinate(value: i32) -> i32 {
     i32::from(value as i16)
 }
 
+/// Clamp a rectangle corner like LVM's block_check: the VM casts arguments
+/// to unsigned 16-bit words, then values at or beyond the screen edge are
+/// clamped to the last pixel.
+fn block_clamp(value: i32, limit: i32) -> i32 {
+    let value = i32::from(value as u16);
+    if value >= limit {
+        limit - 1
+    } else {
+        value
+    }
+}
+
+/// Integer sine table used by the reference VM (1024 = sin 90 degrees).
+const SIN90: [i32; 91] = [
+    0, 18, 36, 54, 71, 89, 107, 125, 143, 160, 178, 195, 213, 230, 248, 265,
+    282, 299, 316, 333, 350, 367, 384, 400, 416, 433, 449, 465, 481, 496, 512,
+    527, 543, 558, 573, 587, 602, 616, 630, 644, 658, 672, 685, 698, 711, 724,
+    737, 749, 761, 773, 784, 796, 807, 818, 828, 839, 849, 859, 868, 878, 887,
+    896, 904, 912, 920, 928, 935, 943, 949, 956, 962, 968, 974, 979, 984, 989,
+    994, 998, 1002, 1005, 1008, 1011, 1014, 1016, 1018, 1020, 1022, 1023, 1023,
+    1024, 1024,
+];
+
+fn sin_lookup(degrees: i32) -> i32 {
+    let degrees = degrees % 360;
+    if degrees < 90 {
+        SIN90[degrees as usize]
+    } else if degrees < 180 {
+        SIN90[(180 - degrees) as usize]
+    } else if degrees < 270 {
+        -SIN90[(degrees - 180) as usize]
+    } else {
+        -SIN90[(360 - degrees) as usize]
+    }
+}
+
+/// Map a physical Windows virtual-key code to a LavaX key code (c_keyval).
+fn lava_key_from_vk(vk: u16) -> u8 {
+    let vk = vk as u8;
+    match vk {
+        b'A'..=b'Z' => vk | 0x20,
+        112..=115 => vk - 112 + 0x1c, // F1-F4
+        37 => 23,                      // left
+        38 => 20,                      // up
+        39 => 22,                      // right
+        40 => 21,                      // down
+        33 => 19,                      // PageUp
+        34 => 14,                      // PageDown
+        190 => b'.',
+        b'0' | b' ' | b'\r' | 27 => vk,
+        16 => 26, // Shift
+        b'1'..=b'9' => *b"bnmghjtyu".get((vk - b'1') as usize).unwrap_or(&0),
+        116 => 25, // F5
+        117 => 18, // F6
+        _ => 0,
+    }
+}
+
 fn target_from_flag(mode: u8, set_means_front: bool) -> BufferTarget {
     let flag = mode & 0x40 != 0;
     if flag == set_means_front {
@@ -1247,9 +1322,8 @@ mod tests {
             0x40,
         ]);
         let frame = emulator.run_frame().unwrap();
-        assert_eq!(frame.status, FrameStatus::Presented);
+        assert_eq!(frame.status, FrameStatus::Halted(0));
         assert_eq!(emulator.display().indexed_frame()[3 * 240 + 2], 255);
-        assert_eq!(emulator.run_frame().unwrap().status, FrameStatus::Halted(0));
     }
 
     #[test]

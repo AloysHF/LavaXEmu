@@ -531,7 +531,6 @@ dependencies = [
  "serde",
  "serde-big-array",
  "thiserror",
- "unifont",
 ]
 
 [[package]]
@@ -1006,12 +1005,6 @@ name = "unicode-ident"
 version = "1.0.24"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "e6e4313cd5fcd3dad5cafa179702e2b244f760991f45397d14d4ebf38247da75"
-
-[[package]]
-name = "unifont"
-version = "1.1.0+data-15.1.05"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "8eb5abf597aaa6fff19801d6747672f56e618d60002e7191ea92773a5bcae156"
 
 [[package]]
 name = "utf8parse"

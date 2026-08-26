@@ -1,5 +1,5 @@
 use crate::{
-    BufferTarget, Display, DrawOperation, InputState, Program, Result, RunOutcome,
+    BufferTarget, Display, DrawOperation, GraphicsMode, InputState, Program, Result, RunOutcome,
     VirtualFileSystem, Vm,
 };
 use serde::{Deserialize, Serialize};
@@ -40,6 +40,9 @@ pub(crate) struct TextConsole {
     x: usize,
     y: usize,
     small: bool,
+    small_left: usize,
+    small_up: usize,
+    small_down: usize,
 }
 
 impl TextConsole {
@@ -51,6 +54,9 @@ impl TextConsole {
             x: 0,
             y: 0,
             small: false,
+            small_left: 0,
+            small_up: 0,
+            small_down: 0,
         };
         console.set_mode(width, height, false);
         console
@@ -61,9 +67,16 @@ impl TextConsole {
         if small {
             self.columns = (usize::from(width).saturating_sub(2) / 6) & !1;
             self.rows = usize::from(height).saturating_sub(1) / 13;
+            self.small_left = (usize::from(width) - self.columns * 6) / 2;
+            self.small_up = (usize::from(height) - (self.rows * 13 - 1)) / 2;
+            self.small_down =
+                usize::from(height) - (self.rows * 13 - 1) - self.small_up;
         } else {
             self.columns = usize::from(width) / 8;
             self.rows = usize::from(height) / 16;
+            self.small_left = 0;
+            self.small_up = 0;
+            self.small_down = 0;
         }
         self.columns = self.columns.max(1);
         self.rows = self.rows.max(1);
@@ -111,23 +124,65 @@ impl TextConsole {
     }
 
     pub(crate) fn render(&self, display: &mut Display) {
-        display.clear(BufferTarget::Front);
-        let character_height = if self.small { 13 } else { 16 };
-        let large = !self.small;
-        for row in 0..self.rows {
-            let start = row * self.columns;
-            let mut end = start + self.columns;
-            while end > start && self.cells[end - 1] == b' ' {
-                end -= 1;
-            }
-            display.draw_text(
+        if self.small {
+            let background = if display.graphics_mode() == GraphicsMode::Mono {
+                0
+            } else {
+                display.background()
+            };
+            let width = display.width();
+            let height = display.height();
+            // Top and bottom margins, plus separator rows between lines.
+            display.fill_region(BufferTarget::Front, 0, 0, width, self.small_up as u16, background);
+            display.fill_region(
                 BufferTarget::Front,
                 0,
-                (row * character_height) as i32,
-                &self.cells[start..end],
-                large,
-                DrawOperation::Set,
+                i32::from(height) - self.small_down as i32,
+                width,
+                self.small_down as u16,
+                background,
             );
+            for row in 1..self.rows {
+                let y = (row * 13 + self.small_up - 1) as i32;
+                display.fill_region(BufferTarget::Front, 0, y, width, 1, background);
+            }
+            // Left and right margins.
+            for column in 0..self.small_left {
+                display.fill_region(BufferTarget::Front, column as i32, 0, 1, height, background);
+                display.fill_region(
+                    BufferTarget::Front,
+                    i32::from(width) - 1 - column as i32,
+                    0,
+                    1,
+                    height,
+                    background,
+                );
+            }
+            for row in 0..self.rows {
+                let start = row * self.columns;
+                let end = start + self.columns;
+                display.draw_text(
+                    BufferTarget::Front,
+                    self.small_left as i32,
+                    (row * 13 + self.small_up) as i32,
+                    &self.cells[start..end],
+                    false,
+                    DrawOperation::Set,
+                );
+            }
+        } else {
+            for row in 0..self.rows {
+                let start = row * self.columns;
+                let end = start + self.columns;
+                display.draw_text(
+                    BufferTarget::Front,
+                    0,
+                    (row * 16) as i32,
+                    &self.cells[start..end],
+                    true,
+                    DrawOperation::Set,
+                );
+            }
         }
     }
 }
@@ -141,7 +196,9 @@ pub struct Emulator {
     pub(crate) console: TextConsole,
     pub(crate) elapsed_ms: u64,
     pub(crate) time_remainder: u32,
-    pub(crate) delay_remaining_ms: u32,
+    pub(crate) frame_index: u64,
+    pub(crate) delay_remaining_ticks: u32,
+    pub(crate) delay_tick_carry: u32,
     pub(crate) waiting_for_key: bool,
     pub(crate) random_seed: i32,
     pub(crate) calendar: [u8; 8],
@@ -159,7 +216,9 @@ impl Emulator {
             console: TextConsole::new(header.width, header.height),
             elapsed_ms: 0,
             time_remainder: 0,
-            delay_remaining_ms: 0,
+            frame_index: 0,
+            delay_remaining_ticks: 0,
+            delay_tick_carry: 0,
             waiting_for_key: false,
             random_seed: 1,
             calendar: [0xd0, 0x07, 1, 1, 0, 0, 0, 6],
@@ -175,7 +234,9 @@ impl Emulator {
         self.input.release_all();
         self.elapsed_ms = 0;
         self.time_remainder = 0;
-        self.delay_remaining_ms = 0;
+        self.frame_index = 0;
+        self.delay_remaining_ticks = 0;
+        self.delay_tick_carry = 0;
         self.waiting_for_key = false;
         self.random_seed = 1;
     }
@@ -217,6 +278,12 @@ impl Emulator {
     }
 
     pub fn run_frame_with_budget(&mut self, budget: usize) -> Result<FrameResult> {
+        let result = self.run_frame_inner(budget);
+        self.frame_index += 1;
+        result
+    }
+
+    fn run_frame_inner(&mut self, budget: usize) -> Result<FrameResult> {
         self.advance_frame_clock();
         if !self.vm.is_running() {
             return Ok(self.frame_result(FrameStatus::Halted(self.vm.exit_code()), 0, 0));
@@ -229,9 +296,8 @@ impl Emulator {
                 return Ok(self.frame_result(FrameStatus::WaitingForInput, 0, 0));
             }
         }
-        if self.delay_remaining_ms != 0 {
-            let elapsed = self.frame_duration_ms();
-            self.delay_remaining_ms = self.delay_remaining_ms.saturating_sub(elapsed);
+        self.advance_delay_ticks();
+        if self.delay_remaining_ticks != 0 {
             return Ok(self.frame_result(FrameStatus::Delayed, 0, 0));
         }
 
@@ -289,8 +355,17 @@ impl Emulator {
         self.time_remainder %= 60;
     }
 
-    fn frame_duration_ms(&self) -> u32 {
-        16 + u32::from(self.time_remainder >= 40)
+    /// Advance the delay counter using LVM timing: delay is counted in
+    /// 1/256-second ticks and the host refreshes at 60 Hz, so one frame
+    /// consumes 256/60 ticks.
+    fn advance_delay_ticks(&mut self) {
+        self.delay_tick_carry += 256;
+        while self.delay_tick_carry >= 60 {
+            self.delay_tick_carry -= 60;
+            if self.delay_remaining_ticks != 0 {
+                self.delay_remaining_ticks -= 1;
+            }
+        }
     }
 
     pub(crate) fn pending_input_value(&mut self) -> Option<i32> {

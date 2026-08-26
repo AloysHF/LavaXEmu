@@ -23,7 +23,6 @@ serde-big-array = "0.5"
 bincode = "1"
 crc32fast = "1"
 encoding_rs = "0.8"
-unifont = "1.1"
 clap = { version = "4", features = ["derive"] }
 minifb = "0.28"
 image = { version = "0.25", default-features = false, features = ["png"] }

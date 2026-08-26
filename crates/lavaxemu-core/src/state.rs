@@ -3,7 +3,7 @@ use crc32fast::hash;
 use crate::{Emulator, Error, GUEST_MEMORY_SIZE, Result};
 
 const STATE_MAGIC: [u8; 4] = *b"LXST";
-const STATE_VERSION: u16 = 1;
+const STATE_VERSION: u16 = 2;
 const STATE_HEADER_SIZE: usize = 14;
 const MAX_STATE_SIZE: usize = 64 * 1024 * 1024;
 
