@@ -189,8 +189,7 @@ impl Vm {
             0x04..=0x0c => self.execute_global_push(opcode)?,
             0x0d => self.push_string()?,
             0x0e..=0x19 => self.execute_local_push(opcode)?,
-            0x1a => return Err(Error::UnsupportedFeature("_TEXT")),
-            0x1b => return Err(Error::UnsupportedFeature("_GRAPH")),
+            0x1a | 0x1b => self.push_value(0)?,
             0x1c => {
                 let value = self.pop_value()?.wrapping_neg();
                 self.push_value(value)?;
@@ -226,7 +225,7 @@ impl Vm {
                 return Ok(StepOutcome::Halted(0));
             }
             0x41 => self.preset_memory()?,
-            0x42 => return Err(Error::UnsupportedFeature("_GBUF")),
+            0x42 => self.push_value(0)?,
             0x43 => self.secret = self.fetch_u8()?,
             0x44 => {}
             0x45..=0x51 => self.execute_quick_operation(opcode, opcode_pc)?,
@@ -910,6 +909,16 @@ mod tests {
         assert_eq!(vm.run(16).unwrap(), RunOutcome::SystemCall(0));
         assert_eq!(vm.pop_value().unwrap(), i32::from(b'A'));
         assert_eq!(vm.run(16).unwrap(), RunOutcome::Halted(0));
+    }
+
+    #[test]
+    fn reports_unavailable_host_buffers_as_null() {
+        let mut vm = vm(&[0x1a, 0x1b, 0x42, 0x40]);
+
+        assert_eq!(vm.run(10).unwrap(), RunOutcome::Halted(0));
+        assert_eq!(vm.pop_value().unwrap(), 0);
+        assert_eq!(vm.pop_value().unwrap(), 0);
+        assert_eq!(vm.pop_value().unwrap(), 0);
     }
 
     #[test]
