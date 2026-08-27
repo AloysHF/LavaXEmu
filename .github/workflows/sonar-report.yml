@@ -34,7 +34,7 @@ jobs:
       - name: Run tests with coverage
         run: |
           cargo install cargo-tarpaulin
-          cargo tarpaulin --out cobertura --output-dir coverage
+          cargo tarpaulin --out xml --output-dir coverage
 
       - name: SonarQube Scan
         uses: SonarSource/sonarqube-scan-action@v8
