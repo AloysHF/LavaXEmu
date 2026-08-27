@@ -20,7 +20,7 @@ thiserror = "2"
 log = "0.4"
 serde = { version = "1", features = ["derive"] }
 serde-big-array = "0.5"
-bincode = "1"
+bincode = "3"
 crc32fast = "1"
 encoding_rs = "0.8"
 clap = { version = "4", features = ["derive"] }
