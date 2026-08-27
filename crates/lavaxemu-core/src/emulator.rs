@@ -69,8 +69,7 @@ impl TextConsole {
             self.rows = usize::from(height).saturating_sub(1) / 13;
             self.small_left = (usize::from(width) - self.columns * 6) / 2;
             self.small_up = (usize::from(height) - (self.rows * 13 - 1)) / 2;
-            self.small_down =
-                usize::from(height) - (self.rows * 13 - 1) - self.small_up;
+            self.small_down = usize::from(height) - (self.rows * 13 - 1) - self.small_up;
         } else {
             self.columns = usize::from(width) / 8;
             self.rows = usize::from(height) / 16;
@@ -133,7 +132,14 @@ impl TextConsole {
             let width = display.width();
             let height = display.height();
             // Top and bottom margins, plus separator rows between lines.
-            display.fill_region(BufferTarget::Front, 0, 0, width, self.small_up as u16, background);
+            display.fill_region(
+                BufferTarget::Front,
+                0,
+                0,
+                width,
+                self.small_up as u16,
+                background,
+            );
             display.fill_region(
                 BufferTarget::Front,
                 0,

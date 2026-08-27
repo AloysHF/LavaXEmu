@@ -236,10 +236,22 @@ impl Emulator {
 
     fn system_rectangle(&mut self, filled: bool) -> Result<HostAction> {
         let mode = self.vm.pop_value()?;
-        let y1 = block_clamp(coordinate(self.vm.pop_value()?), i32::from(self.display.height()));
-        let x1 = block_clamp(coordinate(self.vm.pop_value()?), i32::from(self.display.width()));
-        let y0 = block_clamp(coordinate(self.vm.pop_value()?), i32::from(self.display.height()));
-        let x0 = block_clamp(coordinate(self.vm.pop_value()?), i32::from(self.display.width()));
+        let y1 = block_clamp(
+            coordinate(self.vm.pop_value()?),
+            i32::from(self.display.height()),
+        );
+        let x1 = block_clamp(
+            coordinate(self.vm.pop_value()?),
+            i32::from(self.display.width()),
+        );
+        let y0 = block_clamp(
+            coordinate(self.vm.pop_value()?),
+            i32::from(self.display.height()),
+        );
+        let x0 = block_clamp(
+            coordinate(self.vm.pop_value()?),
+            i32::from(self.display.width()),
+        );
         self.display.draw_rectangle(
             target_from_flag(mode as u8, true),
             x0,
@@ -333,10 +345,22 @@ impl Emulator {
     fn system_box(&mut self) -> Result<HostAction> {
         let mode = self.vm.pop_value()?;
         let filled = self.vm.pop_value()? != 0;
-        let y1 = block_clamp(coordinate(self.vm.pop_value()?), i32::from(self.display.height()));
-        let x1 = block_clamp(coordinate(self.vm.pop_value()?), i32::from(self.display.width()));
-        let y0 = block_clamp(coordinate(self.vm.pop_value()?), i32::from(self.display.height()));
-        let x0 = block_clamp(coordinate(self.vm.pop_value()?), i32::from(self.display.width()));
+        let y1 = block_clamp(
+            coordinate(self.vm.pop_value()?),
+            i32::from(self.display.height()),
+        );
+        let x1 = block_clamp(
+            coordinate(self.vm.pop_value()?),
+            i32::from(self.display.width()),
+        );
+        let y0 = block_clamp(
+            coordinate(self.vm.pop_value()?),
+            i32::from(self.display.height()),
+        );
+        let x0 = block_clamp(
+            coordinate(self.vm.pop_value()?),
+            i32::from(self.display.width()),
+        );
         self.display.draw_rectangle(
             BufferTarget::Front,
             x0,
@@ -1184,22 +1208,16 @@ fn coordinate(value: i32) -> i32 {
 /// clamped to the last pixel.
 fn block_clamp(value: i32, limit: i32) -> i32 {
     let value = i32::from(value as u16);
-    if value >= limit {
-        limit - 1
-    } else {
-        value
-    }
+    if value >= limit { limit - 1 } else { value }
 }
 
 /// Integer sine table used by the reference VM (1024 = sin 90 degrees).
 const SIN90: [i32; 91] = [
-    0, 18, 36, 54, 71, 89, 107, 125, 143, 160, 178, 195, 213, 230, 248, 265,
-    282, 299, 316, 333, 350, 367, 384, 400, 416, 433, 449, 465, 481, 496, 512,
-    527, 543, 558, 573, 587, 602, 616, 630, 644, 658, 672, 685, 698, 711, 724,
-    737, 749, 761, 773, 784, 796, 807, 818, 828, 839, 849, 859, 868, 878, 887,
-    896, 904, 912, 920, 928, 935, 943, 949, 956, 962, 968, 974, 979, 984, 989,
-    994, 998, 1002, 1005, 1008, 1011, 1014, 1016, 1018, 1020, 1022, 1023, 1023,
-    1024, 1024,
+    0, 18, 36, 54, 71, 89, 107, 125, 143, 160, 178, 195, 213, 230, 248, 265, 282, 299, 316, 333,
+    350, 367, 384, 400, 416, 433, 449, 465, 481, 496, 512, 527, 543, 558, 573, 587, 602, 616, 630,
+    644, 658, 672, 685, 698, 711, 724, 737, 749, 761, 773, 784, 796, 807, 818, 828, 839, 849, 859,
+    868, 878, 887, 896, 904, 912, 920, 928, 935, 943, 949, 956, 962, 968, 974, 979, 984, 989, 994,
+    998, 1002, 1005, 1008, 1011, 1014, 1016, 1018, 1020, 1022, 1023, 1023, 1024, 1024,
 ];
 
 fn sin_lookup(degrees: i32) -> i32 {
@@ -1221,12 +1239,12 @@ fn lava_key_from_vk(vk: u16) -> u8 {
     match vk {
         b'A'..=b'Z' => vk | 0x20,
         112..=115 => vk - 112 + 0x1c, // F1-F4
-        37 => 23,                      // left
-        38 => 20,                      // up
-        39 => 22,                      // right
-        40 => 21,                      // down
-        33 => 19,                      // PageUp
-        34 => 14,                      // PageDown
+        37 => 23,                     // left
+        38 => 20,                     // up
+        39 => 22,                     // right
+        40 => 21,                     // down
+        33 => 19,                     // PageUp
+        34 => 14,                     // PageDown
         190 => b'.',
         b'0' | b' ' | b'\r' | 27 => vk,
         16 => 26, // Shift

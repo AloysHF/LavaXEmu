@@ -466,9 +466,7 @@ impl Display {
         for row in 0..height {
             for column in 0..width {
                 let bit = match order {
-                    GlyphOrder::Ascii => {
-                        glyph[usize::from(row)] & (0x80 >> (column & 7)) != 0
-                    }
+                    GlyphOrder::Ascii => glyph[usize::from(row)] & (0x80 >> (column & 7)) != 0,
                     GlyphOrder::Gbk if width == 16 => {
                         let byte = glyph[usize::from(row) * 2 + usize::from(column / 8)];
                         byte & (0x80 >> (column & 7)) != 0
