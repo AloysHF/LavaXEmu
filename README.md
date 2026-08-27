@@ -176,6 +176,11 @@ Contributions are welcome! Whether you're interested in fixing bugs, adding
 features, improving documentation, or testing game compatibility, we'd love your
 help. See [CONTRIBUTING.md](docs/CONTRIBUTING.md) for details.
 
+## Acknowledgments
+
+- [LavaXVM](https://github.com/leesoft-mirage/LavaXVM) — reference LavaX
+  virtual machine implementation
+
 ## License
 
 This project is licensed under the [GPL 2.0 License](LICENSE).
