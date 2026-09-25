@@ -20,6 +20,10 @@ jobs:
           - platform: ubuntu-24.04-arm
             target: aarch64-unknown-linux-gnu
             artifact: lavaxemu-linux-aarch64
+          - platform: ubuntu-22.04
+            target: i686-unknown-linux-gnu
+            artifact: lavaxemu-linux-i686
+            libretro_only: true
           - platform: macos-latest
             target: x86_64-apple-darwin
             artifact: lavaxemu-macos-x86_64
@@ -29,6 +33,10 @@ jobs:
           - platform: windows-latest
             target: x86_64-pc-windows-msvc
             artifact: lavaxemu-windows-x86_64
+          - platform: windows-latest
+            target: i686-pc-windows-msvc
+            artifact: lavaxemu-windows-i686
+            libretro_only: true
 
     runs-on: ${{ matrix.platform }}
 
@@ -52,7 +60,16 @@ jobs:
           sudo apt-get update
           sudo apt-get install -y libx11-dev libxkbcommon-dev
 
+      - name: Install 32-bit Linux build dependencies
+        if: matrix.target == 'i686-unknown-linux-gnu'
+        run: sudo apt-get install -y gcc-multilib
+
       - name: Build standalone
+        # The standalone frontend pulls in its window, input and audio crates,
+        # which would need a full set of 32-bit X11/ALSA/udev dev packages; the
+        # 32-bit targets exist for RetroArch, so they build the core only, as
+        # on GitLab.
+        if: ${{ !matrix.libretro_only }}
         run: cargo build -p lavaxemu --release --target ${{ matrix.target }}
 
       - name: Build libretro core
@@ -79,14 +96,14 @@ jobs:
           ls -la "$out"
 
       - name: Package (Unix)
-        if: runner.os != 'Windows'
+        if: ${{ runner.os != 'Windows' && !matrix.libretro_only }}
         run: |
           cd target/${{ matrix.target }}/release
           tar czf ../../../${{ matrix.artifact }}.tar.gz lavaxemu
           cd ../../..
 
       - name: Package (Windows)
-        if: runner.os == 'Windows'
+        if: ${{ runner.os == 'Windows' && !matrix.libretro_only }}
         run: |
           cd target/${{ matrix.target }}/release
           7z a ../../../${{ matrix.artifact }}.zip lavaxemu.exe
@@ -348,6 +365,8 @@ jobs:
             ### libretro core (for RetroArch)
             - Files ending in `-libretro.*` contain `lavaxemu_libretro.<ext>`
               plus `lavaxemu_libretro.info`, ready to drop into RetroArch.
+            - 32-bit builds ship the core only: `lavaxemu-linux-i686-libretro.tar.gz`
+              and `lavaxemu-windows-i686-libretro.zip`.
 
             ### Android libretro core (for RetroArch on Android)
             - `lavaxemu-android-libretro.tar.gz` contains
