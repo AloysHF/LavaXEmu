@@ -56,7 +56,9 @@ Pushing the tag triggers `.github/workflows/release.yml`, which:
 1. **Builds standalone binaries** for Linux, macOS (x86_64 + aarch64), and Windows
 2. **Builds libretro cores** for the same platforms, renaming the cdylib to
    `lavaxemu_libretro.<ext>` and bundling `lavaxemu_libretro.info`
-3. **Creates a draft GitHub Release** with:
+3. **Builds the EmulatorJS core** for the browser as WebAssembly, packaged as
+   `lavaxemu-emulatorjs.zip` with the WebGL2 and legacy `.data` bundles
+4. **Creates a draft GitHub Release** with:
    - Auto-generated release notes (PRs and commits since the previous tag)
    - A download table for standalone and libretro artifacts
    - All build artifacts attached
@@ -72,6 +74,7 @@ Pushing the tag triggers `.github/workflows/release.yml`, which:
    - `lavaxemu-macos-aarch64.tar.gz`
    - `lavaxemu-windows-x86_64.zip`
    - `*-libretro.*` (one per platform)
+   - `lavaxemu-emulatorjs.zip` (browser core bundle)
 5. Click **Publish release**
 
 ### 6. Sync `.info` file to upstream libretro-super

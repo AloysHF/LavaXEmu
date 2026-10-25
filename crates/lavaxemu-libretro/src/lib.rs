@@ -508,7 +508,11 @@ fn import_companion_files(
     files: &mut lavaxemu_core::VirtualFileSystem,
 ) -> std::io::Result<()> {
     let root = program_path.parent().unwrap_or_else(|| Path::new("."));
-    import_directory(root, root, program_path, files)
+    // EmulatorJS unpacks a flat ZIP archive into the wasm filesystem root,
+    // which also holds its own virtual directories (/dev, /proc, /usr). Only
+    // import the files sitting directly in the root in that case.
+    let recurse = !(cfg!(target_os = "emscripten") && root == Path::new("/"));
+    import_directory(root, root, program_path, files, recurse)
 }
 
 fn import_directory(
@@ -516,13 +520,16 @@ fn import_directory(
     directory: &Path,
     program_path: &Path,
     files: &mut lavaxemu_core::VirtualFileSystem,
+    recurse: bool,
 ) -> std::io::Result<()> {
     for entry in fs::read_dir(directory)? {
         let entry = entry?;
         let path = entry.path();
         let file_type = entry.file_type()?;
         if file_type.is_dir() {
-            import_directory(root, &path, program_path, files)?;
+            if recurse {
+                import_directory(root, &path, program_path, files, recurse)?;
+            }
         } else if file_type.is_file() && path != program_path {
             let relative = path
                 .strip_prefix(root)
