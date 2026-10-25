@@ -1,6 +1,7 @@
 /target/
 /tmp/
 /CLAUDE.md
+.claude/
 *.dll
 *.so
 *.dylib
