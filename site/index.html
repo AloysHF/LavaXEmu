@@ -3,6 +3,8 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="description" content="A cross-platform LavaX virtual machine and emulator. Play LavaX games in your browser, no install required.">
+    <meta name="theme-color" content="#16213e">
     <title>LavaXEmu</title>
     <style>
         * {
@@ -10,18 +12,55 @@
             padding: 0;
             box-sizing: border-box;
         }
+        html {
+            scroll-behavior: smooth;
+        }
         body {
             font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, sans-serif;
-            display: flex;
-            justify-content: center;
-            align-items: center;
             min-height: 100vh;
             background: linear-gradient(135deg, #1a1a2e 0%, #16213e 100%);
             color: #e6e6e6;
+            line-height: 1.6;
         }
-        .container {
+        a {
+            color: #00d4ff;
+            text-decoration: none;
+        }
+        .nav {
+            display: flex;
+            flex-wrap: wrap;
+            align-items: center;
+            gap: 1.5rem;
+            max-width: 1100px;
+            margin: 0 auto;
+            padding: 1.25rem 2rem;
+            font-size: 0.95rem;
+        }
+        .nav .brand {
+            margin-right: auto;
+            font-weight: 700;
+            font-size: 1.2rem;
+            background: linear-gradient(90deg, #00d4ff, #7b2cbf);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+        }
+        .nav a:hover {
+            text-decoration: underline;
+        }
+        .nav a.nav-play {
+            color: #ffd700;
+            font-weight: 600;
+        }
+        .nav a.nav-play:hover {
+            color: #00d4ff;
+            text-decoration: none;
+        }
+        .hero {
+            max-width: 900px;
+            margin: 0 auto;
+            padding: 5rem 2rem 4.5rem;
             text-align: center;
-            padding: 2rem;
         }
         h1 {
             font-size: 3rem;
@@ -41,40 +80,155 @@
             0%, 100% { opacity: 1; }
             50% { opacity: 0.5; }
         }
-        p {
+        .hero p {
             font-size: 1.1rem;
             color: #a0a0a0;
             max-width: 600px;
             margin: 0 auto;
-            line-height: 1.6;
         }
-        .links {
+        .hero-actions {
+            display: flex;
+            flex-wrap: wrap;
+            justify-content: center;
+            gap: 0.9rem;
             margin-top: 2rem;
         }
-        .links a {
-            color: #00d4ff;
-            text-decoration: none;
-            margin: 0 1rem;
-            font-size: 1rem;
+        .btn {
+            display: inline-flex;
+            align-items: center;
+            gap: 0.5rem;
+            padding: 0.7rem 1.4rem;
+            border: 1px solid transparent;
+            border-radius: 8px;
+            font-size: 0.95rem;
+            font-weight: 600;
+            transition: background 0.2s, border-color 0.2s, color 0.2s, filter 0.2s;
         }
-        .links a:hover {
-            text-decoration: underline;
+        .btn-primary {
+            background: linear-gradient(90deg, #00a8cc, #6a1fb0);
+            color: #fff;
+        }
+        .btn-primary:hover {
+            filter: brightness(1.12);
+        }
+        .btn-play {
+            background: rgba(0, 212, 255, 0.1);
+            border-color: rgba(0, 212, 255, 0.45);
+            color: #00d4ff;
+        }
+        .btn-play:hover {
+            background: rgba(0, 212, 255, 0.18);
+            border-color: #00d4ff;
+        }
+        .btn-ghost {
+            border-color: rgba(255, 255, 255, 0.18);
+            color: #e6e6e6;
+        }
+        .btn-ghost:hover {
+            border-color: rgba(0, 212, 255, 0.5);
+            color: #00d4ff;
+        }
+        .play-section {
+            max-width: 1100px;
+            margin: 0 auto 5rem;
+            padding: 0 2rem;
+        }
+        .play-cta {
+            display: grid;
+            grid-template-columns: 0.9fr 1.1fr;
+            gap: 2rem;
+            align-items: center;
+            padding: 2rem;
+            background: linear-gradient(135deg, rgba(0, 212, 255, 0.1), rgba(123, 44, 191, 0.1));
+            border: 1px solid rgba(0, 212, 255, 0.22);
+            border-radius: 16px;
+        }
+        .play-cta-cover img {
+            display: block;
+            width: 100%;
+            border: 1px solid rgba(0, 212, 255, 0.25);
+            border-radius: 10px;
+            image-rendering: pixelated;
+        }
+        .play-cta-badge {
+            display: inline-block;
+            padding: 0.3rem 0.75rem;
+            border-radius: 999px;
+            background: rgba(0, 212, 255, 0.12);
+            color: #00d4ff;
+            font-size: 0.8rem;
+            font-weight: 600;
+        }
+        .play-cta-body h2 {
+            font-size: clamp(1.5rem, 3vw, 2rem);
+            margin: 0.9rem 0 0.6rem;
+        }
+        .play-cta-body p {
+            color: #a0a0a0;
+            font-size: 0.98rem;
+            margin-bottom: 1.4rem;
+        }
+        @media (max-width: 720px) {
+            .nav {
+                gap: 1rem;
+                padding: 1rem 1.5rem;
+            }
+            .hero {
+                padding: 3.5rem 1.5rem 3rem;
+            }
+            .play-section {
+                padding: 0 1.5rem;
+            }
+            .play-cta {
+                grid-template-columns: 1fr;
+                gap: 1.5rem;
+                padding: 1.5rem;
+            }
         }
     </style>
 </head>
 <body>
-    <div class="container">
-        <h1>LavaXEmu</h1>
-        <div class="status">🚧 Under Development 🚧</div>
-        <p>
-            A cross-platform LavaX virtual machine and emulator.
-            This project is currently in active development.
-        </p>
-        <div class="links">
-            <a href="play.html">Play Online</a>
-            <a href="https://github.com/AloysHF/LavaXEmu">GitHub</a>
-            <a href="https://github.com/AloysHF/LavaXEmu/releases">Downloads</a>
-        </div>
-    </div>
+    <nav class="nav">
+        <a href="index.html" class="brand">LavaXEmu</a>
+        <a href="play.html" class="nav-play">Play Online</a>
+        <a href="https://github.com/AloysHF/LavaXEmu">GitHub</a>
+        <a href="https://github.com/AloysHF/LavaXEmu/releases">Downloads</a>
+    </nav>
+
+    <main>
+        <section class="hero">
+            <h1>LavaXEmu</h1>
+            <div class="status">🚧 Under Development 🚧</div>
+            <p>
+                A cross-platform LavaX virtual machine and emulator.
+                This project is currently in active development.
+            </p>
+            <div class="hero-actions">
+                <a href="play.html" class="btn btn-play">
+                    <svg width="16" height="16" viewBox="0 0 16 16" fill="currentColor" aria-hidden="true"><path d="M4 2.5v11a.5.5 0 00.77.42l8.5-5.5a.5.5 0 000-.84l-8.5-5.5A.5.5 0 004 2.5z"/></svg>
+                    <span>Play Online</span>
+                </a>
+                <a href="https://github.com/AloysHF/LavaXEmu" class="btn btn-ghost">GitHub</a>
+                <a href="https://github.com/AloysHF/LavaXEmu/releases" class="btn btn-ghost">Downloads</a>
+            </div>
+        </section>
+
+        <section id="play" class="play-section">
+            <div class="play-cta">
+                <div class="play-cta-cover">
+                    <img src="docs/images/allout.png" alt="LavaX game screenshot" loading="lazy">
+                </div>
+                <div class="play-cta-body">
+                    <span class="play-cta-badge">No install · runs in your browser</span>
+                    <h2>Play LavaX Games Online</h2>
+                    <p>Pick a LavaX program from your device and run it right in the browser. Keyboard and touch controls are supported, and files never leave your machine.</p>
+                    <a href="play.html" class="btn btn-primary">
+                        <svg width="16" height="16" viewBox="0 0 16 16" fill="currentColor" aria-hidden="true"><path d="M4 2.5v11a.5.5 0 00.77.42l8.5-5.5a.5.5 0 000-.84l-8.5-5.5A.5.5 0 004 2.5z"/></svg>
+                        <span>Start Playing</span>
+                    </a>
+                </div>
+            </div>
+        </section>
+    </main>
 </body>
 </html>
