@@ -15,172 +15,216 @@
       color: #e6e6e6;
       line-height: 1.6;
     }
-    .page { max-width: 1100px; margin: 0 auto; padding: 24px 2rem 4rem; }
-    nav {
+    a { color: #00d4ff; text-decoration: none; }
+
+    .play-header {
       display: flex;
-      flex-wrap: wrap;
       align-items: center;
-      gap: 1.25rem;
-      padding: 0.5rem 0 2rem;
-      font-size: 0.95rem;
+      justify-content: space-between;
+      gap: 16px;
+      max-width: 1200px;
+      margin: 0 auto;
+      padding: 20px 24px;
     }
-    nav .brand {
+
+    .play-brand {
       font-weight: 700;
       font-size: 1.2rem;
-      margin-right: auto;
+      letter-spacing: 0.02em;
       background: linear-gradient(90deg, #00d4ff, #7b2cbf);
       -webkit-background-clip: text;
       -webkit-text-fill-color: transparent;
       background-clip: text;
     }
-    nav a { color: #00d4ff; text-decoration: none; }
-    nav a:hover { text-decoration: underline; }
-    h1 { font-size: clamp(2rem, 5vw, 3rem); margin-bottom: 0.5rem; }
-    h1 span { color: #00d4ff; }
-    .subtitle { color: #a0a0a0; max-width: 760px; margin-bottom: 1.75rem; }
-    .subtitle code { color: #e6e6e6; }
-    .stage {
+
+    .play-header-links {
+      display: flex;
+      flex-wrap: wrap;
+      align-items: center;
+      justify-content: flex-end;
+      gap: 18px;
+    }
+    .play-header-links a { color: #a0a0a0; font-size: 0.9rem; }
+    .play-header-links a:hover { color: #00d4ff; }
+
+    .play-main {
+      max-width: 1000px;
+      margin: 0 auto;
+      padding: 8px 24px 64px;
+    }
+
+    .play-title { font-size: clamp(1.6rem, 4vw, 2.4rem); line-height: 1.2; }
+    .play-title span { color: #00d4ff; }
+
+    .play-subtitle { color: #a0a0a0; margin: 8px 0 20px; max-width: 68ch; }
+    .play-subtitle code { color: #e6e6e6; font-size: 0.95em; }
+
+    .play-stage {
       position: relative;
+      width: 100%;
       aspect-ratio: 4 / 3;
-      min-height: 320px;
-      max-height: 640px;
       background: #0b1020;
       border: 1px solid rgba(0, 212, 255, 0.25);
       border-radius: 12px;
       overflow: hidden;
-      box-shadow: 0 24px 60px rgba(0, 0, 0, 0.45);
+      box-shadow: 0 20px 60px rgba(0, 0, 0, 0.45);
     }
-    .stage.is-drop { border-color: #00d4ff; }
+
+    .play-stage > #game { position: absolute; inset: 0; }
     #game, #game canvas { width: 100% !important; height: 100% !important; }
-    .overlay {
+
+    .play-overlay {
       position: absolute;
       inset: 0;
+      z-index: 5;
       display: flex;
       flex-direction: column;
       align-items: center;
       justify-content: center;
-      gap: 0.75rem;
-      padding: 2rem;
+      gap: 14px;
+      padding: 24px;
       text-align: center;
-      background: rgba(11, 16, 32, 0.94);
-      z-index: 2;
+      background: rgba(11, 16, 32, 0.88);
+      backdrop-filter: blur(3px);
     }
-    .overlay[hidden] { display: none; }
-    .overlay h2 { font-size: 1.3rem; }
-    .overlay p { color: #a0a0a0; max-width: 620px; font-size: 0.95rem; }
-    .button {
+
+    .play-overlay h2 { font-size: 1.3rem; }
+    .play-overlay p { color: #a0a0a0; max-width: 56ch; }
+    .play-overlay .btn { margin-top: 4px; }
+    .play-overlay[hidden] { display: none; }
+    .play-overlay code { font-family: monospace; font-size: 0.9em; }
+
+    .btn {
       display: inline-flex;
       align-items: center;
       justify-content: center;
+      gap: 0.5rem;
       padding: 0.7rem 1.4rem;
       border: none;
       border-radius: 8px;
       background: linear-gradient(90deg, #00a8cc, #6a1fb0);
       color: #fff;
+      font: inherit;
       font-size: 0.95rem;
       font-weight: 600;
       cursor: pointer;
     }
-    .button:disabled { opacity: 0.45; cursor: not-allowed; }
-    .button:hover:not(:disabled) { filter: brightness(1.1); }
-    .pick { cursor: pointer; }
-    .file-row {
+    .btn:hover { filter: brightness(1.1); }
+
+    .play-picker-error { color: #ff6b5b; font-size: 0.85rem; }
+    .play-picker-hint { font-size: 0.78rem; color: #6b7280; }
+    .play-picker-hint a { color: #a0a0a0; text-decoration: underline; }
+
+    .play-stage.is-drop {
+      border-color: rgba(0, 212, 255, 0.7);
+      box-shadow: 0 0 0 3px rgba(0, 212, 255, 0.18), 0 20px 60px rgba(0, 0, 0, 0.45);
+    }
+
+    .play-controls {
+      margin-top: 16px;
       display: flex;
       flex-wrap: wrap;
+      gap: 8px 20px;
       align-items: center;
-      justify-content: center;
-      gap: 0.75rem;
-    }
-    .file-name {
-      color: #a0a0a0;
-      font-size: 0.85rem;
-      max-width: 420px;
-      overflow: hidden;
-      text-overflow: ellipsis;
-      white-space: nowrap;
-    }
-    .error-text { color: #ff6b5b; font-size: 0.88rem; }
-    .note {
-      margin-top: 1.5rem;
-      color: #a0a0a0;
-      font-size: 0.9rem;
-      max-width: 900px;
-    }
-    .note a { color: #00d4ff; }
-    .controls {
-      display: flex;
-      flex-wrap: wrap;
-      gap: 0.6rem 1.4rem;
-      margin-top: 1.25rem;
       color: #a0a0a0;
       font-size: 0.85rem;
     }
-    kbd {
+
+    .play-controls kbd {
+      font-family: monospace;
+      font-size: 0.78rem;
+      color: #e6e6e6;
       background: #1b2540;
-      border: 1px solid #2c3a5e;
+      border: 1px solid rgba(255, 255, 255, 0.15);
+      border-bottom-width: 2px;
       border-radius: 5px;
       padding: 1px 6px;
-      color: #e6e6e6;
-      font-size: 0.78rem;
     }
-    .reset {
+
+    .play-reset {
       margin-left: auto;
+      padding: 4px 14px;
+      font: inherit;
+      font-size: 0.8rem;
+      color: #a0a0a0;
       background: transparent;
-      border: 1px solid #2c3a5e;
-      border-radius: 6px;
-      color: #e6e6e6;
-      padding: 0.35rem 0.9rem;
+      border: 1px solid rgba(255, 255, 255, 0.2);
+      border-radius: 999px;
       cursor: pointer;
     }
-    @media (max-width: 720px) {
-      .stage { min-height: 260px; }
+
+    .play-reset:hover { color: #00d4ff; border-color: rgba(0, 212, 255, 0.45); }
+    .play-reset[hidden] { display: none; }
+
+    .play-note { margin-top: 12px; font-size: 0.8rem; color: #6b7280; }
+    .play-note a { color: #a0a0a0; text-decoration: underline; }
+
+    @media (max-width: 640px) {
+      .play-header { padding: 16px; }
+      .play-header-links { gap: 12px; }
+      .play-header-links .optional { display: none; }
+      .play-main { padding: 0 16px 40px; }
+      .play-stage { border-radius: 8px; }
+      .play-overlay {
+        justify-content: center;
+        justify-content: safe center;
+        padding: 16px;
+        gap: 10px;
+        overflow-y: auto;
+        scrollbar-width: none;
+      }
+      .play-overlay::-webkit-scrollbar { display: none; }
+      .play-overlay h2 { font-size: 1.1rem; }
+      .play-overlay p { font-size: 0.85rem; }
+      .play-picker-hint { font-size: 0.72rem; }
     }
   </style>
 </head>
-<body>
-  <div class="page">
-    <nav>
-      <a class="brand" href="index.html">LavaXEmu</a>
-      <a href="index.html">Home</a>
-      <a href="https://github.com/AloysHF/LavaXEmu">GitHub</a>
-      <a href="https://github.com/AloysHF/LavaXEmu/releases">Downloads</a>
-    </nav>
+<body class="play-page">
 
-    <h1>Play <span>LavaX</span> Online</h1>
-    <p class="subtitle">
+  <header class="play-header">
+    <a href="index.html" class="play-brand">LavaXEmu</a>
+    <nav class="play-header-links">
+      <a href="index.html">Back to Home</a>
+      <a href="https://github.com/AloysHF/LavaXEmu" class="optional" target="_blank" rel="noopener">GitHub</a>
+    </nav>
+  </header>
+
+  <main class="play-main">
+    <h1 class="play-title">Play <span>LavaX</span> Online</h1>
+    <p class="play-subtitle">
       Pick a <code>.lav</code> program, or a <code>.zip</code> that also contains its
       companion data files. <strong>EmulatorJS</strong> runs it locally in your browser
       through the LavaXEmu WebAssembly core.
     </p>
 
-    <div class="stage" id="stage">
+    <div class="play-stage">
       <div id="game"></div>
 
-      <div class="overlay" id="status" hidden>
+      <div id="play-status" class="play-overlay" hidden>
         <h2>Loading core…</h2>
         <p>The first launch downloads the WebAssembly core.</p>
       </div>
 
-      <div class="overlay" id="picker">
+      <div id="play-picker" class="play-overlay">
         <h2>Choose a program</h2>
         <p>
           A bare <code>.lav</code> file plays on its own. Programs that load data files
           must be zipped with them; keep the files in a folder inside the archive so
           their directory layout is preserved.
         </p>
-        <div class="file-row">
-          <label class="button pick">
-            Choose Game File
-            <input id="game-file" type="file" accept=".lav,.zip,application/zip,application/octet-stream" hidden>
-          </label>
-          <span class="file-name" id="game-name">Not selected</span>
-        </div>
-        <button class="button" id="play-start" type="button" disabled>Start Game</button>
-        <p class="error-text" id="picker-error" hidden></p>
-        <p>Files are processed locally and never uploaded.</p>
+        <label class="btn">
+          <span>Choose Program</span>
+          <input id="game-file" type="file" accept=".lav,.zip,application/zip,application/octet-stream" hidden>
+        </label>
+        <p id="play-picker-error" class="play-picker-error" hidden></p>
+        <p class="play-picker-hint">
+          You can also drop a program onto the window. Files are processed locally and
+          never uploaded.
+        </p>
       </div>
 
-      <div class="overlay" id="play-error" hidden>
+      <div id="play-error" class="play-overlay" hidden>
         <h2>Unable to start the online emulator</h2>
         <p>
           The EmulatorJS runtime is not deployed (missing <code>data/loader.js</code>).
@@ -190,7 +234,7 @@
       </div>
     </div>
 
-    <div class="controls">
+    <div class="play-controls">
       <span><kbd>Arrows</kbd> Directions</span>
       <span><kbd>X</kbd> / <kbd>Z</kbd> B / N</span>
       <span><kbd>A</kbd> / <kbd>S</kbd> G / M</span>
@@ -198,17 +242,17 @@
       <span><kbd>Enter</kbd> J</span>
       <span><kbd>Shift</kbd> H</span>
       <span>Gamepad and touch controls supported</span>
-      <button class="reset" id="play-reset" type="button" hidden>Play another program</button>
+      <button class="play-reset" id="play-reset" type="button" hidden>Play another program</button>
     </div>
 
-    <p class="note">
-      Online play uses <a href="https://emulatorjs.org">EmulatorJS</a>; save states stay
-      in your browser only. Game data is not distributed with this site, so use your own
-      legally obtained files. Prefer playing offline? Download the standalone emulator or
-      the RetroArch core from
-      <a href="https://github.com/AloysHF/LavaXEmu/releases">Releases</a>.
+    <p class="play-note">
+      Online play uses <a href="https://emulatorjs.org" target="_blank" rel="noopener">EmulatorJS</a>;
+      save states stay in your browser only. Game data is not distributed with this site,
+      so use your own legally obtained files. Prefer playing offline? Download the
+      standalone emulator or the RetroArch core from
+      <a href="https://github.com/AloysHF/LavaXEmu/releases" target="_blank" rel="noopener">Releases</a>.
     </p>
-  </div>
+  </main>
 
   <script>
     (function () {
@@ -216,32 +260,20 @@
 
       var RUNTIME_PATH = 'data/';
       var GAME_EXTENSIONS = /\.(lav|zip)$/i;
-      var stage = document.getElementById('stage');
-      var status = document.getElementById('status');
-      var picker = document.getElementById('picker');
-      var pickerError = document.getElementById('picker-error');
+      var stage = document.querySelector('.play-stage');
+      var status = document.getElementById('play-status');
+      var picker = document.getElementById('play-picker');
+      var pickerError = document.getElementById('play-picker-error');
       var error = document.getElementById('play-error');
       var gameInput = document.getElementById('game-file');
-      var gameName = document.getElementById('game-name');
-      var startButton = document.getElementById('play-start');
       var resetButton = document.getElementById('play-reset');
-      var gameFile = null;
       var booted = false;
 
       function show(element) { element.hidden = false; }
       function hide(element) { element.hidden = true; }
 
-      function updateStart() {
-        startButton.disabled = !gameFile;
-      }
-
-      function fail(message) {
-        pickerError.textContent = message;
-        show(pickerError);
-      }
-
-      function boot() {
-        if (booted || !gameFile) return;
+      function boot(file) {
+        if (booted) return;
         booted = true;
         hide(picker);
         hide(error);
@@ -253,8 +285,8 @@
         // Blob URLs have no file name, so EJS_gameName must keep the extension:
         // EmulatorJS writes the content under this name in the wasm filesystem
         // and the core opens it by path (need_fullpath).
-        window.EJS_gameUrl = URL.createObjectURL(gameFile);
-        window.EJS_gameName = gameFile.name;
+        window.EJS_gameUrl = URL.createObjectURL(file);
+        window.EJS_gameName = file.name;
         window.EJS_pathtodata = RUNTIME_PATH;
         window.EJS_startOnLoaded = false;
         window.EJS_backgroundColor = '#0b1020';
@@ -273,22 +305,20 @@
         document.body.appendChild(runtime);
       }
 
-      gameInput.addEventListener('change', function () {
-        var file = gameInput.files && gameInput.files[0];
+      function pick(file) {
         if (!file) return;
         if (!GAME_EXTENSIONS.test(file.name)) {
-          gameFile = null;
-          gameName.textContent = 'Not selected';
-          fail('Only .lav programs or .zip archives are supported.');
-        } else {
-          gameFile = file;
-          gameName.textContent = file.name;
-          hide(pickerError);
+          pickerError.textContent = 'Only .lav programs or .zip archives are supported.';
+          show(pickerError);
+          return;
         }
-        updateStart();
-      });
+        hide(pickerError);
+        boot(file);
+      }
 
-      startButton.addEventListener('click', boot);
+      gameInput.addEventListener('change', function () {
+        pick(gameInput.files && gameInput.files[0]);
+      });
 
       var dragDepth = 0;
 
@@ -315,23 +345,12 @@
         dragDepth = 0;
         stage.classList.remove('is-drop');
         if (booted) return;
-        var file = event.dataTransfer && event.dataTransfer.files && event.dataTransfer.files[0];
-        if (!file) return;
-        if (GAME_EXTENSIONS.test(file.name)) {
-          gameFile = file;
-          gameName.textContent = file.name;
-          hide(pickerError);
-        } else {
-          fail('Only .lav programs or .zip archives are supported.');
-        }
-        updateStart();
+        pick(event.dataTransfer && event.dataTransfer.files && event.dataTransfer.files[0]);
       });
 
       resetButton.addEventListener('click', function () {
         window.location.reload();
       });
-
-      updateStart();
     })();
   </script>
 </body>
