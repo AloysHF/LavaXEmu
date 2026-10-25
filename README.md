@@ -43,6 +43,9 @@ being progressively improved.
   `retro_reset` in libretro)
 - **Libretro integration** — playable libretro core with RGB565 video output,
   RetroPad input, content loading, save states, and reset
+- **Browser play** — EmulatorJS core compiled to WebAssembly, with a ready-to-use
+  [online player](https://AloysHF.github.io/LavaXEmu/play.html) that runs `.lav`
+  programs without uploading them
 
 ## Usage
 
@@ -65,6 +68,14 @@ Install the core and load a game through RetroArch's **Load Content** menu.
 See the [RetroArch Core](docs/RetroArch-Core.md) guide for installation,
 supported platforms, RetroPad mapping, and features.
 
+### Browser (EmulatorJS)
+
+Open <https://AloysHF.github.io/LavaXEmu/play.html>, then pick a `.lav` program
+or a `.zip` that bundles it with its companion data files. It runs locally in
+the browser through the LavaXEmu WebAssembly core; nothing is uploaded. See the
+[EmulatorJS Core](docs/EmulatorJS-Core.md) guide for embedding the core in your
+own EmulatorJS deployment, bundle contents, and controls.
+
 ## Building
 
 Requires [Rust](https://www.rust-lang.org/tools/install) (stable).
@@ -86,6 +97,22 @@ The binary is produced at `target/release/lavaxemu.dll`
 (`liblavaxemu.so` on Linux, `liblavaxemu.dylib` on macOS). Rename it to
 `lavaxemu_libretro.<ext>` before placing it in RetroArch's `cores/`
 directory.
+
+### EmulatorJS Core (for the browser)
+
+The browser core links the libretro core into EmulatorJS's RetroArch fork. It
+needs an activated emsdk, `p7zip`, and the pinned nightly toolchain:
+
+```bash
+cargo +nightly build -p lavaxemu-libretro \
+  --target wasm32-unknown-emscripten --profile wasm-release \
+  -Zbuild-std=std,panic_abort
+
+scripts/build-emulatorjs-core.sh
+```
+
+The bundle is written to `out/lavaxemu-emulatorjs.zip`. See
+[EmulatorJS Core](docs/EmulatorJS-Core.md) for details.
 
 ## Architecture
 

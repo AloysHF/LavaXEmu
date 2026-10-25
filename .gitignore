@@ -7,3 +7,5 @@
 *.pdb
 *.sav
 *.state
+out/
+site/data/
