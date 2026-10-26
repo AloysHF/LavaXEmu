@@ -528,6 +528,7 @@ impl Emulator {
         let mode = String::from_utf8_lossy(&self.read_c_bytes(mode_address)?).into_owned();
         let path = self.decode_guest_string(path_address)?;
         let handle = self.files.open(&path, &mode).map_or(0, i32::from);
+        log::debug!("fopen({path:?}, {mode:?}) = {handle:#x}");
         self.vm.push_value(handle)?;
         Ok(HostAction::Continue)
     }
