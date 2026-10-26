@@ -90,3 +90,18 @@ without an execution error alone does not establish playability.
   leap years, year rollover, SetTime/GetTime, and save-state phase restoration.
 
 ![Running game](images/fixes/hit-game.png)
+
+## Counter-Strike 1.3 (CS 1.3)
+
+- Content: `LAVA1 CS 1.3/非pac/Cs(lav)1_3.lav`.
+- Problem: the flat bundle's `Csgun.dat` and other resources could not be
+  opened through `/LavaData`, preventing normal startup.
+- Fix: shared resource resolution restores startup, animation and mission
+  assets. This game's separate regression exercises the title, setup menu,
+  mission loading and direction controls after the calendar-clock fix.
+- Validation: a 10,075-frame replay reaches combat. Direction input changes
+  the actual camera coordinate, and the mission framebuffer changes as well.
+
+| Title | Mission |
+| --- | --- |
+| ![Title](images/fixes/cs13-title.png) | ![Mission](images/fixes/cs13-mission.png) |

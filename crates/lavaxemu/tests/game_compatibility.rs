@@ -261,3 +261,38 @@ fn hit_loads_the_logo_runs_and_pauses_with_the_keyboard() {
         "resume must restart gameplay"
     );
 }
+
+#[test]
+#[ignore = "requires the local game corpus via LAVAX_GAME_ROOT"]
+fn counter_strike_13_loads_resources_and_enters_a_mission() {
+    let mut emulator = load("LAVA1 CS 1.3/非pac/Cs(lav)1_3.lav");
+    advance(&mut emulator, 3600);
+    let title = emulator.display().indexed_frame().to_vec();
+    capture(&emulator, "cs13-title");
+    let keys = [
+        13, 22, 21, 21, 21, 13, 22, b'b', b'w', b'a', b'd', b'b', 22, b'b', b'w', b'a', b'd', b'b',
+    ];
+    for frame in 0..6400 {
+        emulator
+            .input_mut()
+            .set_keys((frame % 60 < 3).then_some(keys[(frame / 60) % keys.len()]));
+        advance(&mut emulator, 1);
+    }
+    emulator.input_mut().set_keys([]);
+    let mission = emulator.display().indexed_frame().to_vec();
+    capture(&emulator, "cs13-mission");
+    assert!(
+        title != mission,
+        "start must leave the title and load a mission"
+    );
+    let camera = u16::from_le_bytes(emulator.vm().memory()[0x2062..0x2064].try_into().unwrap());
+    assert!(camera <= 140);
+    hold(&mut emulator, if camera == 140 { 23 } else { 22 }, 45);
+    let moved = u16::from_le_bytes(emulator.vm().memory()[0x2062..0x2064].try_into().unwrap());
+    assert_ne!(camera, moved, "direction input must move the camera");
+    capture(&emulator, "cs13-look");
+    assert!(
+        mission != emulator.display().indexed_frame(),
+        "mission controls must update the view"
+    );
+}
