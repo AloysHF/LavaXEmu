@@ -296,3 +296,27 @@ fn counter_strike_13_loads_resources_and_enters_a_mission() {
         "mission controls must update the view"
     );
 }
+
+#[test]
+#[ignore = "requires the local game corpus via LAVAX_GAME_ROOT"]
+fn crazy_f2_counts_presses_and_finishes_the_timed_round() {
+    let mut emulator = load("LAVA1 疯狂F2/F2.lav");
+    press(&mut emulator, b'b');
+    press(&mut emulator, 0x1d);
+    advance(&mut emulator, 480);
+    capture(&emulator, "f2-playing");
+    for _ in 0..5 {
+        press(&mut emulator, 0x1d);
+    }
+    advance(&mut emulator, 360);
+    capture(&emulator, "f2-score");
+    assert!(
+        matches!(
+            emulator.run_frame().unwrap().status,
+            FrameStatus::WaitingForInput
+        ),
+        "timed round must reach its score screen"
+    );
+    let score = emulator.vm().memory()[emulator.vm().local_bp() as usize + 5];
+    assert!(score > 0, "F2 presses must be counted");
+}

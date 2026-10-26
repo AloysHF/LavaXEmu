@@ -105,3 +105,16 @@ without an execution error alone does not establish playability.
 | Title | Mission |
 | --- | --- |
 | ![Title](images/fixes/cs13-title.png) | ![Mission](images/fixes/cs13-mission.png) |
+
+## Crazy F2 (疯狂F2)
+
+- Content: `LAVA1 疯狂F2/F2.lav`.
+- Problem: its five-second F2-press round polls the seconds returned by
+  `GetTime`; the fixed timestamp previously prevented completion.
+- Fix: the advancing guest calendar restores the round timer. This game's
+  regression selects a platform, starts with F2, presses F2 five times, and
+  waits for the score screen without injecting further input.
+- Validation: the round completes and reports a positive press count. The
+  initial title intentionally waits for F2, rather than Enter, to begin.
+
+![Completed round](images/fixes/f2-score.png)
