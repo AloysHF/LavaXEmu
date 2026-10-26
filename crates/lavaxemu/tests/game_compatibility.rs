@@ -103,6 +103,14 @@ fn nested_device_content_loads_and_writes_to_the_same_root() {
     content::flush_dirty_files(&program_path, emulator.files_mut()).unwrap();
     assert_eq!(std::fs::read(data.join("slot.sav")).unwrap(), [9, 8]);
     assert!(!programs.join("lavadata").exists());
+    let lava2 = device.join("LAVA2");
+    std::fs::create_dir(&lava2).unwrap();
+    std::fs::copy(&program_path, lava2.join("test.lav")).unwrap();
+    let emulator = content::load_emulator(&lava2.join("test.lav"), &[]).unwrap();
+    assert_eq!(
+        emulator.files().file("/LavaData/sprite.dat"),
+        Some([1, 2].as_slice())
+    );
 
     let flat = root.path().join("flat");
     std::fs::create_dir_all(root.path().join("LavaData")).unwrap();
@@ -206,4 +214,39 @@ fn puzzled_sheep_loads_levels_moves_the_cursor_and_runs_the_simulation() {
         emulator.run_frame().unwrap().status,
         FrameStatus::WaitingForInput
     ));
+}
+
+#[test]
+#[ignore = "requires the local game corpus via LAVAX_GAME_ROOT"]
+fn hit_loads_the_logo_runs_and_pauses_with_the_keyboard() {
+    let mut emulator = load("LAVA2 打地鼠/LAVA2/Hit.lav");
+    advance(&mut emulator, 300);
+    press(&mut emulator, 13);
+    advance(&mut emulator, 120);
+    capture(&emulator, "hit-game");
+    let game = emulator.display().indexed_frame().to_vec();
+    for key in *b"tyughjbnm" {
+        press(&mut emulator, key);
+    }
+    assert!(
+        game != emulator.display().indexed_frame(),
+        "hitting must update the game"
+    );
+    emulator.input_mut().set_key(b'p', true);
+    advance(&mut emulator, 12);
+    emulator.input_mut().set_key(b'p', false);
+    advance(&mut emulator, 30);
+    let paused = emulator.display().indexed_frame().to_vec();
+    advance(&mut emulator, 120);
+    assert!(
+        paused == emulator.display().indexed_frame(),
+        "pause must freeze gameplay"
+    );
+    press(&mut emulator, 13);
+    advance(&mut emulator, 120);
+    capture(&emulator, "hit-resumed");
+    assert!(
+        paused != emulator.display().indexed_frame(),
+        "resume must restart gameplay"
+    );
 }

@@ -73,3 +73,15 @@ without an execution error alone does not establish playability.
 | Level selection | Simulation running |
 | --- | --- |
 | ![Level](images/fixes/sheep-level.png) | ![Simulation](images/fixes/sheep-running.png) |
+
+## Hit (打地鼠)
+
+- Content: `LAVA2 打地鼠/LAVA2/Hit.lav`.
+- Problem: the `LAVA2` program folder was not recognized as part of a device
+  layout, so `/LavaData/MULogo.dat` could not be loaded and `Read Error` appeared.
+- Fix: recognize `LAVA2` alongside `LAVA` and `GVmaker` in both frontends.
+- Validation: logo, playfield, nine TYUGHJBNM hit controls, P to pause and
+  Enter to resume. The regression checks the framebuffer stays frozen during
+  a 120-frame pause and changes again after resuming. Also replayed 1,800 frames.
+
+![Running game](images/fixes/hit-game.png)

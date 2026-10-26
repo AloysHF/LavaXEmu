@@ -519,6 +519,7 @@ fn import_companion_files(
             if !device_folder.is_some_and(|folder| {
                 folder.as_os_str().eq_ignore_ascii_case("GVmaker")
                     || folder.as_os_str().eq_ignore_ascii_case("LAVA")
+                    || folder.as_os_str().eq_ignore_ascii_case("LAVA2")
             }) {
                 return false;
             }
