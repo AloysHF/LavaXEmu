@@ -418,3 +418,54 @@ fn speed_racing_loads_the_track_and_responds_to_steering() {
         "steering must appear on screen"
     );
 }
+
+#[test]
+#[ignore = "requires the local game corpus via LAVAX_GAME_ROOT"]
+fn modified_speed_racing_steers_and_returns_from_the_score_screen() {
+    let mut emulator = load("LAVA1 生死时速II/生死时速Ⅱ（修改版）.lav");
+    advance(&mut emulator, 300);
+    press(&mut emulator, 13);
+    press(&mut emulator, b'b');
+    for _ in 0..300 {
+        if (0x156d..0x1936).contains(&emulator.vm().pc()) {
+            break;
+        }
+        advance(&mut emulator, 1);
+    }
+    assert!((0x156d..0x1936).contains(&emulator.vm().pc()));
+    capture(&emulator, "swr-track");
+    let mut idle = emulator.clone();
+    let base = emulator.vm().local_bp() as usize;
+    hold(&mut emulator, 22, 6);
+    advance(&mut idle, 36);
+    assert!(
+        emulator.vm().memory()[base + 7..base + 9] != idle.vm().memory()[base + 7..base + 9],
+        "right input must steer the car"
+    );
+    for _ in 0..1800 {
+        if [0x1715, 0x1774].contains(&emulator.vm().pc()) {
+            break;
+        }
+        advance(&mut emulator, 1);
+    }
+    assert!(
+        [0x1715, 0x1774].contains(&emulator.vm().pc()),
+        "round must reach its score screen"
+    );
+    let score = emulator.display().indexed_frame().to_vec();
+    capture(&emulator, "swr-score");
+    advance(&mut emulator, 120);
+    assert!(
+        score == emulator.display().indexed_frame(),
+        "score screen must stay stable"
+    );
+    emulator.input_mut().set_keys([27]);
+    advance(&mut emulator, 1);
+    emulator.input_mut().set_keys([]);
+    advance(&mut emulator, 120);
+    capture(&emulator, "swr-menu");
+    assert!(
+        score != emulator.display().indexed_frame(),
+        "Escape must return to the menu"
+    );
+}

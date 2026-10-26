@@ -148,7 +148,7 @@ impl Emulator {
             self.console.write(byte);
         }
         self.console.render(&mut self.display);
-        Ok(HostAction::Continue)
+        Ok(HostAction::Present)
     }
 
     fn system_strcpy(&mut self) -> Result<HostAction> {
@@ -1357,6 +1357,24 @@ mod tests {
         assert_eq!(emulator.display().indexed_frame()[3 * 240 + 4], 0);
         assert_eq!(emulator.run_frame().unwrap().status, FrameStatus::Presented);
         assert_eq!(emulator.display().indexed_frame()[3 * 240 + 4], 255);
+    }
+
+    #[test]
+    fn printf_presents_the_console_before_polling_for_input() {
+        let mut emulator = emulator(&[
+            0x0d, b'S', b'c', b'o', b'r', b'e', 0, 0x01, 1, 0x82, 0x93, 0x38, 0x40,
+        ]);
+        assert_eq!(emulator.run_frame().unwrap().status, FrameStatus::Presented);
+        assert!(
+            emulator
+                .display()
+                .indexed_frame()
+                .iter()
+                .any(|&pixel| pixel != 0)
+        );
+        emulator.input_mut().set_key(13, true);
+        assert_eq!(emulator.run_frame().unwrap().status, FrameStatus::Halted(0));
+        assert_eq!(emulator.vm().result(), 13);
     }
 
     #[test]

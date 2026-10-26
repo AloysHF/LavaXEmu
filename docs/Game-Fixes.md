@@ -154,3 +154,20 @@ without an execution error alone does not establish playability.
   the CS 1.3 replay now explicitly handles its Ready confirmation.
 
 ![Track after steering](images/fixes/speed-racing.png)
+
+## Modified Speed Racing II (生死时速Ⅱ修改版)
+
+- Content: `LAVA1 生死时速II/生死时速Ⅱ（修改版）.lav`.
+- Problem: its score loop repeatedly calls Locate, printf and Inkey without
+  Refresh. Profiling found 6,250 identical score prints in one host frame,
+  making the full replay exceed the 45-second scan limit.
+- Fix: printf yields `Presented` after rendering its console output, giving
+  the frontend a display/input boundary for console-driven loops as well.
+- Validation: choose easy mode, steer right, reach a stable score screen, and
+  return to the mode menu with Escape. Steering position is checked against
+  an idle clone. A 3,600-frame replay completes in about 0.4 seconds locally.
+  A core test confirms console output is presented before the next input poll.
+
+| Score | Menu after Escape |
+| --- | --- |
+| ![Score](images/fixes/swr-score.png) | ![Mode menu](images/fixes/swr-menu.png) |
