@@ -356,9 +356,45 @@ impl Emulator {
     }
 
     fn advance_frame_clock(&mut self) {
+        let previous_second = self.elapsed_ms / 1_000;
         self.time_remainder += 1_000;
         self.elapsed_ms += u64::from(self.time_remainder / 60);
         self.time_remainder %= 60;
+        if self.elapsed_ms / 1_000 != previous_second {
+            self.advance_calendar_second();
+        }
+    }
+
+    fn advance_calendar_second(&mut self) {
+        for (index, limit) in [(6, 60), (5, 60), (4, 24)] {
+            self.calendar[index] = self.calendar[index].wrapping_add(1);
+            if self.calendar[index] < limit {
+                return;
+            }
+            self.calendar[index] = 0;
+        }
+        self.calendar[7] = (self.calendar[7] + 1) % 7;
+        let year = u16::from_le_bytes([self.calendar[0], self.calendar[1]]);
+        let days = match self.calendar[2] {
+            2 if year.is_multiple_of(4)
+                && (!year.is_multiple_of(100) || year.is_multiple_of(400)) =>
+            {
+                29
+            }
+            2 => 28,
+            4 | 6 | 9 | 11 => 30,
+            _ => 31,
+        };
+        self.calendar[3] = self.calendar[3].wrapping_add(1);
+        if self.calendar[3] <= days {
+            return;
+        }
+        self.calendar[3] = 1;
+        self.calendar[2] = self.calendar[2].wrapping_add(1);
+        if self.calendar[2] > 12 {
+            self.calendar[2] = 1;
+            self.calendar[..2].copy_from_slice(&year.wrapping_add(1).to_le_bytes());
+        }
     }
 
     /// Advance the delay counter using LVM timing: delay is counted in
@@ -387,5 +423,75 @@ impl Emulator {
             );
         }
         None
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    fn emulator() -> Emulator {
+        let mut image = vec![0; crate::LAV_HEADER_SIZE];
+        image[..4].copy_from_slice(&crate::LAV_MAGIC);
+        image.push(0x40);
+        Emulator::new(Program::load(&image).unwrap())
+    }
+
+    #[test]
+    fn advances_calendar_at_sixty_frames_per_second_and_restores_its_phase() {
+        let mut emulator = emulator();
+        for _ in 0..59 {
+            emulator.advance_frame_clock();
+        }
+        assert_eq!(emulator.calendar[6], 0);
+        let state = emulator.save_state().unwrap();
+        emulator.advance_frame_clock();
+        assert_eq!(emulator.calendar[6], 1);
+        emulator.load_state(&state).unwrap();
+        emulator.advance_frame_clock();
+        assert_eq!(emulator.calendar[6], 1);
+        for _ in 0..3540 {
+            emulator.advance_frame_clock();
+        }
+        assert_eq!(&emulator.calendar[4..7], &[0, 1, 0]);
+    }
+
+    #[test]
+    fn rolls_over_leap_days_months_and_years() {
+        let mut emulator = emulator();
+        for (year, month, day, expected_year, expected_month, expected_day) in [
+            (2000u16, 2, 28, 2000u16, 2, 29),
+            (1900, 2, 28, 1900, 3, 1),
+            (2024, 2, 29, 2024, 3, 1),
+            (2024, 4, 30, 2024, 5, 1),
+            (2024, 12, 31, 2025, 1, 1),
+        ] {
+            let [low, high] = year.to_le_bytes();
+            emulator.calendar = [low, high, month, day, 23, 59, 59, 6];
+            emulator.advance_calendar_second();
+            let [low, high] = expected_year.to_le_bytes();
+            assert_eq!(
+                emulator.calendar,
+                [low, high, expected_month, expected_day, 0, 0, 0, 0]
+            );
+        }
+    }
+
+    #[test]
+    fn gettime_reports_elapsed_seconds_after_settime() {
+        let mut emulator = emulator();
+        let date = [0xe8, 0x07, 12, 31, 23, 59, 59, 2];
+        emulator.vm.memory_mut()[0x2000..0x2008].copy_from_slice(&date);
+        emulator.vm.push_value(0x2000).unwrap();
+        emulator.dispatch_system_call(67).unwrap();
+        for _ in 0..60 {
+            emulator.advance_frame_clock();
+        }
+        emulator.vm.push_value(0x2000).unwrap();
+        emulator.dispatch_system_call(66).unwrap();
+        assert_eq!(
+            &emulator.vm.memory()[0x2000..0x2008],
+            &[0xe9, 0x07, 1, 1, 0, 0, 0, 3]
+        );
     }
 }

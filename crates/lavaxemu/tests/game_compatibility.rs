@@ -24,9 +24,15 @@ fn advance(emulator: &mut Emulator, frames: usize) {
 }
 
 fn press(emulator: &mut Emulator, key: u8) {
-    emulator.input_mut().set_key(key, true);
-    advance(emulator, 3);
-    emulator.input_mut().set_key(key, false);
+    hold(emulator, key, 3);
+}
+
+fn hold(emulator: &mut Emulator, key: u8, frames: usize) {
+    for _ in 0..frames {
+        emulator.input_mut().set_keys([key]);
+        advance(emulator, 1);
+    }
+    emulator.input_mut().set_keys([]);
     advance(emulator, 30);
 }
 
@@ -222,8 +228,16 @@ fn hit_loads_the_logo_runs_and_pauses_with_the_keyboard() {
     let mut emulator = load("LAVA2 打地鼠/LAVA2/Hit.lav");
     advance(&mut emulator, 300);
     press(&mut emulator, 13);
+    press(&mut emulator, 13);
     advance(&mut emulator, 120);
     capture(&emulator, "hit-game");
+    let seconds = emulator.vm().memory()[0x22df];
+    advance(&mut emulator, 120);
+    assert_ne!(
+        seconds,
+        emulator.vm().memory()[0x22df],
+        "GetTime must advance the game timer"
+    );
     let game = emulator.display().indexed_frame().to_vec();
     for key in *b"tyughjbnm" {
         press(&mut emulator, key);
@@ -232,10 +246,7 @@ fn hit_loads_the_logo_runs_and_pauses_with_the_keyboard() {
         game != emulator.display().indexed_frame(),
         "hitting must update the game"
     );
-    emulator.input_mut().set_key(b'p', true);
-    advance(&mut emulator, 12);
-    emulator.input_mut().set_key(b'p', false);
-    advance(&mut emulator, 30);
+    hold(&mut emulator, b'p', 45);
     let paused = emulator.display().indexed_frame().to_vec();
     advance(&mut emulator, 120);
     assert!(

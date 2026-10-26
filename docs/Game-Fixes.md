@@ -83,5 +83,10 @@ without an execution error alone does not establish playability.
 - Validation: logo, playfield, nine TYUGHJBNM hit controls, P to pause and
   Enter to resume. The regression checks the framebuffer stays frozen during
   a 120-frame pause and changes again after resuming. Also replayed 1,800 frames.
+- Timer follow-up: `GetTime` now advances with the deterministic 60 Hz clock,
+  including calendar rollovers. Previously it always returned the initial
+  timestamp, preventing the game's countdown from advancing. The regression
+  checks the game's time buffer changes over two seconds; clock tests cover
+  leap years, year rollover, SetTime/GetTime, and save-state phase restoration.
 
 ![Running game](images/fixes/hit-game.png)
