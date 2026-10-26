@@ -118,3 +118,20 @@ without an execution error alone does not establish playability.
   initial title intentionally waits for F2, rather than Enter, to begin.
 
 ![Completed round](images/fixes/f2-score.png)
+
+## Lost Fantasy
+
+- Content: `LAVA1 lost fantasy/LF_demo.lav` and `LF_demo(PC).lav`.
+- Problem: the device version continuously captures and redraws the full
+  monochrome screen. Per-pixel buffer access made its 1,800-frame corpus
+  replay exceed the 45-second scan limit. The PC version adds a 30 ms delay.
+- Fix: copy in-bounds monochrome bitmaps in groups of eight pixels, and pack
+  captured rows directly. Clipped, mirrored, inverted, and other color modes
+  retain their existing paths. No guest timing or instruction budgets change.
+- Validation: the same 1,800-frame replay completes in about 2.9 seconds when
+  run individually on the development machine; frame 1,199 is identical to the
+  previous capture. Both versions respond to D movement, with horizontal
+  position and framebuffer differences checked against an idle clone.
+  Bitmap tests exercise all 256 byte patterns and neighboring-pixel boundaries.
+
+![PC version after movement](images/fixes/lost-fantasy.png)

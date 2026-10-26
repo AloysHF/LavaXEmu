@@ -320,3 +320,33 @@ fn crazy_f2_counts_presses_and_finishes_the_timed_round() {
     let score = emulator.vm().memory()[emulator.vm().local_bp() as usize + 5];
     assert!(score > 0, "F2 presses must be counted");
 }
+
+#[test]
+#[ignore = "requires the local game corpus via LAVAX_GAME_ROOT"]
+fn lost_fantasy_device_and_pc_versions_draw_and_move() {
+    for (name, image) in [("LF_demo.lav", "lf-device"), ("LF_demo(PC).lav", "lf-pc")] {
+        let mut emulator = load(&format!("LAVA1 lost fantasy/{name}"));
+        advance(&mut emulator, 1);
+        let mut idle = emulator.clone();
+        hold(&mut emulator, b'd', 6);
+        advance(&mut idle, 36);
+        let position = |emulator: &Emulator| {
+            [
+                emulator.vm().memory()[0x2008],
+                emulator.vm().memory()[0x2009],
+                emulator.vm().memory()[0x2010],
+                emulator.vm().memory()[0x2011],
+            ]
+        };
+        assert_ne!(
+            position(&emulator),
+            position(&idle),
+            "D must change horizontal position in {name}"
+        );
+        assert!(
+            emulator.display().indexed_frame() != idle.display().indexed_frame(),
+            "movement must appear in {name}"
+        );
+        capture(&emulator, image);
+    }
+}
