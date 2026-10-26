@@ -58,3 +58,18 @@ without an execution error alone does not establish playability.
 | Main room | Status screen after Enter |
 | --- | --- |
 | ![Main room](images/fixes/pm4-game.png) | ![Status screen](images/fixes/pm4-status.png) |
+
+## Puzzled Sheep
+
+- Content: `LAVA1 Puzzled Sheep/Psheep.lav`.
+- Problem: starting the game opens `/GVMdata/Psheep.dat`, while the bundle
+  places `Psheep.dat` beside the program; the game displayed `Error!` and exited.
+- Fix: recognize the legacy `/GVMdata` resource prefix for existing flat
+  companions, with the same exact-path priority as `/LavaData`.
+- Validation: first-level loading, cursor movement, simulation animation,
+  Escape to leave simulation, and 1,200 exploratory frames. Checked the
+  supplied game source to verify the expected controls and resource name.
+
+| Level selection | Simulation running |
+| --- | --- |
+| ![Level](images/fixes/sheep-level.png) | ![Simulation](images/fixes/sheep-running.png) |

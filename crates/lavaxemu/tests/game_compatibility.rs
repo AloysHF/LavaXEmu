@@ -177,3 +177,33 @@ fn princess_maker_4_reaches_gameplay_and_opens_the_status_menu() {
     );
     advance(&mut emulator, 600);
 }
+
+#[test]
+#[ignore = "requires the local game corpus via LAVAX_GAME_ROOT"]
+fn puzzled_sheep_loads_levels_moves_the_cursor_and_runs_the_simulation() {
+    let mut emulator = load("LAVA1 Puzzled Sheep/Psheep.lav");
+    advance(&mut emulator, 60);
+    let title = emulator.display().indexed_frame().to_vec();
+    press(&mut emulator, 13);
+    let level = emulator.display().indexed_frame().to_vec();
+    capture(&emulator, "sheep-level");
+    assert!(title != level, "starting must load the level");
+    press(&mut emulator, 22);
+    assert!(
+        level != emulator.display().indexed_frame(),
+        "cursor must move"
+    );
+    let selection = emulator.display().indexed_frame().to_vec();
+    press(&mut emulator, 13);
+    capture(&emulator, "sheep-running");
+    assert!(
+        selection != emulator.display().indexed_frame(),
+        "simulation must animate"
+    );
+    press(&mut emulator, 27);
+    advance(&mut emulator, 60);
+    assert!(matches!(
+        emulator.run_frame().unwrap().status,
+        FrameStatus::WaitingForInput
+    ));
+}
