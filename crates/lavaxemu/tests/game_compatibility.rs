@@ -25,9 +25,31 @@ fn advance(emulator: &mut Emulator, frames: usize) {
 
 fn press(emulator: &mut Emulator, key: u8) {
     emulator.input_mut().set_key(key, true);
-    advance(emulator, 1);
+    advance(emulator, 3);
     emulator.input_mut().set_key(key, false);
     advance(emulator, 30);
+}
+
+fn capture(emulator: &Emulator, name: &str) {
+    let Some(directory) = std::env::var_os("LAVAX_CAPTURE_DIR") else {
+        return;
+    };
+    let directory = PathBuf::from(directory);
+    std::fs::create_dir_all(&directory).unwrap();
+    let display = emulator.display();
+    let rgb: Vec<u8> = display
+        .indexed_frame()
+        .iter()
+        .flat_map(|&pixel| display.palette()[usize::from(pixel)])
+        .collect();
+    image::save_buffer(
+        directory.join(format!("{name}.png")),
+        &rgb,
+        u32::from(display.width()),
+        u32::from(display.height()),
+        image::ColorType::Rgb8,
+    )
+    .unwrap();
 }
 
 #[test]
@@ -123,4 +145,35 @@ fn pet_world_3h_loads_nested_assets_and_opens_pet_management() {
     );
     press(&mut emulator, 27);
     advance(&mut emulator, 300);
+}
+
+#[test]
+#[ignore = "requires the local game corpus via LAVAX_GAME_ROOT"]
+fn princess_maker_4_reaches_gameplay_and_opens_the_status_menu() {
+    let mut emulator = load("LAVA2 美少女梦工场/非pac/PM4.lav");
+    for frame in 0..6000 {
+        if frame >= 300 {
+            let input_frame = frame - 300;
+            let key = [13, b'y', 13][(input_frame / 60) % 3];
+            emulator
+                .input_mut()
+                .set_keys((input_frame % 60 < 3).then_some(key));
+        }
+        advance(&mut emulator, 1);
+        if frame == 2999 {
+            capture(&emulator, "pm4-confirmation");
+        }
+    }
+    emulator.input_mut().set_keys([]);
+    press(&mut emulator, 13);
+    let game = emulator.display().indexed_frame().to_vec();
+    capture(&emulator, "pm4-game");
+    assert!(game.iter().any(|&pixel| pixel != game[0]));
+    press(&mut emulator, 13);
+    capture(&emulator, "pm4-status");
+    assert!(
+        game != emulator.display().indexed_frame(),
+        "status menu must open"
+    );
+    advance(&mut emulator, 600);
 }

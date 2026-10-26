@@ -43,3 +43,18 @@ without an execution error alone does not establish playability.
   External multiplayer is outside this basic-control check.
 
 ![Pet management and statistics](images/fixes/pet-world-3h-after.png)
+
+## Princess Maker 4 (美少女梦工场4)
+
+- Content: `LAVA2 美少女梦工场/非pac/PM4.lav`.
+- Problem: `/LavaData/pm_data*.dat` and `PM4_cfg.dat` could not be opened in
+  the flat bundle, leaving a blank screen and exiting in the first frame.
+- Fix: the shared flat-companion resolution above restores all four data
+  files. This game's separate regression covers the complete introduction,
+  character confirmation, main room, and opening the status screen with Enter.
+- Validation: 6,666 scripted frames without an error or exit, a 15,000-frame
+  exploratory replay, and visual inspection of the room and status pages.
+
+| Main room | Status screen after Enter |
+| --- | --- |
+| ![Main room](images/fixes/pm4-game.png) | ![Status screen](images/fixes/pm4-status.png) |
