@@ -99,8 +99,10 @@ without an execution error alone does not establish playability.
 - Fix: shared resource resolution restores startup, animation and mission
   assets. This game's separate regression exercises the title, setup menu,
   mission loading and direction controls after the calendar-clock fix.
-- Validation: a 10,075-frame replay reaches combat. Direction input changes
-  the actual camera coordinate, and the mission framebuffer changes as well.
+- Validation: the replay selects Start, confirms Ready, and reaches combat.
+  Direction input changes the actual camera coordinate, and the mission
+  framebuffer changes as well. Stage checks follow guest execution rather
+  than assuming a fixed animation duration.
 
 | Title | Mission |
 | --- | --- |
@@ -127,7 +129,8 @@ without an execution error alone does not establish playability.
   replay exceed the 45-second scan limit. The PC version adds a 30 ms delay.
 - Fix: copy in-bounds monochrome bitmaps in groups of eight pixels, and pack
   captured rows directly. Clipped, mirrored, inverted, and other color modes
-  retain their existing paths. No guest timing or instruction budgets change.
+  retain their existing paths. The bitmap fast paths preserve pixel results;
+  presentation pacing is handled separately below.
 - Validation: the same 1,800-frame replay completes in about 2.9 seconds when
   run individually on the development machine; frame 1,199 is identical to the
   previous capture. Both versions respond to D movement, with horizontal
@@ -135,3 +138,19 @@ without an execution error alone does not establish playability.
   Bitmap tests exercise all 256 byte patterns and neighboring-pixel boundaries.
 
 ![PC version after movement](images/fixes/lost-fantasy.png)
+
+## Speed Racing corpus variant (极速狂飙 / 生死时速II)
+
+- Content: `LAVA1 极速狂飙/极速狂飙.lav`, whose in-game title is 生死时速II.
+- Problem: `Refresh` copied the framebuffer but kept executing guest code in
+  the same host frame. Unthrottled draw loops consumed CPU and advanced past
+  the moment when the frontend could deliver steering input.
+- Fix: `Refresh` now returns `Presented`, yielding to the host after each
+  visible frame. Unit tests check that successive presented frames remain
+  distinct. The instruction budget remains unchanged.
+- Validation: enter the main menu, select a difficulty, and start the game.
+  Right steering changes horizontal position and the rendered track compared
+  with an idle clone. All previously completed game regressions are rerun;
+  the CS 1.3 replay now explicitly handles its Ready confirmation.
+
+![Track after steering](images/fixes/speed-racing.png)

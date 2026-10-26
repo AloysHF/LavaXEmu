@@ -23,7 +23,7 @@ impl Emulator {
             8 => self.system_write_block(),
             9 => {
                 self.display.present();
-                Ok(HostAction::Continue)
+                Ok(HostAction::Present)
             }
             10 => self.system_textout(),
             11 => self.system_rectangle(true),
@@ -1341,8 +1341,22 @@ mod tests {
             0x40,
         ]);
         let frame = emulator.run_frame().unwrap();
-        assert_eq!(frame.status, FrameStatus::Halted(0));
+        assert_eq!(frame.status, FrameStatus::Presented);
         assert_eq!(emulator.display().indexed_frame()[3 * 240 + 2], 255);
+        assert_eq!(emulator.run_frame().unwrap().status, FrameStatus::Halted(0));
+    }
+
+    #[test]
+    fn refresh_preserves_each_frame_before_advancing_the_guest() {
+        let mut emulator = emulator(&[
+            0x01, 2, 0x01, 3, 0x01, 0x41, 0x94, 0x89, 0x01, 4, 0x01, 3, 0x01, 0x41, 0x94, 0x89,
+            0x40,
+        ]);
+        assert_eq!(emulator.run_frame().unwrap().status, FrameStatus::Presented);
+        assert_eq!(emulator.display().indexed_frame()[3 * 240 + 2], 255);
+        assert_eq!(emulator.display().indexed_frame()[3 * 240 + 4], 0);
+        assert_eq!(emulator.run_frame().unwrap().status, FrameStatus::Presented);
+        assert_eq!(emulator.display().indexed_frame()[3 * 240 + 4], 255);
     }
 
     #[test]

@@ -269,16 +269,36 @@ fn counter_strike_13_loads_resources_and_enters_a_mission() {
     advance(&mut emulator, 3600);
     let title = emulator.display().indexed_frame().to_vec();
     capture(&emulator, "cs13-title");
-    let keys = [
-        13, 22, 21, 21, 21, 13, 22, b'b', b'w', b'a', b'd', b'b', 22, b'b', b'w', b'a', b'd', b'b',
-    ];
-    for frame in 0..6400 {
-        emulator
-            .input_mut()
-            .set_keys((frame % 60 < 3).then_some(keys[(frame / 60) % keys.len()]));
+    hold(&mut emulator, 13, 18);
+    capture(&emulator, "cs13-after-enter");
+    advance(&mut emulator, 1200);
+    capture(&emulator, "cs13-setup");
+    for key in [21, 21, 21, 13] {
+        press(&mut emulator, key);
+    }
+    for _ in 0..3600 {
+        if emulator.vm().pc() == 0x4ca4 {
+            break;
+        }
         advance(&mut emulator, 1);
     }
-    emulator.input_mut().set_keys([]);
+    assert_eq!(
+        emulator.vm().pc(),
+        0x4ca4,
+        "mission must reach Ready confirmation"
+    );
+    press(&mut emulator, 13);
+    for _ in 0..3600 {
+        if (0x5205..0x5f1c).contains(&emulator.vm().pc()) {
+            break;
+        }
+        advance(&mut emulator, 1);
+    }
+    assert!(
+        (0x5205..0x5f1c).contains(&emulator.vm().pc()),
+        "mission loading must finish, pc={:x}",
+        emulator.vm().pc()
+    );
     let mission = emulator.display().indexed_frame().to_vec();
     capture(&emulator, "cs13-mission");
     assert!(
@@ -349,4 +369,52 @@ fn lost_fantasy_device_and_pc_versions_draw_and_move() {
         );
         capture(&emulator, image);
     }
+}
+
+#[test]
+#[ignore = "requires the local game corpus via LAVAX_GAME_ROOT"]
+fn speed_racing_loads_the_track_and_responds_to_steering() {
+    let mut emulator = load("LAVA1 极速狂飙/极速狂飙.lav");
+    advance(&mut emulator, 1);
+    press(&mut emulator, 13);
+    for _ in 0..300 {
+        if (1..=4).contains(&u16::from_le_bytes(
+            emulator.vm().memory()[0x6515..0x6517].try_into().unwrap(),
+        )) {
+            break;
+        }
+        advance(&mut emulator, 1);
+    }
+    let choice = u16::from_le_bytes(emulator.vm().memory()[0x6515..0x6517].try_into().unwrap());
+    assert!((1..=4).contains(&choice));
+    for key in std::iter::repeat_n(20, (choice - 1) as usize).chain([13]) {
+        emulator.input_mut().set_keys([key]);
+        advance(&mut emulator, 1);
+        emulator.input_mut().set_keys([]);
+        advance(&mut emulator, 1);
+    }
+    advance(&mut emulator, 120);
+    emulator.input_mut().set_keys([13]);
+    advance(&mut emulator, 1);
+    emulator.input_mut().set_keys([]);
+    advance(&mut emulator, 1);
+    for _ in 0..300 {
+        if (0x155d..0x1f68).contains(&emulator.vm().pc()) {
+            break;
+        }
+        advance(&mut emulator, 1);
+    }
+    capture(&emulator, "speed-track");
+    let mut idle = emulator.clone();
+    hold(&mut emulator, 22, 6);
+    advance(&mut idle, 36);
+    capture(&emulator, "speed-steering");
+    assert!(
+        emulator.vm().memory()[0x200f..0x2015] != idle.vm().memory()[0x200f..0x2015],
+        "steering must change the horizontal position"
+    );
+    assert!(
+        emulator.display().indexed_frame() != idle.display().indexed_frame(),
+        "steering must appear on screen"
+    );
 }
