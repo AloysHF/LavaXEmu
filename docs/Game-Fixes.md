@@ -39,6 +39,7 @@ without an execution error alone does not establish playability.
 - Validation: pet sprites, status information, pet management, detail pages,
   menu navigation and continued execution. Unit tests cover padding and
   nested resource/write-back paths, including unrelated ancestor directories.
+  Write-back preserves existing on-disk path casing on case-sensitive systems.
   External multiplayer is outside this basic-control check.
 
 ![Pet management and statistics](images/fixes/pet-world-3h-after.png)

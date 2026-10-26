@@ -23,7 +23,16 @@ pub fn flush_dirty_files(program_path: &Path, files: &mut VirtualFileSystem) -> 
     let root = content_root(program_path);
     for (virtual_path, data) in files.take_dirty_files() {
         let relative = virtual_path.trim_start_matches('/');
-        let destination = root.join(relative.replace('/', std::path::MAIN_SEPARATOR_STR));
+        let mut destination = root.clone();
+        for component in relative.split('/') {
+            let existing = fs::read_dir(&destination).ok().and_then(|entries| {
+                entries
+                    .filter_map(Result::ok)
+                    .find(|entry| entry.file_name().eq_ignore_ascii_case(component))
+            });
+            destination =
+                existing.map_or_else(|| destination.join(component), |entry| entry.path());
+        }
         if let Some(parent) = destination.parent() {
             fs::create_dir_all(parent)
                 .with_context(|| format!("failed to create {}", parent.display()))?;
