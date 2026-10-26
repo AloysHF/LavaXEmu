@@ -517,6 +517,7 @@ dependencies = [
  "lavaxemu-core",
  "log",
  "minifb",
+ "tempfile",
 ]
 
 [[package]]

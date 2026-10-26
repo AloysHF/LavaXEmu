@@ -507,7 +507,29 @@ fn import_companion_files(
     program_path: &Path,
     files: &mut lavaxemu_core::VirtualFileSystem,
 ) -> std::io::Result<()> {
-    let root = program_path.parent().unwrap_or_else(|| Path::new("."));
+    let parent = program_path.parent().unwrap_or_else(|| Path::new("."));
+    let root = parent
+        .ancestors()
+        .take(4)
+        .find(|ancestor| {
+            let device_folder = program_path
+                .strip_prefix(ancestor)
+                .ok()
+                .and_then(|relative| relative.components().next());
+            if !device_folder.is_some_and(|folder| {
+                folder.as_os_str().eq_ignore_ascii_case("GVmaker")
+                    || folder.as_os_str().eq_ignore_ascii_case("LAVA")
+            }) {
+                return false;
+            }
+            fs::read_dir(ancestor).is_ok_and(|entries| {
+                entries.filter_map(Result::ok).any(|entry| {
+                    entry.file_type().is_ok_and(|kind| kind.is_dir())
+                        && entry.file_name().eq_ignore_ascii_case("LavaData")
+                })
+            })
+        })
+        .unwrap_or(parent);
     // EmulatorJS unpacks a flat ZIP archive into the wasm filesystem root,
     // which also holds its own virtual directories (/dev, /proc, /usr). Only
     // import the files sitting directly in the root in that case.

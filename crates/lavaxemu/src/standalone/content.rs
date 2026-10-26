@@ -1,4 +1,7 @@
-use std::{fs, path::Path};
+use std::{
+    fs,
+    path::{Path, PathBuf},
+};
 
 use anyhow::{Context, Result};
 use lavaxemu_core::{Emulator, Program, VirtualFileSystem};
@@ -11,14 +14,13 @@ pub fn load_emulator(program_path: &Path, arguments: &[String]) -> Result<Emulat
     let mut emulator = Emulator::new(program);
     emulator.set_command_line(arguments.join(" ").into_bytes());
 
-    if let Some(root) = program_path.parent() {
-        import_directory(root, root, program_path, emulator.files_mut())?;
-    }
+    let root = content_root(program_path);
+    import_directory(&root, &root, program_path, emulator.files_mut())?;
     Ok(emulator)
 }
 
 pub fn flush_dirty_files(program_path: &Path, files: &mut VirtualFileSystem) -> Result<()> {
-    let root = program_path.parent().unwrap_or_else(|| Path::new("."));
+    let root = content_root(program_path);
     for (virtual_path, data) in files.take_dirty_files() {
         let relative = virtual_path.trim_start_matches('/');
         let destination = root.join(relative.replace('/', std::path::MAIN_SEPARATOR_STR));
@@ -30,6 +32,33 @@ pub fn flush_dirty_files(program_path: &Path, files: &mut VirtualFileSystem) -> 
             .with_context(|| format!("failed to write {}", destination.display()))?;
     }
     Ok(())
+}
+
+fn content_root(program_path: &Path) -> PathBuf {
+    let parent = program_path.parent().unwrap_or_else(|| Path::new("."));
+    parent
+        .ancestors()
+        .take(4)
+        .find(|ancestor| {
+            let device_folder = program_path
+                .strip_prefix(ancestor)
+                .ok()
+                .and_then(|relative| relative.components().next());
+            if !device_folder.is_some_and(|folder| {
+                folder.as_os_str().eq_ignore_ascii_case("GVmaker")
+                    || folder.as_os_str().eq_ignore_ascii_case("LAVA")
+            }) {
+                return false;
+            }
+            fs::read_dir(ancestor).is_ok_and(|entries| {
+                entries.filter_map(Result::ok).any(|entry| {
+                    entry.file_type().is_ok_and(|kind| kind.is_dir())
+                        && entry.file_name().eq_ignore_ascii_case("LavaData")
+                })
+            })
+        })
+        .unwrap_or(parent)
+        .to_path_buf()
 }
 
 fn import_directory(

@@ -26,3 +26,19 @@ without an execution error alone does not establish playability.
 | Before | Board after input |
 | --- | --- |
 | ![Missing resource](images/fixes/dark-chess-before.png) | ![Playable board](images/fixes/dark-chess-after.png) |
+
+## Pet World 3H (宠物世界3H)
+
+- Content: `LAVA1 宠物世界/GVmaker/NC3000/宠物世界3H.lav`.
+- Problems: opcode `0x00` was rejected at `0x72`, although the reference VM
+  treats it as a no-op. Importing only `GVmaker/NC3000` also omitted the sibling
+  `LavaData/宠世图片.dat` directory.
+- Fix: accept zero padding as a no-op; recognize `GVmaker` and `LAVA` device
+  layouts with a sibling `LavaData` directory in both frontends. Standalone
+  write-back uses the same root. Flat bundles retain their own content root.
+- Validation: pet sprites, status information, pet management, detail pages,
+  menu navigation and continued execution. Unit tests cover padding and
+  nested resource/write-back paths, including unrelated ancestor directories.
+  External multiplayer is outside this basic-control check.
+
+![Pet management and statistics](images/fixes/pet-world-3h-after.png)

@@ -168,7 +168,7 @@ impl Vm {
         }
 
         match opcode {
-            0x00 | 0x75..=0x7f => {
+            0x75..=0x7f => {
                 return Err(Error::InvalidOpcode {
                     opcode,
                     pc: opcode_pc,
@@ -227,7 +227,7 @@ impl Vm {
             0x41 => self.preset_memory()?,
             0x42 => self.push_value(0)?,
             0x43 => self.secret = self.fetch_u8()?,
-            0x44 => {}
+            0x00 | 0x44 => {}
             0x45..=0x51 => self.execute_quick_operation(opcode, opcode_pc)?,
             0x52 => {
                 let pointer = self.pop_value()? as u32;
@@ -883,6 +883,14 @@ mod tests {
         ]);
         assert_eq!(vm.run(32).unwrap(), RunOutcome::Halted(0));
         assert_eq!(vm.result(), 4);
+        assert_eq!(vm.stack_depth(), 0);
+    }
+
+    #[test]
+    fn accepts_legacy_zero_padding_without_changing_the_stack() {
+        let mut vm = vm(&[0x01, 42, 0x00, 0x00, 0x38, 0x00, 0x40]);
+        assert_eq!(vm.run(32).unwrap(), RunOutcome::Halted(0));
+        assert_eq!(vm.result(), 42);
         assert_eq!(vm.stack_depth(), 0);
     }
 
