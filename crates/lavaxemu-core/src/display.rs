@@ -6,6 +6,7 @@ use serde_big_array::BigArray;
 /// the reference LavaX VM. Layout: 128x(6x12) ASCII, 128x(8x16) ASCII,
 /// GB2312 12x12 and GB2312 16x16.
 const LVM_FONT: &[u8] = include_bytes!("../assets/LVM.bin");
+const WQX_ICONS: &[u8] = include_bytes!("../assets/wqx-icons-16.bin");
 const FONT_ASCII6: usize = 0;
 const FONT_ASCII8: usize = 1536;
 const FONT_GB12: usize = FONT_ASCII8 + 2048;
@@ -50,6 +51,13 @@ fn font_ascii(character: u8, large: bool) -> (&'static [u8], u16, u16) {
 }
 
 fn font_gbk(first: u8, second: u8, large: bool) -> Option<(&'static [u8], u16, u16)> {
+    if large && (0xf8..=0xfd).contains(&first) && (0xa1..=0xfe).contains(&second) {
+        let index = usize::from(first - 0xf8) * 94 + usize::from(second - 0xa1);
+        let offset = index * 32;
+        return WQX_ICONS
+            .get(offset..offset + 32)
+            .map(|glyph| (glyph, 16, 16));
+    }
     if !(0xa1..=0xf7).contains(&first) || !(0xa1..=0xfe).contains(&second) {
         return None;
     }
@@ -877,6 +885,32 @@ mod tests {
             DrawOperation::Set,
         );
         assert!(display.indexed_frame().iter().any(|&pixel| pixel != 0));
+    }
+
+    #[test]
+    fn renders_the_device_heart_without_consuming_the_following_ascii() {
+        let mut display = Display::new(160, 80, GraphicsMode::Mono);
+        display.draw_text(
+            BufferTarget::Front,
+            0,
+            0,
+            b"\xf8\xa8A",
+            true,
+            DrawOperation::Set,
+        );
+        let heart = [
+            0x00, 0x00, 0x00, 0x00, 0x0c, 0x60, 0x1e, 0xf0, 0x3f, 0xd8, 0x3f, 0xf8, 0x3f, 0xd8,
+            0x1f, 0x90, 0x1f, 0xb0, 0x0f, 0xe0, 0x07, 0xc0, 0x03, 0x80, 0x01, 0x00, 0x00, 0x00,
+            0x00, 0x00, 0x00, 0x00,
+        ];
+        assert_eq!(display.capture(BufferTarget::Front, 0, 0, 16, 16), heart);
+        display.draw_text(BufferTarget::Back, 0, 0, b"A", true, DrawOperation::Set);
+        assert_eq!(
+            display.capture(BufferTarget::Front, 16, 0, 8, 16),
+            display.capture(BufferTarget::Back, 0, 0, 8, 16)
+        );
+        assert!(font_gbk(0xfd, 0xd9, true).is_some());
+        assert!(font_gbk(0xfd, 0xda, true).is_none());
     }
 
     #[test]

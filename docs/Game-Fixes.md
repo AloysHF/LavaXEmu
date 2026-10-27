@@ -5,7 +5,7 @@ The local corpus is not distributed with the repository. Set `LAVAX_GAME_ROOT`
 to its `lavax_game` directory, then run:
 
 ```powershell
-cargo test -p lavaxemu --test game_compatibility -- --ignored
+cargo test --release -p lavaxemu --test game_compatibility -- --ignored
 ```
 
 Only games with a completed display and input regression appear below. Startup
@@ -293,3 +293,22 @@ without an execution error alone does not establish playability.
 | Room | Club/work menu | Help |
 | --- | --- | --- |
 | ![Room](images/fixes/tokimeki-room.png) | ![Activity](images/fixes/tokimeki-activity.png) | ![Help](images/fixes/tokimeki-help.png) |
+
+## Gamble (先赌为快)
+
+- Content: `LAVA1 先赌为快/先赌★为快.lav`.
+- Problem: the board's device-specific heart, snail, and other icons use F8–FD
+  codes outside GB2312. The existing font rejected these pairs and interpreted
+  subsequent bytes as unrelated Chinese characters, making the board unreadable.
+- Fix: add the 527 built-in 16×16 NC/TC device icon glyphs and decode their
+  documented two-byte range. The unchanged bitmap asset comes from the MIT-licensed
+  WQX toolbox; its pinned source and retained license are in the assets directory.
+- Validation: register a local account through 新手上路, acknowledge its restart
+  request, reload the actual account file, and log in through 再续赌缘. The full
+  board now displays its icons. Q adds a bet, Enter advances the round, the result
+  prompt appears, and another bet can be placed afterward. The core regression
+  checks the heart bitmap and the following ASCII character's position.
+
+| Before | Correct board | Completed round |
+| --- | --- | --- |
+| ![Incorrect symbols](images/fixes/gamble-before.png) | ![Board](images/fixes/gamble-board.png) | ![Result](images/fixes/gamble-result.png) |

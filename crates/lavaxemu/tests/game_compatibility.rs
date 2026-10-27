@@ -732,3 +732,82 @@ fn tokimeki_reaches_the_room_and_selects_an_activity() {
     );
     capture(&help, "tokimeki-help");
 }
+
+#[test]
+#[ignore = "requires the local game corpus via LAVAX_GAME_ROOT"]
+fn gamble_creates_a_local_account_and_accepts_bets() {
+    let path = "LAVA1 先赌为快/先赌★为快.lav";
+    let mut emulator = load(path);
+    advance(&mut emulator, 300);
+    for key in [13, 21, 13]
+        .into_iter()
+        .chain(*b"lava")
+        .chain([13])
+        .chain(*b"test")
+        .chain([13])
+        .chain(*b"test")
+        .chain([13])
+    {
+        press(&mut emulator, key);
+    }
+    capture(&emulator, "gamble-registration");
+    emulator.input_mut().set_keys([13]);
+    let mut halted = false;
+    for _ in 0..120 {
+        if matches!(emulator.run_frame().unwrap().status, FrameStatus::Halted(0)) {
+            halted = true;
+            break;
+        }
+        emulator.input_mut().set_keys([]);
+    }
+    assert!(
+        halted,
+        "registration must finish and request restarting the game"
+    );
+    let files = emulator.files_mut().take_dirty_files();
+    assert!(
+        files
+            .iter()
+            .any(|(path, bytes)| path.ends_with("lava.dat") && !bytes.is_empty())
+    );
+    let mut emulator = load(path);
+    for (path, bytes) in files {
+        emulator.files_mut().import_file(&path, bytes);
+    }
+    advance(&mut emulator, 300);
+    for key in [13, 13]
+        .into_iter()
+        .chain(*b"lava")
+        .chain([13])
+        .chain(*b"test")
+        .chain([13])
+    {
+        press(&mut emulator, key);
+    }
+    capture(&emulator, "gamble-board");
+    let board = emulator.display().indexed_frame().to_vec();
+    press(&mut emulator, b'q');
+    assert!(
+        board != emulator.display().indexed_frame(),
+        "Q must add a bet"
+    );
+    capture(&emulator, "gamble-bet");
+    press(&mut emulator, 13);
+    advance(&mut emulator, 1200);
+    capture(&emulator, "gamble-round");
+    press(&mut emulator, 13);
+    advance(&mut emulator, 1800);
+    assert_eq!(
+        emulator.vm().pc(),
+        0x6124,
+        "the round must reach its result prompt"
+    );
+    capture(&emulator, "gamble-settled");
+    press(&mut emulator, 13);
+    let next_round = emulator.display().indexed_frame().to_vec();
+    press(&mut emulator, b'w');
+    assert!(
+        next_round != emulator.display().indexed_frame(),
+        "another bet must be possible after the round"
+    );
+}
