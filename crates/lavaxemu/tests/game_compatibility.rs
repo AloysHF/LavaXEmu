@@ -872,3 +872,30 @@ fn shushan_registers_a_character_and_enters_the_game() {
         "closing status must restore the map"
     );
 }
+
+#[test]
+#[ignore = "requires the local game corpus via LAVAX_GAME_ROOT"]
+fn my_world_creates_a_character_and_moves_on_the_map() {
+    let mut emulator = load("LAVA1 我的世界~霸王屎/我的世界.lav");
+    let keys = [13, b'l', b'a', b'v', b'a', 13, 13, 13, 13, 13];
+    for frame in 0..3600 {
+        if frame >= 900 {
+            let input = frame - 900;
+            emulator.input_mut().set_keys(
+                (input % 60 < 3 && input / 60 < keys.len())
+                    .then_some(keys[(input / 60) % keys.len()]),
+            );
+        }
+        advance(&mut emulator, 1);
+    }
+    emulator.input_mut().set_keys([]);
+    let mut idle = emulator.clone();
+    advance(&mut idle, 60);
+    let moved = input_branch(&emulator, 20);
+    assert!(
+        moved.display().indexed_frame() != idle.display().indexed_frame(),
+        "up must move the created character"
+    );
+    capture(&emulator, "my-world-map");
+    capture(&moved, "my-world-movement");
+}

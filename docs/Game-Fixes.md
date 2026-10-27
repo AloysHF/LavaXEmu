@@ -329,3 +329,17 @@ without an execution error alone does not establish playability.
 | First map | Character status |
 | --- | --- |
 | ![Map](images/fixes/shushan-map.png) | ![Status](images/fixes/shushan-status.png) |
+
+## My World corpus variant (我的世界～霸王屎)
+
+- Content: `LAVA1 我的世界~霸王屎/我的世界.lav`.
+- Validation gap: the generic direction sequence selected Exit from the main menu;
+  an early halt therefore did not determine whether the game itself was playable.
+- Validation: wait for the introductory animation, start a new character, enter a
+  name, and confirm the character setup. The program loads `mine_SC.dat` and enters
+  its tile map. Up input changes the player's rendered position compared with an
+  equal-duration idle replay. No emulator behavior change was needed for this path.
+
+| Map | After movement |
+| --- | --- |
+| ![Map](images/fixes/my-world-map.png) | ![Movement](images/fixes/my-world-movement.png) |
