@@ -3,6 +3,10 @@
 This guide covers installing and running the standalone `lavaxemu` binary,
 loading games, keyboard controls, headless mode, and all command-line options.
 
+Load either a `.lav` program with its companion files or a `.pac` package.
+PAC packages provide their embedded resources and launch their first LAV program.
+For 神州, open `神州.pac`; the loose `非pac/Magic.lav` lacks `GameSource.dat`.
+
 ## Supported Platforms
 
 | Platform | Architecture | Status |

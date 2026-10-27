@@ -4,14 +4,13 @@ use std::{
 };
 
 use anyhow::{Context, Result};
-use lavaxemu_core::{Emulator, Program, VirtualFileSystem};
+use lavaxemu_core::{Emulator, VirtualFileSystem};
 
 pub fn load_emulator(program_path: &Path, arguments: &[String]) -> Result<Emulator> {
     let data = fs::read(program_path)
         .with_context(|| format!("failed to read {}", program_path.display()))?;
-    let program = Program::load(&data)
+    let mut emulator = Emulator::load_content(&data)
         .with_context(|| format!("failed to load {}", program_path.display()))?;
-    let mut emulator = Emulator::new(program);
     emulator.set_command_line(arguments.join(" ").into_bytes());
 
     let root = content_root(program_path);

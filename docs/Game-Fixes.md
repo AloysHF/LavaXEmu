@@ -203,3 +203,22 @@ without an execution error alone does not establish playability.
   device-resource loading fixes are sufficient.
 
 ![Legacy pet management](images/fixes/pet-legacy-management.png)
+
+## Magic / 神州
+
+- Content: `LAVA1 神州/神州.pac`.
+- Problem: the loose `非pac/Magic.lav` cannot open `GameSource.dat`, which is
+  only present inside the PAC. Previously neither frontend accepted PAC content.
+- Fix: parse PAC entry headers and GBK paths, launch the first embedded LAV,
+  and import every package resource into the virtual filesystem. Standalone and
+  libretro use the shared loader; the core metadata and browser picker accept PAC.
+  Existing disk companions override embedded files so saved progress can reload.
+- Validation: the complete package opens `GameSource.dat`, displays the intro,
+  advances through dialogue, and reaches the map. Right input changes the rendered
+  player position compared with an idle clone. Unit tests cover multiple entries,
+  Chinese paths, truncated records, invalid paths, and the libretro load lifecycle.
+  Use the complete PAC instead of the incomplete loose LAV for this game.
+
+| Map | After right movement |
+| --- | --- |
+| ![Map](images/fixes/magic-map.png) | ![Movement](images/fixes/magic-movement.png) |

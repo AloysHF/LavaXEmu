@@ -3,6 +3,7 @@ mod emulator;
 mod error;
 mod filelist;
 mod input;
+mod package;
 mod program;
 mod state;
 mod system;

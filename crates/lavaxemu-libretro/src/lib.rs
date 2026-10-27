@@ -9,7 +9,7 @@ use std::{
 };
 
 use ffi::*;
-use lavaxemu_core::{Emulator, PointerState, Program};
+use lavaxemu_core::{Emulator, PointerState};
 
 const FRAMES_PER_SECOND: f64 = 60.0;
 const AUDIO_SAMPLE_RATE: f64 = 44_100.0;
@@ -111,7 +111,7 @@ pub unsafe extern "C" fn retro_get_system_info(info: *mut SystemInfo) {
     *info = SystemInfo {
         library_name: c"LavaXEmu".as_ptr(),
         library_version: c"0.1.0".as_ptr(),
-        valid_extensions: c"lav".as_ptr(),
+        valid_extensions: c"lav|pac".as_ptr(),
         need_fullpath: true,
         block_extract: false,
     };
@@ -177,15 +177,14 @@ pub unsafe extern "C" fn retro_load_game(info: *const GameInfo) -> bool {
             return false;
         }
     };
-    let program = match Program::load(&data) {
-        Ok(program) => program,
+    let mut emulator = match Emulator::load_content(&data) {
+        Ok(emulator) => emulator,
         Err(error) => {
             log::error!("failed to load content: {error}");
             return false;
         }
     };
 
-    let mut emulator = Emulator::new(program);
     if let Some(path) = path.as_deref()
         && let Err(error) = import_companion_files(path, emulator.files_mut())
     {
@@ -605,6 +604,25 @@ mod tests {
         let mut state = vec![0_u8; retro_serialize_size()];
         assert!(unsafe { retro_serialize(state.as_mut_ptr().cast(), state.len()) });
         assert!(unsafe { retro_unserialize(state.as_ptr().cast(), state.len()) });
+        retro_unload_game();
+
+        let mut package = vec![0; 18];
+        package[..4].copy_from_slice(b"PAC ");
+        package[16..18].copy_from_slice(&1u16.to_le_bytes());
+        let mut header = [0; 64];
+        header[..4].copy_from_slice(&(image.len() as u32).to_le_bytes());
+        header[4..17].copy_from_slice(b"LAVA/test.lav");
+        package.extend_from_slice(&header);
+        package.extend_from_slice(&image);
+        let info = GameInfo {
+            path: ptr::null(),
+            data: package.as_ptr().cast(),
+            size: package.len(),
+            meta: ptr::null(),
+        };
+        assert!(unsafe { retro_load_game(&info) });
+        retro_run();
+        assert_eq!(VIDEO_WIDTH.load(Ordering::Relaxed), 160);
         retro_unload_game();
     }
 }

@@ -537,3 +537,29 @@ fn pet_world_legacy_versions_reopen_the_main_game_save() {
         advance(&mut linked, 300);
     }
 }
+
+#[test]
+#[ignore = "requires the local game corpus via LAVAX_GAME_ROOT"]
+fn magic_pac_loads_embedded_resources_and_moves_on_the_map() {
+    let mut emulator = load("LAVA1 神州/神州.pac");
+    assert!(emulator.files().file("/LavaData/GameSource.dat").is_some());
+    for frame in 0..1800 {
+        if frame >= 300 {
+            let input = frame - 300;
+            emulator
+                .input_mut()
+                .set_keys((input % 60 < 3).then_some([13, b'b'][(input / 60) % 2]));
+        }
+        advance(&mut emulator, 1);
+    }
+    emulator.input_mut().set_keys([]);
+    capture(&emulator, "magic-map");
+    let mut idle = emulator.clone();
+    hold(&mut emulator, 22, 6);
+    advance(&mut idle, 36);
+    assert!(
+        emulator.display().indexed_frame() != idle.display().indexed_frame(),
+        "right input must visibly move the player relative to an idle replay"
+    );
+    capture(&emulator, "magic-movement");
+}

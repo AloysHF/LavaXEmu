@@ -12,7 +12,7 @@
 </p>
 
 LavaXEmu is a cross-platform LavaX virtual machine written in Rust. It loads
-`.lav` game programs and executes them through a pure-Rust bytecode
+`.lav` game programs and `.pac` packages and executes them through a pure-Rust bytecode
 interpreter, providing:
 
 - Standalone desktop emulator with window display
@@ -70,7 +70,7 @@ supported platforms, RetroPad mapping, and features.
 
 ### Browser (EmulatorJS)
 
-Open <https://AloysHF.github.io/LavaXEmu/play.html>, then pick a `.lav` program
+Open <https://AloysHF.github.io/LavaXEmu/play.html>, then pick a `.lav` program, a `.pac` package,
 or a `.zip` that bundles it with its companion data files. It runs locally in
 the browser through the LavaXEmu WebAssembly core; nothing is uploaded. See the
 [EmulatorJS Core](docs/EmulatorJS-Core.md) guide for embedding the core in your

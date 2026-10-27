@@ -3,6 +3,9 @@
 This guide covers installing and using the LavaXEmu libretro core with
 RetroArch.
 
+Content can be a `.lav` program or a `.pac` package. PAC loading launches its
+first LAV program with all embedded companion files available in the virtual filesystem.
+
 ## Supported Platforms
 
 The core builds as a standard libretro dynamic library and runs on any
