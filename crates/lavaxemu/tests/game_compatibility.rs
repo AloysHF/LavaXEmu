@@ -689,3 +689,46 @@ fn new_hero_reaches_the_village_and_scrolls_the_map() {
     capture(&moved, "hero-movement");
     capture(&scrolled, "hero-scroll");
 }
+
+#[test]
+#[ignore = "requires the local game corpus via LAVAX_GAME_ROOT"]
+fn tokimeki_reaches_the_room_and_selects_an_activity() {
+    let mut emulator = load("LAVA2 心跳回忆/心跳回忆.lav");
+    replay_start(&mut emulator, 7200);
+    let mut idle = emulator.clone();
+    advance(&mut idle, 60);
+    let selected = input_branch(&emulator, 22);
+    assert!(
+        selected.display().indexed_frame() != idle.display().indexed_frame(),
+        "right must select another room activity"
+    );
+    capture(&emulator, "tokimeki-room");
+    capture(&selected, "tokimeki-selection");
+    let mut menu = emulator.clone();
+    for _ in 0..10 {
+        press(&mut menu, 23);
+    }
+    for _ in 0..3 {
+        press(&mut menu, 22);
+    }
+    let room = menu.display().indexed_frame().to_vec();
+    press(&mut menu, 13);
+    assert_ne!(
+        room,
+        menu.display().indexed_frame(),
+        "the club/work activity menu must open"
+    );
+    capture(&menu, "tokimeki-activity");
+    press(&mut menu, 13);
+    capture(&menu, "tokimeki-return");
+    assert!(
+        room == menu.display().indexed_frame(),
+        "selecting the ESC menu item must return to the room"
+    );
+    let help = input_branch(&emulator, 25);
+    assert!(
+        help.display().indexed_frame() != idle.display().indexed_frame(),
+        "Help must explain the activity icons"
+    );
+    capture(&help, "tokimeki-help");
+}

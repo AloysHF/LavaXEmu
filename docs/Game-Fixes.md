@@ -277,3 +277,19 @@ without an execution error alone does not establish playability.
 | Village | Map after down input |
 | --- | --- |
 | ![Village](images/fixes/hero-village.png) | ![Scroll](images/fixes/hero-scroll.png) |
+
+## Tokimeki (心跳回忆)
+
+- Content: `LAVA2 心跳回忆/心跳回忆.lav`.
+- Validation gap: the initial short replay remained in the story; a later room
+  capture alone did not prove the activity controls worked.
+- Validation: advance into the room, change the selected bottom icon with Right,
+  open the club/work menu, select its ESC item with Enter to return to the room,
+  and open Help (guest key 25 / F5) to display the icon descriptions. The menu's
+  ESC item is selected with Enter; the physical Escape key does not close it.
+  Several study activities update attributes without replacing the room image.
+  No additional emulator behavior changes were needed for this workflow.
+
+| Room | Club/work menu | Help |
+| --- | --- | --- |
+| ![Room](images/fixes/tokimeki-room.png) | ![Activity](images/fixes/tokimeki-activity.png) | ![Help](images/fixes/tokimeki-help.png) |
