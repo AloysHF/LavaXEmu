@@ -362,3 +362,19 @@ without an execution error alone does not establish playability.
 | Island map | Conversation | After walking along the path |
 | --- | --- | --- |
 | ![Map](images/fixes/holiday-island-map.png) | ![Conversation](images/fixes/holiday-island-dialogue.png) | ![Path](images/fixes/holiday-island-path.png) |
+
+## Crazy Ball updated corpus version (疯狂弹球)
+
+- Content: `LAVA1 疯狂弹球/疯狂弹球.pac` and `非pac/crazyball.lav`.
+- Problem: the loose program could display its setup screens but failed to load
+  `/CBMap/stagepack.dat`, reporting a stage-pack error instead of starting play.
+- Fix: the matching-package loader supplies the missing CBMap files from the PAC,
+  whose embedded program is byte-for-byte identical to the loose LAV.
+- Validation: both entry points complete the initial player/control setup and
+  display the first stage. Enter launches the ball; it hits bricks and scores.
+  Left input changes the paddle position relative to an idle clone executing
+  the same number of frames. This is a separate version from `LAVA1 Crazy_ball`.
+
+| Missing stage pack | Loose LAV after loading | Paddle after left input |
+| --- | --- | --- |
+| ![Missing data](images/fixes/crazy-ball-before.png) | ![Launch](images/fixes/crazy-ball-loose-launch.png) | ![Control](images/fixes/crazy-ball-loose-left.png) |

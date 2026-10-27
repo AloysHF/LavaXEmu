@@ -993,3 +993,28 @@ fn holiday_island_finishes_the_intro_talks_and_moves_on_the_map() {
     capture(&emulator, "holiday-island-path");
     capture(&moved, "holiday-island-movement");
 }
+
+#[test]
+#[ignore = "requires the local game corpus via LAVAX_GAME_ROOT"]
+fn crazy_ball_packaged_and_loose_versions_load_the_stage_and_move_the_paddle() {
+    for (path, name) in [
+        ("LAVA1 疯狂弹球/疯狂弹球.pac", "crazy-ball-pac"),
+        ("LAVA1 疯狂弹球/非pac/crazyball.lav", "crazy-ball-loose"),
+    ] {
+        let mut emulator = load(path);
+        assert!(emulator.files().file("/CBMap/stagepack.dat").is_some());
+        replay_start(&mut emulator, 1200);
+        capture(&emulator, &format!("{name}-ready"));
+        press(&mut emulator, 13);
+        capture(&emulator, &format!("{name}-launch"));
+        let mut idle = emulator.clone();
+        advance(&mut idle, 36);
+        hold(&mut emulator, 23, 6);
+        capture(&emulator, &format!("{name}-left"));
+        capture(&idle, &format!("{name}-idle"));
+        assert!(
+            emulator.display().indexed_frame() != idle.display().indexed_frame(),
+            "left must move the paddle in {path}"
+        );
+    }
+}
