@@ -392,3 +392,20 @@ without an execution error alone does not establish playability.
 | Level one | Coin after D |
 | --- | --- |
 | ![Board](images/fixes/planting-gold-board.png) | ![Movement](images/fixes/planting-gold-movement.png) |
+
+## Sky & Land (幕天席地 1.1)
+
+- Content: `LAVA1 幕天席地1.1/幕天席地.lav`.
+- Validation gap: the generic replay entered existing-account login without first
+  creating a character, so its missing-account message did not validate gameplay.
+- Validation: hold Enter briefly to leave the animated credit/title screens,
+  choose a new game, confirm, and enter a local account and password. Up moves
+  the character against an idle replay. F5 (guest key 25) opens the system menu;
+  saving writes an 88-byte `LavaData/lava.sls` character file. Start a new emulator,
+  provide that actual file, and log in: the saved map viewport and character
+  position are restored exactly. The independently scrolling footer is excluded
+  from the map comparison. No additional emulator behavior changes were needed.
+
+| Map | System menu | Reloaded character |
+| --- | --- | --- |
+| ![Map](images/fixes/sky-land-map.png) | ![Menu](images/fixes/sky-land-system.png) | ![Reload](images/fixes/sky-land-reloaded.png) |

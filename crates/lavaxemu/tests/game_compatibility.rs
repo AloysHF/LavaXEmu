@@ -1043,3 +1043,71 @@ fn planting_gold_moves_a_coin_and_restarts_the_level() {
         "F1 must restore the initial level layout and step count"
     );
 }
+
+#[test]
+#[ignore = "requires the local game corpus via LAVAX_GAME_ROOT"]
+fn sky_and_land_creates_a_local_save_and_moves_on_the_map() {
+    let mut emulator = load("LAVA1 幕天席地1.1/幕天席地.lav");
+    advance(&mut emulator, 300);
+    for key in [13, 13, 20, 13] {
+        hold(&mut emulator, key, 18);
+        advance(&mut emulator, 12);
+    }
+    for key in b"ylava"
+        .iter()
+        .copied()
+        .chain([13])
+        .chain(*b"test")
+        .chain([13])
+    {
+        press(&mut emulator, key);
+    }
+    advance(&mut emulator, 600);
+    capture(&emulator, "sky-land-map");
+    // The footer marquee advances independently of the saved map.
+    let viewport = usize::from(emulator.display().width()) * 64;
+    let initial_map = emulator.display().indexed_frame()[..viewport].to_vec();
+    let mut idle = emulator.clone();
+    advance(&mut idle, 60);
+    let moved = input_branch(&emulator, 20);
+    capture(&moved, "sky-land-movement");
+    assert!(
+        moved.display().indexed_frame() != idle.display().indexed_frame(),
+        "up must move the new character"
+    );
+    hold(&mut emulator, 25, 18);
+    capture(&emulator, "sky-land-system");
+    press(&mut emulator, 13);
+    capture(&emulator, "sky-land-save");
+    let files = emulator.files_mut().take_dirty_files();
+    assert!(
+        files
+            .iter()
+            .any(|(path, bytes)| path.ends_with("lava.sls") && bytes.len() == 88),
+        "save progress must write the local account file"
+    );
+    let mut reloaded = load("LAVA1 幕天席地1.1/幕天席地.lav");
+    for (path, bytes) in files {
+        reloaded.files_mut().import_file(&path, bytes);
+    }
+    advance(&mut reloaded, 300);
+    for key in [13, 13, 21, 13] {
+        hold(&mut reloaded, key, 18);
+        advance(&mut reloaded, 12);
+    }
+    for key in b"lava"
+        .iter()
+        .copied()
+        .chain([13])
+        .chain(*b"test")
+        .chain([13])
+    {
+        press(&mut reloaded, key);
+    }
+    advance(&mut reloaded, 600);
+    capture(&reloaded, "sky-land-reloaded");
+    assert!(
+        initial_map == reloaded.display().indexed_frame()[..viewport],
+        "logging into the written account must restore the saved map"
+    );
+}
