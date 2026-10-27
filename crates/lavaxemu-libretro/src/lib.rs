@@ -488,9 +488,11 @@ fn game_path(path: *const c_char) -> Option<PathBuf> {
     if path.is_null() {
         return None;
     }
-    Some(PathBuf::from(
-        unsafe { CStr::from_ptr(path) }.to_string_lossy().as_ref(),
-    ))
+    let path = unsafe { CStr::from_ptr(path) };
+    if path.is_empty() {
+        return None;
+    }
+    std::path::absolute(PathBuf::from(path.to_string_lossy().as_ref())).ok()
 }
 
 fn game_data(info: &GameInfo, path: Option<&Path>) -> std::io::Result<Vec<u8>> {
@@ -619,7 +621,7 @@ mod tests {
         image[10] = 5;
         image[16] = 4;
         let info = GameInfo {
-            path: ptr::null(),
+            path: c"".as_ptr(),
             data: image.as_ptr().cast(),
             size: image.len(),
             meta: ptr::null(),

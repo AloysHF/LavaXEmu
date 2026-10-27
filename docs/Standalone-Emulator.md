@@ -9,6 +9,8 @@ When a loose LAV lacks resources, the loader checks PAC files beside it and in
 its parent directory. It mounts missing resources only from a package containing
 the identical program, with existing disk files taking priority. This supports
 both `神州.pac` and the loose `非pac/Magic.lav` entry point without manual unpacking.
+You can also run `lavaxemu game.lav` from the game's directory; companion lookup
+and saved files use that game's location.
 
 ## Supported Platforms
 

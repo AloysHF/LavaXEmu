@@ -215,6 +215,26 @@ fn loose_program_mounts_matching_sibling_package_without_replacing_its_save() {
 }
 
 #[test]
+fn standalone_loads_a_filename_in_its_working_directory() {
+    let root = tempfile::tempdir().unwrap();
+    std::fs::write(
+        root.path().join("test.lav"),
+        b"LAV\x12\0\0\0\0\0\0\0\0\0\0\0\0\x40",
+    )
+    .unwrap();
+    let output = std::process::Command::new(env!("CARGO_BIN_EXE_lavaxemu"))
+        .current_dir(root.path())
+        .args(["--info", "test.lav"])
+        .output()
+        .unwrap();
+    assert!(
+        output.status.success(),
+        "filename-only launch failed: {}",
+        String::from_utf8_lossy(&output.stderr)
+    );
+}
+
+#[test]
 #[ignore = "requires the local game corpus via LAVAX_GAME_ROOT"]
 fn pet_world_3h_loads_nested_assets_and_opens_pet_management() {
     let mut emulator = load("LAVA1 宠物世界/GVmaker/NC3000/宠物世界3H.lav");

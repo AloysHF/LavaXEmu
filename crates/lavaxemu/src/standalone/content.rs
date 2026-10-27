@@ -7,6 +7,9 @@ use anyhow::{Context, Result};
 use lavaxemu_core::{Emulator, VirtualFileSystem};
 
 pub fn load_emulator(program_path: &Path, arguments: &[String]) -> Result<Emulator> {
+    let absolute_path = std::path::absolute(program_path)
+        .with_context(|| format!("failed to resolve {}", program_path.display()))?;
+    let program_path = absolute_path.as_path();
     let data = fs::read(program_path)
         .with_context(|| format!("failed to read {}", program_path.display()))?;
     let mut emulator = Emulator::load_content(&data)
@@ -48,7 +51,9 @@ fn import_packaged_resources(program_path: &Path, emulator: &mut Emulator) {
 }
 
 pub fn flush_dirty_files(program_path: &Path, files: &mut VirtualFileSystem) -> Result<()> {
-    let root = content_root(program_path);
+    let absolute_path = std::path::absolute(program_path)
+        .with_context(|| format!("failed to resolve {}", program_path.display()))?;
+    let root = content_root(&absolute_path);
     for (virtual_path, data) in files.take_dirty_files() {
         let relative = virtual_path.trim_start_matches('/');
         let mut destination = root.clone();

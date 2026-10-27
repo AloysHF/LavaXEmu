@@ -220,6 +220,9 @@ without an execution error alone does not establish playability.
   Chinese paths, truncated records, invalid paths, and the libretro load lifecycle.
   Additional regressions reject mismatched/incomplete companion packages and verify
   that an existing loose save remains authoritative and writes back to its original file.
+  A filename-only CLI launch from the loose game's working directory is covered as
+  well: relative paths are resolved before companion lookup and write-back. The
+  earlier empty parent path caused even `lavaxemu --info Magic.lav` to fail.
 
 | Map | After right movement |
 | --- | --- |
