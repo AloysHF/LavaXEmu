@@ -36,6 +36,29 @@ fn hold(emulator: &mut Emulator, key: u8, frames: usize) {
     advance(emulator, 30);
 }
 
+fn replay_start(emulator: &mut Emulator, frames: usize) {
+    let keys = [13, 13, b'b', 13, 23, 23, 22, 20, 21, b'b', b'n', b'm'];
+    for frame in 0..frames {
+        if frame >= 300 {
+            let input = frame - 300;
+            emulator
+                .input_mut()
+                .set_keys((input % 60 < 3).then_some(keys[(input / 60) % keys.len()]));
+        }
+        advance(emulator, 1);
+    }
+    emulator.input_mut().set_keys([]);
+}
+
+fn input_branch(original: &Emulator, key: u8) -> Emulator {
+    let mut emulator = original.clone();
+    for frame in 0..60 {
+        emulator.input_mut().set_keys((frame < 18).then_some(key));
+        advance(&mut emulator, 1);
+    }
+    emulator
+}
+
 fn capture(emulator: &Emulator, name: &str) {
     let Some(directory) = std::env::var_os("LAVAX_CAPTURE_DIR") else {
         return;
@@ -643,4 +666,26 @@ fn magic_era_accepts_the_device_identifier_and_enters_gameplay() {
         "right must visibly move the player after the introduction"
     );
     capture(&emulator, "magic-era-movement");
+}
+
+#[test]
+#[ignore = "requires the local game corpus via LAVAX_GAME_ROOT"]
+fn new_hero_reaches_the_village_and_scrolls_the_map() {
+    let mut emulator = load("LAVA1 新英雄坛说/非pac/Hero.lav");
+    replay_start(&mut emulator, 7200);
+    let mut idle = emulator.clone();
+    advance(&mut idle, 60);
+    let moved = input_branch(&emulator, 20);
+    assert!(
+        moved.display().indexed_frame() != idle.display().indexed_frame(),
+        "up must move the player in the village"
+    );
+    let scrolled = input_branch(&emulator, 21);
+    assert!(
+        scrolled.display().indexed_frame() != idle.display().indexed_frame(),
+        "down must move the player and scroll the village"
+    );
+    capture(&emulator, "hero-village");
+    capture(&moved, "hero-movement");
+    capture(&scrolled, "hero-scroll");
 }

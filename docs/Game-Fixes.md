@@ -262,3 +262,18 @@ without an execution error alone does not establish playability.
 | Castle map | After movement |
 | --- | --- |
 | ![Map](images/fixes/magic-era-map.png) | ![Movement](images/fixes/magic-era-movement.png) |
+
+## New Hero (新英雄坛说)
+
+- Content: `LAVA1 新英雄坛说/非pac/Hero.lav`.
+- Validation gap: the short batch replay only reached the long introductory
+  dialogue and could not establish that the map accepted input.
+- Validation: advance 7,200 frames through the startup sequence into the village,
+  then compare separate up/down branches with an equal-duration idle replay.
+  Up moves the player; down moves the player and scrolls the village map.
+  The existing core and resource fixes suffice; this adds a gameplay regression
+  rather than changing the game or emulator behavior.
+
+| Village | Map after down input |
+| --- | --- |
+| ![Village](images/fixes/hero-village.png) | ![Scroll](images/fixes/hero-scroll.png) |
