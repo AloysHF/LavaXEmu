@@ -1018,3 +1018,28 @@ fn crazy_ball_packaged_and_loose_versions_load_the_stage_and_move_the_paddle() {
         );
     }
 }
+
+#[test]
+#[ignore = "requires the local game corpus via LAVAX_GAME_ROOT"]
+fn planting_gold_moves_a_coin_and_restarts_the_level() {
+    let mut emulator = load("LAVA1 种金币/种金币.lav");
+    advance(&mut emulator, 300);
+    press(&mut emulator, 13);
+    press(&mut emulator, 13);
+    advance(&mut emulator, 300);
+    let board = emulator.display().indexed_frame().to_vec();
+    capture(&emulator, "planting-gold-board");
+    press(&mut emulator, b'd');
+    assert!(
+        board != emulator.display().indexed_frame(),
+        "D must move a coin and update the step count"
+    );
+    capture(&emulator, "planting-gold-movement");
+    press(&mut emulator, 28);
+    advance(&mut emulator, 120);
+    capture(&emulator, "planting-gold-reset");
+    assert!(
+        board == emulator.display().indexed_frame(),
+        "F1 must restore the initial level layout and step count"
+    );
+}

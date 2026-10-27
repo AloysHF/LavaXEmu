@@ -378,3 +378,17 @@ without an execution error alone does not establish playability.
 | Missing stage pack | Loose LAV after loading | Paddle after left input |
 | --- | --- | --- |
 | ![Missing data](images/fixes/crazy-ball-before.png) | ![Launch](images/fixes/crazy-ball-loose-launch.png) | ![Control](images/fixes/crazy-ball-loose-left.png) |
+
+## Planting Gold (种金币)
+
+- Content: `LAVA1 种金币/种金币.lav`.
+- Validation gap: a small final-frame thumbnail showed the stage chooser rather
+  than the playing board, leaving its coin controls unverified.
+- Validation: dismiss the logo, choose level one, and use D (the documented WASD
+  controls) to move a coin and increment the step counter. F1 replays the level;
+  after its wipe transition, the entire board and zero step count exactly match
+  the initial state. No additional emulator behavior changes were required.
+
+| Level one | Coin after D |
+| --- | --- |
+| ![Board](images/fixes/planting-gold-board.png) | ![Movement](images/fixes/planting-gold-movement.png) |
