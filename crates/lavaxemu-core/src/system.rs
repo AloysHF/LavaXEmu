@@ -849,7 +849,8 @@ impl Emulator {
     fn system_extended(&mut self) -> Result<HostAction> {
         let function = self.vm.pop_value()?;
         let result = match function {
-            0 | 2..=5 | 7 | 13 | 14 => 0,
+            0 => i32::from_be_bytes([b'L', 0, 0, 1]),
+            2..=5 | 7 | 13 | 14 => 0,
             1 | 6 | 8 => {
                 self.vm.pop_value()?;
                 0
@@ -1392,6 +1393,16 @@ mod tests {
         emulator.input_mut().set_key(b'A', true);
         assert_eq!(emulator.run_frame().unwrap().status, FrameStatus::Halted(0));
         assert_eq!(emulator.vm().result(), i32::from(b'A'));
+    }
+
+    #[test]
+    fn reports_a_stable_lava_device_identifier() {
+        let mut emulator = emulator(&[0x01, 0, 0xd3, 0x38, 0x40]);
+        assert_eq!(emulator.run_frame().unwrap().status, FrameStatus::Halted(0));
+        assert_eq!(emulator.vm().result(), 0x4c00_0001);
+        emulator.reset();
+        emulator.run_frame().unwrap();
+        assert_eq!(emulator.vm().result(), 0x4c00_0001);
     }
 
     #[test]

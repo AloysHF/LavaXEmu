@@ -610,3 +610,37 @@ fn super_robot_wars_installs_resources_and_accepts_map_input() {
     );
     capture(&emulator, "srw-cursor");
 }
+
+#[test]
+#[ignore = "requires the local game corpus via LAVAX_GAME_ROOT"]
+fn magic_era_accepts_the_device_identifier_and_enters_gameplay() {
+    let mut emulator = load("LAVA2 魔法纪元/魔法纪元.lav");
+    for frame in 0..18_000 {
+        if frame >= 300 {
+            let input = frame - 300;
+            let keys = [13, 13, b'b', 13, 13, 13, 13, 13];
+            emulator
+                .input_mut()
+                .set_keys((input % 60 < 3).then_some(keys[(input / 60) % keys.len()]));
+        }
+        advance(&mut emulator, 1);
+    }
+    emulator.input_mut().set_keys([]);
+    for frame in 0..60 {
+        emulator.input_mut().set_keys((frame < 18).then_some(20));
+        advance(&mut emulator, 1);
+    }
+    capture(&emulator, "magic-era-map");
+    let mut idle = emulator.clone();
+    for frame in 0..60 {
+        emulator.input_mut().set_keys((frame < 18).then_some(22));
+        advance(&mut emulator, 1);
+        idle.input_mut().set_keys([]);
+        advance(&mut idle, 1);
+    }
+    assert!(
+        emulator.display().indexed_frame() != idle.display().indexed_frame(),
+        "right must visibly move the player after the introduction"
+    );
+    capture(&emulator, "magic-era-movement");
+}

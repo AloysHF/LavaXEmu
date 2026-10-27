@@ -240,3 +240,25 @@ without an execution error alone does not establish playability.
 | Tactical map | Cursor after right input |
 | --- | --- |
 | ![Map](images/fixes/srw-map.png) | ![Cursor](images/fixes/srw-cursor.png) |
+
+## Magic Era (魔法纪元)
+
+- Content: `LAVA2 魔法纪元/魔法纪元.lav`.
+- Problem: after the title prompt, the game checks that GetPID's high byte is
+  `L` and exits when the previous zero-valued implementation fails this check.
+  The reference PC VM also deliberately returns zero, so matching its exit alone
+  would not satisfy compatibility with a Lava device.
+- Fix: return the stable virtual Lava device identifier `0x4c000001`, following
+  the device identifier layout shown in the original VM source. It remains
+  consistent across resets and does not use a physical device's identity.
+- Validation: pass the title/menu, start a new game, advance the opening story,
+  and reach the castle map. Right input changes the player's rendered position
+  against an idle replay. The regression covers 18,120 frames; the identifier
+  test checks the value before and after reset. All 16 content/layout regressions
+  pass, and a fresh scan of 267 LAV programs plus 57 PAC packages reports no
+  loading errors, runtime errors, or timeouts. The scan does not certify every
+  game's complete interaction flow.
+
+| Castle map | After movement |
+| --- | --- |
+| ![Map](images/fixes/magic-era-map.png) | ![Movement](images/fixes/magic-era-movement.png) |
