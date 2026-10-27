@@ -501,3 +501,39 @@ fn resource_manager_selects_files_and_cancels_the_dialog() {
     }
     assert!(halted, "confirming exit must terminate normally");
 }
+
+#[test]
+#[ignore = "requires the local game corpus via LAVAX_GAME_ROOT"]
+fn pet_world_legacy_versions_reopen_the_main_game_save() {
+    for (folder, main, linked) in [
+        ("NC2600", "宠物世界26.lav", "宠世L_2K6.lav"),
+        ("NC3000", "宠物世界3K.lav", "宠世L_3K.lav"),
+        ("TC1000", "宠物世界1K.lav", "宠世L_1K.lav"),
+        ("TC1000S", "宠物世界1S.lav", "宠世L_1KS.lav"),
+        ("TC808", "宠物世界88.lav", "宠世L_808.lav"),
+    ] {
+        let prefix = format!("LAVA1 宠物世界/GVmaker/{folder}");
+        let mut main = load(&format!("{prefix}/{main}"));
+        advance(&mut main, 300);
+        press(&mut main, 23);
+        for _ in 0..4 {
+            press(&mut main, 22);
+        }
+        press(&mut main, 13);
+        let saved = main.files_mut().take_dirty_files();
+        assert!(saved.iter().any(|(path, _)| path.ends_with(".sav")));
+        let mut linked = load(&format!("{prefix}/{linked}"));
+        for (path, bytes) in saved {
+            linked.files_mut().import_file(&path, bytes);
+        }
+        advance(&mut linked, 300);
+        capture(&linked, &format!("pet-linked-{folder}"));
+        let before = linked.display().indexed_frame().to_vec();
+        press(&mut linked, 20);
+        assert_ne!(before, linked.display().indexed_frame(), "{folder}");
+        capture(&linked, &format!("pet-linked-{folder}-management"));
+        press(&mut linked, 19);
+        press(&mut linked, 27);
+        advance(&mut linked, 300);
+    }
+}

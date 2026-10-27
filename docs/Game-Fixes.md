@@ -188,3 +188,18 @@ without an execution error alone does not establish playability.
 | Directory picker | File actions |
 | --- | --- |
 | ![Directory](images/fixes/filelist-directory.png) | ![Actions](images/fixes/filelist-actions.png) |
+
+## Pet World legacy and L variants (宠物世界)
+
+- Content: NC2600, NC3000, TC1000, TC1000S, and TC808 pairs under
+  `LAVA1 宠物世界/GVmaker`.
+- Initial finding: the five `宠世L_*.lav` variants exit immediately when
+  `/LavaData/宠世存档.sav` does not exist. The main variants can start a new game.
+- Validation: start each matching main variant, open the left/right menu,
+  move right four times to 存档, and confirm. Transfer the actual written save
+  into its L variant, then verify the sprite, pet management, and details controls.
+  All five pairs pass without modifying their game binaries or synthesizing saves.
+  This closes the earlier startup-only scan gap for these variants; the existing
+  device-resource loading fixes are sufficient.
+
+![Legacy pet management](images/fixes/pet-legacy-management.png)
