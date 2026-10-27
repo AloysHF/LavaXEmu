@@ -312,3 +312,20 @@ without an execution error alone does not establish playability.
 | Before | Correct board | Completed round |
 | --- | --- | --- |
 | ![Incorrect symbols](images/fixes/gamble-before.png) | ![Board](images/fixes/gamble-board.png) | ![Result](images/fixes/gamble-result.png) |
+
+## Shushan (蜀山群侠传)
+
+- Content: `LAVA1 蜀山群侠传/蜀山注册.lav` and `蜀山群侠传.lav`.
+- Validation gap: the main game needs a local character account created by its
+  separate registration program. Sending generic menu keys without that account
+  never verified actual gameplay.
+- Validation: follow the bundled manual, create an account and confirm with Y,
+  transfer the registration program's actual `M-lava.dat` file, then log in with
+  the main game after its splash finishes. Advance the story to the first map,
+  compare upward movement with an idle branch, and open/close F3 character status.
+  This verifies the existing shared file workflow without synthesizing a character
+  save or changing the game binary.
+
+| First map | Character status |
+| --- | --- |
+| ![Map](images/fixes/shushan-map.png) | ![Status](images/fixes/shushan-status.png) |

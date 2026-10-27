@@ -811,3 +811,64 @@ fn gamble_creates_a_local_account_and_accepts_bets() {
         "another bet must be possible after the round"
     );
 }
+
+#[test]
+#[ignore = "requires the local game corpus via LAVAX_GAME_ROOT"]
+fn shushan_registers_a_character_and_enters_the_game() {
+    let mut registration = load("LAVA1 蜀山群侠传/蜀山注册.lav");
+    advance(&mut registration, 300);
+    for key in [13]
+        .into_iter()
+        .chain(*b"lava")
+        .chain([13])
+        .chain(*b"test")
+        .chain([13, b'y'])
+    {
+        press(&mut registration, key);
+    }
+    capture(&registration, "shushan-registration");
+    let files = registration.files_mut().take_dirty_files();
+    assert!(
+        files
+            .iter()
+            .any(|(path, bytes)| path.ends_with("m-lava.dat") && !bytes.is_empty())
+    );
+    let mut emulator = load("LAVA1 蜀山群侠传/蜀山群侠传.lav");
+    for (path, bytes) in files {
+        emulator.files_mut().import_file(&path, bytes);
+    }
+    advance(&mut emulator, 1200);
+    for key in [13, 13]
+        .into_iter()
+        .chain(*b"lava")
+        .chain([13])
+        .chain(*b"test")
+        .chain([13, 13])
+    {
+        press(&mut emulator, key);
+    }
+    for _ in 0..15 {
+        press(&mut emulator, 13);
+    }
+    capture(&emulator, "shushan-map");
+    let mut idle = emulator.clone();
+    advance(&mut idle, 60);
+    let moved = input_branch(&emulator, 20);
+    assert!(
+        moved.display().indexed_frame() != idle.display().indexed_frame(),
+        "up must move the registered character"
+    );
+    capture(&moved, "shushan-movement");
+    let map = emulator.display().indexed_frame().to_vec();
+    press(&mut emulator, 30);
+    assert!(
+        map != emulator.display().indexed_frame(),
+        "F3 must open character status"
+    );
+    capture(&emulator, "shushan-status");
+    press(&mut emulator, 27);
+    assert!(
+        map == emulator.display().indexed_frame(),
+        "closing status must restore the map"
+    );
+}
