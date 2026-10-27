@@ -171,3 +171,20 @@ without an execution error alone does not establish playability.
 | Score | Menu after Escape |
 | --- | --- |
 | ![Score](images/fixes/swr-score.png) | ![Mode menu](images/fixes/swr-menu.png) |
+
+## Resource Manager (文件夹助手 3.7)
+
+- Content: `LAVA1 百战天虫即时版/资源管理器.lav`.
+- Problem: FileList returned cancellation immediately, so the program exited
+  without showing its directory picker.
+- Fix: implement the blocking file picker, GBK names, cursor and page navigation,
+  selection/scroll return values, cancellation, and SetList help/delete flags.
+  The caller handles directory changes and file operations, as in the reference VM.
+- Validation: dismiss the splash, move the selection, open the file action menu,
+  restore a pending picker save state, cancel, and confirm normal exit. Core tests
+  cover Chinese names, paging, special keys, reset, and version 2 state migration.
+  Save states now use version 3 and retain version 2 loading support.
+
+| Directory picker | File actions |
+| --- | --- |
+| ![Directory](images/fixes/filelist-directory.png) | ![Actions](images/fixes/filelist-actions.png) |

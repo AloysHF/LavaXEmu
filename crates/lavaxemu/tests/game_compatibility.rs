@@ -469,3 +469,35 @@ fn modified_speed_racing_steers_and_returns_from_the_score_screen() {
         "Escape must return to the menu"
     );
 }
+
+#[test]
+#[ignore = "requires the local game corpus via LAVAX_GAME_ROOT"]
+fn resource_manager_selects_files_and_cancels_the_dialog() {
+    let mut emulator = load("LAVA1 百战天虫即时版/资源管理器.lav");
+    advance(&mut emulator, 300);
+    press(&mut emulator, 13);
+    advance(&mut emulator, 300);
+    assert_eq!(emulator.vm().pc(), 0x5ad1);
+    let list = emulator.display().indexed_frame().to_vec();
+    capture(&emulator, "filelist-directory");
+    let saved = emulator.save_state().unwrap();
+    press(&mut emulator, 21);
+    assert_ne!(list, emulator.display().indexed_frame());
+    press(&mut emulator, 13);
+    assert_eq!(emulator.vm().pc(), 0x2772);
+    capture(&emulator, "filelist-actions");
+    emulator.load_state(&saved).unwrap();
+    assert_eq!(list, emulator.display().indexed_frame());
+    press(&mut emulator, 27);
+    capture(&emulator, "filelist-cancel");
+    emulator.input_mut().set_keys([13]);
+    let mut halted = false;
+    for _ in 0..120 {
+        if matches!(emulator.run_frame().unwrap().status, FrameStatus::Halted(0)) {
+            halted = true;
+            break;
+        }
+        emulator.input_mut().set_keys([]);
+    }
+    assert!(halted, "confirming exit must terminate normally");
+}

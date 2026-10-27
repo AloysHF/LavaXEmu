@@ -102,7 +102,12 @@ impl Emulator {
                 Ok(HostAction::Continue)
             }
             78 => {
-                self.pop_values(2)?;
+                let position = self.vm.pop_value()? as u32;
+                self.file_list.flags = self.vm.pop_value()? as u8;
+                if position != 0 {
+                    self.file_list.selected = (position as u16).saturating_sub(1) as usize;
+                    self.file_list.first = (position >> 16) as usize;
+                }
                 Ok(HostAction::Continue)
             }
             79 => {
@@ -706,9 +711,9 @@ impl Emulator {
     }
 
     fn system_filelist(&mut self) -> Result<HostAction> {
-        self.vm.pop_value()?;
-        self.vm.push_value(0)?;
-        Ok(HostAction::Continue)
+        log::debug!("FileList requested at pc={:x}", self.vm.pc());
+        let destination = self.pop_guest_address()?;
+        self.begin_file_list(destination)
     }
 
     fn system_gettime(&mut self) -> Result<HostAction> {
@@ -1193,7 +1198,7 @@ impl Emulator {
         Ok(GBK.decode(&bytes).0.into_owned())
     }
 
-    fn write_memory(&mut self, address: u32, data: &[u8]) -> Result<()> {
+    pub(crate) fn write_memory(&mut self, address: u32, data: &[u8]) -> Result<()> {
         let range = self.memory_range(address, data.len())?;
         self.vm.memory_mut()[range].copy_from_slice(data);
         Ok(())

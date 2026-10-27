@@ -1,6 +1,7 @@
 mod display;
 mod emulator;
 mod error;
+mod filelist;
 mod input;
 mod program;
 mod state;

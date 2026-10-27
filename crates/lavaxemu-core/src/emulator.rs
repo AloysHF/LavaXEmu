@@ -1,3 +1,4 @@
+use crate::filelist::FileListState;
 use crate::{
     BufferTarget, Display, DrawOperation, GraphicsMode, InputState, Program, Result, RunOutcome,
     VirtualFileSystem, Vm,
@@ -209,6 +210,7 @@ pub struct Emulator {
     pub(crate) random_seed: i32,
     pub(crate) calendar: [u8; 8],
     pub(crate) command_line: Vec<u8>,
+    pub(crate) file_list: FileListState,
 }
 
 impl Emulator {
@@ -229,6 +231,7 @@ impl Emulator {
             random_seed: 1,
             calendar: [0xd0, 0x07, 1, 1, 0, 0, 0, 6],
             command_line: Vec::new(),
+            file_list: FileListState::default(),
         }
     }
 
@@ -245,6 +248,7 @@ impl Emulator {
         self.delay_tick_carry = 0;
         self.waiting_for_key = false;
         self.random_seed = 1;
+        self.file_list = FileListState::default();
     }
 
     pub const fn vm(&self) -> &Vm {
@@ -293,6 +297,9 @@ impl Emulator {
         self.advance_frame_clock();
         if !self.vm.is_running() {
             return Ok(self.frame_result(FrameStatus::Halted(self.vm.exit_code()), 0, 0));
+        }
+        if self.file_list.destination.is_some() && self.poll_file_list()? {
+            return Ok(self.frame_result(FrameStatus::WaitingForInput, 0, 0));
         }
         if self.waiting_for_key {
             if let Some(value) = self.pending_input_value() {
