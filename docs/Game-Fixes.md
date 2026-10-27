@@ -343,3 +343,18 @@ without an execution error alone does not establish playability.
 | Map | After movement |
 | --- | --- |
 | ![Map](images/fixes/my-world-map.png) | ![Movement](images/fixes/my-world-movement.png) |
+
+## Holiday Island (假日神秘岛)
+
+- Content: `LAVA1 假日神秘岛/假日神秘岛 abcdef.lav`.
+- Validation gap: the earlier replay sampled the lengthy opening sequence, during
+  which the candidate movement keys did not affect the scene.
+- Validation: advance 18,000 frames into the island map. Right input triggers the
+  nearby conversation; further right presses finish it and walk along the path.
+  A subsequent left branch changes the player/camera position relative to an
+  equal-duration idle replay. Map tiles, characters, and dialogue render correctly.
+  This closes the sampling gap without changing the program's original intro.
+
+| Island map | Conversation | After walking along the path |
+| --- | --- | --- |
+| ![Map](images/fixes/holiday-island-map.png) | ![Conversation](images/fixes/holiday-island-dialogue.png) | ![Path](images/fixes/holiday-island-path.png) |

@@ -899,3 +899,35 @@ fn my_world_creates_a_character_and_moves_on_the_map() {
     capture(&emulator, "my-world-map");
     capture(&moved, "my-world-movement");
 }
+
+#[test]
+#[ignore = "requires the local game corpus via LAVAX_GAME_ROOT"]
+fn holiday_island_finishes_the_intro_talks_and_moves_on_the_map() {
+    let mut emulator = load("LAVA1 假日神秘岛/假日神秘岛 abcdef.lav");
+    replay_start(&mut emulator, 18_000);
+    capture(&emulator, "holiday-island-map");
+    let dialogue = input_branch(&emulator, 22);
+    let mut idle = emulator.clone();
+    advance(&mut idle, 60);
+    assert!(
+        dialogue.display().indexed_frame() != idle.display().indexed_frame(),
+        "right must trigger the nearby conversation"
+    );
+    capture(&dialogue, "holiday-island-dialogue");
+    for _ in 0..12 {
+        emulator.input_mut().set_keys([22]);
+        advance(&mut emulator, 3);
+        emulator.input_mut().set_keys([]);
+        advance(&mut emulator, 57);
+    }
+    advance(&mut emulator, 2880);
+    let mut idle = emulator.clone();
+    advance(&mut idle, 60);
+    let moved = input_branch(&emulator, 23);
+    assert!(
+        moved.display().indexed_frame() != idle.display().indexed_frame(),
+        "left must move the player after the conversation"
+    );
+    capture(&emulator, "holiday-island-path");
+    capture(&moved, "holiday-island-movement");
+}
