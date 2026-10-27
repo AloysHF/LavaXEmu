@@ -222,3 +222,21 @@ without an execution error alone does not establish playability.
 | Map | After right movement |
 | --- | --- |
 | ![Map](images/fixes/magic-map.png) | ![Movement](images/fixes/magic-movement.png) |
+
+## Super Robot Wars (超级机器人大战)
+
+- Content: `LAVA1 超级机器人大战/Setup/SRWDate.lav`, `Setup/SRW.lav`,
+  and `Download/SRW.pac`.
+- Initial finding: opening `Setup/SRW.lav` before running its data installer
+  displays an installation error. `SRWDate.lav` finishes quickly because it is
+  the installer, rather than a standalone game.
+- Validation: execute the installer to completion, transfer its actual written
+  data files into the setup game, start a new game, and advance into the tactical
+  map. Right input moves the cursor compared with an idle clone. The complete PAC
+  also loads its data and point tables and reaches the map and unit information.
+  The PAC loader fixes the complete-package entry point; the setup pair works
+  with the existing virtual file write-back workflow.
+
+| Tactical map | Cursor after right input |
+| --- | --- |
+| ![Map](images/fixes/srw-map.png) | ![Cursor](images/fixes/srw-cursor.png) |

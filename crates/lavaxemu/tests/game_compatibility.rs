@@ -563,3 +563,50 @@ fn magic_pac_loads_embedded_resources_and_moves_on_the_map() {
     );
     capture(&emulator, "magic-movement");
 }
+
+#[test]
+#[ignore = "requires the local game corpus via LAVAX_GAME_ROOT"]
+fn super_robot_wars_installs_resources_and_accepts_map_input() {
+    let mut installer = load("LAVA1 超级机器人大战/Setup/SRWDate.lav");
+    let mut installed = false;
+    for _ in 0..300 {
+        if matches!(
+            installer.run_frame().unwrap().status,
+            FrameStatus::Halted(0)
+        ) {
+            installed = true;
+            break;
+        }
+    }
+    assert!(installed, "data installer must finish successfully");
+    let files = installer.files_mut().take_dirty_files();
+    assert!(
+        files
+            .iter()
+            .any(|(path, bytes)| path.ends_with("srw.dat") && bytes.len() > 100_000)
+    );
+    let mut emulator = load("LAVA1 超级机器人大战/Setup/SRW.lav");
+    for (path, bytes) in files {
+        emulator.files_mut().import_file(&path, bytes);
+    }
+    for frame in 0..1800 {
+        if frame >= 300 {
+            let input = frame - 300;
+            let keys = [13, 13, b'b', 13, 23, 23, 22, 20, 21, b'b', b'n', b'm'];
+            emulator
+                .input_mut()
+                .set_keys((input % 60 < 3).then_some(keys[(input / 60) % keys.len()]));
+        }
+        advance(&mut emulator, 1);
+    }
+    emulator.input_mut().set_keys([]);
+    capture(&emulator, "srw-map");
+    let mut idle = emulator.clone();
+    hold(&mut emulator, 22, 6);
+    advance(&mut idle, 36);
+    assert!(
+        emulator.display().indexed_frame() != idle.display().indexed_frame(),
+        "right must move the map cursor"
+    );
+    capture(&emulator, "srw-cursor");
+}
