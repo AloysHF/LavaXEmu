@@ -158,6 +158,63 @@ fn nested_device_content_loads_and_writes_to_the_same_root() {
 }
 
 #[test]
+fn loose_program_mounts_matching_sibling_package_without_replacing_its_save() {
+    fn package(lav: &[u8], resource: &str) -> Vec<u8> {
+        let mut data = vec![0; 18];
+        data[..4].copy_from_slice(b"PAC ");
+        data[16..18].copy_from_slice(&3u16.to_le_bytes());
+        for (name, bytes) in [
+            ("LAVA/test.lav", lav),
+            (resource, &[1, 2][..]),
+            ("LavaData/slot.sav", &[0][..]),
+        ] {
+            let mut header = [0; 64];
+            header[..4].copy_from_slice(&(bytes.len() as u32).to_le_bytes());
+            header[4..4 + name.len()].copy_from_slice(name.as_bytes());
+            data.extend_from_slice(&header);
+            data.extend_from_slice(bytes);
+        }
+        data
+    }
+    let root = tempfile::tempdir().unwrap();
+    let loose = root.path().join("unpacked");
+    std::fs::create_dir(&loose).unwrap();
+    let program = loose.join("test.lav");
+    let lav = b"LAV\x12\0\0\0\0\0\0\0\0\0\0\0\0\x40";
+    std::fs::write(&program, lav).unwrap();
+    std::fs::write(loose.join("Slot.sav"), [9]).unwrap();
+    let wrong = [lav.as_slice(), &[0x40]].concat();
+    std::fs::write(
+        root.path().join("00-unrelated.pac"),
+        package(&wrong, "unrelated.dat"),
+    )
+    .unwrap();
+    std::fs::write(root.path().join("01-broken.pac"), b"PAC ").unwrap();
+    std::fs::write(
+        root.path().join("02-matched.pac"),
+        package(lav, "CBMap/stagepack.dat"),
+    )
+    .unwrap();
+    let mut emulator = content::load_emulator(&program, &[]).unwrap();
+    assert_eq!(
+        emulator.files().file("/CBMap/stagepack.dat"),
+        Some(&[1, 2][..])
+    );
+    assert_eq!(emulator.files().file("/LavaData/slot.sav"), Some(&[9][..]));
+    assert!(emulator.files().file("unrelated.dat").is_none());
+    let handle = emulator
+        .files_mut()
+        .open("/LavaData/slot.sav", "w")
+        .unwrap();
+    emulator.files_mut().write(handle, &[7]);
+    emulator.files_mut().close(handle);
+    content::flush_dirty_files(&program, emulator.files_mut()).unwrap();
+    assert_eq!(std::fs::read(loose.join("Slot.sav")).unwrap(), [7]);
+    assert!(!loose.join("lavadata").exists());
+    assert!(!loose.join("CBMap").exists());
+}
+
+#[test]
 #[ignore = "requires the local game corpus via LAVAX_GAME_ROOT"]
 fn pet_world_3h_loads_nested_assets_and_opens_pet_management() {
     let mut emulator = load("LAVA1 宠物世界/GVmaker/NC3000/宠物世界3H.lav");
@@ -563,28 +620,33 @@ fn pet_world_legacy_versions_reopen_the_main_game_save() {
 
 #[test]
 #[ignore = "requires the local game corpus via LAVAX_GAME_ROOT"]
-fn magic_pac_loads_embedded_resources_and_moves_on_the_map() {
-    let mut emulator = load("LAVA1 神州/神州.pac");
-    assert!(emulator.files().file("/LavaData/GameSource.dat").is_some());
-    for frame in 0..1800 {
-        if frame >= 300 {
-            let input = frame - 300;
-            emulator
-                .input_mut()
-                .set_keys((input % 60 < 3).then_some([13, b'b'][(input / 60) % 2]));
+fn magic_packaged_and_loose_versions_load_resources_and_move_on_the_map() {
+    for (path, name) in [
+        ("LAVA1 神州/神州.pac", "magic"),
+        ("LAVA1 神州/非pac/Magic.lav", "magic-loose"),
+    ] {
+        let mut emulator = load(path);
+        assert!(emulator.files().file("/LavaData/GameSource.dat").is_some());
+        for frame in 0..1800 {
+            if frame >= 300 {
+                let input = frame - 300;
+                emulator
+                    .input_mut()
+                    .set_keys((input % 60 < 3).then_some([13, b'b'][(input / 60) % 2]));
+            }
+            advance(&mut emulator, 1);
         }
-        advance(&mut emulator, 1);
+        emulator.input_mut().set_keys([]);
+        capture(&emulator, &format!("{name}-map"));
+        let mut idle = emulator.clone();
+        hold(&mut emulator, 22, 6);
+        advance(&mut idle, 36);
+        assert!(
+            emulator.display().indexed_frame() != idle.display().indexed_frame(),
+            "right input must visibly move the player in {path} relative to an idle replay"
+        );
+        capture(&emulator, &format!("{name}-movement"));
     }
-    emulator.input_mut().set_keys([]);
-    capture(&emulator, "magic-map");
-    let mut idle = emulator.clone();
-    hold(&mut emulator, 22, 6);
-    advance(&mut idle, 36);
-    assert!(
-        emulator.display().indexed_frame() != idle.display().indexed_frame(),
-        "right input must visibly move the player relative to an idle replay"
-    );
-    capture(&emulator, "magic-movement");
 }
 
 #[test]

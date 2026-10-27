@@ -5,7 +5,10 @@ loading games, keyboard controls, headless mode, and all command-line options.
 
 Load either a `.lav` program with its companion files or a `.pac` package.
 PAC packages provide their embedded resources and launch their first LAV program.
-For 神州, open `神州.pac`; the loose `非pac/Magic.lav` lacks `GameSource.dat`.
+When a loose LAV lacks resources, the loader checks PAC files beside it and in
+its parent directory. It mounts missing resources only from a package containing
+the identical program, with existing disk files taking priority. This supports
+both `神州.pac` and the loose `非pac/Magic.lav` entry point without manual unpacking.
 
 ## Supported Platforms
 

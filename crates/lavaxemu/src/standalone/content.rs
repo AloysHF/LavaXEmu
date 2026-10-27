@@ -15,7 +15,36 @@ pub fn load_emulator(program_path: &Path, arguments: &[String]) -> Result<Emulat
 
     let root = content_root(program_path);
     import_directory(&root, &root, program_path, emulator.files_mut())?;
+    if !data.starts_with(b"PAC ") {
+        import_packaged_resources(program_path, &mut emulator);
+    }
     Ok(emulator)
+}
+
+fn import_packaged_resources(program_path: &Path, emulator: &mut Emulator) {
+    let parent = program_path.parent().unwrap_or_else(|| Path::new("."));
+    for directory in parent.ancestors().take(2) {
+        let Ok(entries) = fs::read_dir(directory) else {
+            continue;
+        };
+        let mut packages: Vec<_> = entries
+            .filter_map(Result::ok)
+            .map(|entry| entry.path())
+            .filter(|path| {
+                path.extension()
+                    .is_some_and(|extension| extension.eq_ignore_ascii_case("pac"))
+            })
+            .collect();
+        packages.sort();
+        for path in packages {
+            let Ok(data) = fs::read(&path) else { continue };
+            match emulator.import_matching_package(&data) {
+                Ok(true) => return,
+                Ok(false) => {}
+                Err(error) => log::debug!("ignored companion package {}: {error}", path.display()),
+            }
+        }
+    }
 }
 
 pub fn flush_dirty_files(program_path: &Path, files: &mut VirtualFileSystem) -> Result<()> {

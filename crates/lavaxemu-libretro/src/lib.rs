@@ -190,6 +190,11 @@ pub unsafe extern "C" fn retro_load_game(info: *const GameInfo) -> bool {
     {
         log::warn!("failed to import companion files: {error}");
     }
+    if let Some(path) = path.as_deref()
+        && !data.starts_with(b"PAC ")
+    {
+        import_packaged_resources(path, &mut emulator);
+    }
 
     let mut core = core();
     if !configure_frontend(core.callbacks.environment) {
@@ -537,6 +542,32 @@ fn import_companion_files(
     import_directory(root, root, program_path, files, recurse)
 }
 
+fn import_packaged_resources(program_path: &Path, emulator: &mut Emulator) {
+    let parent = program_path.parent().unwrap_or_else(|| Path::new("."));
+    for directory in parent.ancestors().take(2) {
+        let Ok(entries) = fs::read_dir(directory) else {
+            continue;
+        };
+        let mut packages: Vec<_> = entries
+            .filter_map(Result::ok)
+            .map(|entry| entry.path())
+            .filter(|path| {
+                path.extension()
+                    .is_some_and(|extension| extension.eq_ignore_ascii_case("pac"))
+            })
+            .collect();
+        packages.sort();
+        for path in packages {
+            let Ok(data) = fs::read(&path) else { continue };
+            match emulator.import_matching_package(&data) {
+                Ok(true) => return,
+                Ok(false) => {}
+                Err(error) => log::debug!("ignored companion package {}: {error}", path.display()),
+            }
+        }
+    }
+}
+
 fn import_directory(
     root: &Path,
     directory: &Path,
@@ -624,5 +655,32 @@ mod tests {
         retro_run();
         assert_eq!(VIDEO_WIDTH.load(Ordering::Relaxed), 160);
         retro_unload_game();
+    }
+
+    #[test]
+    fn finds_matching_packages_beside_the_unpacked_directory() {
+        let root = tempfile::tempdir().unwrap();
+        let unpacked = root.path().join("unpacked");
+        fs::create_dir(&unpacked).unwrap();
+        let image = b"LAV\x12\0\0\0\0\0\0\0\0\0\0\0\0\x40";
+        let path = unpacked.join("test.lav");
+        fs::write(&path, image).unwrap();
+        let mut package = vec![0; 18];
+        package[..4].copy_from_slice(b"PAC ");
+        package[16..18].copy_from_slice(&2u16.to_le_bytes());
+        for (name, bytes) in [
+            ("LAVA/test.lav", image.as_slice()),
+            ("LavaData/data.dat", &[7][..]),
+        ] {
+            let mut header = [0; 64];
+            header[..4].copy_from_slice(&(bytes.len() as u32).to_le_bytes());
+            header[4..4 + name.len()].copy_from_slice(name.as_bytes());
+            package.extend_from_slice(&header);
+            package.extend_from_slice(bytes);
+        }
+        fs::write(root.path().join("test.pac"), package).unwrap();
+        let mut emulator = Emulator::load_content(image).unwrap();
+        import_packaged_resources(&path, &mut emulator);
+        assert_eq!(emulator.files().file("/LavaData/data.dat"), Some(&[7][..]));
     }
 }

@@ -5,6 +5,9 @@ RetroArch.
 
 Content can be a `.lav` program or a `.pac` package. PAC loading launches its
 first LAV program with all embedded companion files available in the virtual filesystem.
+For a loose LAV, matching PAC files beside the program or in its parent directory
+can supply missing resources. The program bytes must match exactly, and existing
+companion files take priority over package defaults.
 
 ## Supported Platforms
 

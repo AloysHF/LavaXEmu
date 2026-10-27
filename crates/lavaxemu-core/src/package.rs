@@ -8,57 +8,76 @@ impl Emulator {
         if !data.starts_with(b"PAC ") {
             return Ok(Self::new(Program::load(data)?));
         }
-        if data.len() < 18 {
-            return Err(Error::InvalidPackage("truncated header"));
-        }
-        let count = u16::from_le_bytes([data[16], data[17]]);
-        let mut offset = 18usize;
-        let mut entries = Vec::new();
-        let mut program = None;
-        for _ in 0..count {
-            let header = data
-                .get(offset..offset + 64)
-                .ok_or(Error::InvalidPackage("truncated entry header"))?;
-            offset += 64;
-            let length = u32::from_le_bytes(header[..4].try_into().unwrap()) as usize;
-            let end = offset
-                .checked_add(length)
-                .ok_or(Error::InvalidPackage("entry length overflow"))?;
-            let bytes = data
-                .get(offset..end)
-                .ok_or(Error::InvalidPackage("truncated entry data"))?;
-            offset = end;
-            if length == 0 {
-                continue;
-            }
-            let name = &header[4..];
-            let terminator = name
-                .iter()
-                .position(|&byte| byte == 0)
-                .ok_or(Error::InvalidPackage("unterminated entry name"))?;
-            let (name, _, errors) = GBK.decode(&name[..terminator]);
-            let name = name.replace('\\', "/");
-            if errors
-                || name.is_empty()
-                || name.starts_with('/')
-                || name.contains(':')
-                || name.split('/').any(|part| part == "..")
-            {
-                return Err(Error::InvalidPackage("invalid entry path"));
-            }
-            if program.is_none() && name.to_ascii_lowercase().ends_with(".lav") {
-                program = Some(Program::load(bytes)?);
-            }
-            entries.push((name, bytes));
-        }
-        let mut emulator = Self::new(program.ok_or(Error::InvalidPackage("no LAV program"))?);
+        let entries = package_entries(data)?;
+        let program = entries
+            .iter()
+            .find(|(name, _)| name.to_ascii_lowercase().ends_with(".lav"))
+            .ok_or(Error::InvalidPackage("no LAV program"))?;
+        let mut emulator = Self::new(Program::load(program.1)?);
         for (name, bytes) in entries {
-            if !emulator.files_mut().import_file(&name, bytes.to_vec()) {
-                return Err(Error::InvalidPackage("invalid virtual file path"));
-            }
+            emulator.files_mut().import_file(&name, bytes.to_vec());
         }
         Ok(emulator)
     }
+
+    /// Imports missing resources only when the package contains this exact program.
+    pub fn import_matching_package(&mut self, data: &[u8]) -> Result<bool> {
+        let entries = package_entries(data)?;
+        if !entries.iter().any(|(name, bytes)| {
+            name.to_ascii_lowercase().ends_with(".lav") && *bytes == self.vm.program().image()
+        }) {
+            return Ok(false);
+        }
+        for (name, bytes) in entries {
+            if self.files().file(&name).is_none() {
+                self.files_mut().import_file(&name, bytes.to_vec());
+            }
+        }
+        Ok(true)
+    }
+}
+
+fn package_entries(data: &[u8]) -> Result<Vec<(String, &[u8])>> {
+    if data.len() < 18 || !data.starts_with(b"PAC ") {
+        return Err(Error::InvalidPackage("invalid header"));
+    }
+    let count = u16::from_le_bytes([data[16], data[17]]);
+    let mut offset = 18usize;
+    let mut entries = Vec::new();
+    for _ in 0..count {
+        let header = data
+            .get(offset..offset + 64)
+            .ok_or(Error::InvalidPackage("truncated entry header"))?;
+        offset += 64;
+        let length = u32::from_le_bytes(header[..4].try_into().unwrap()) as usize;
+        let end = offset
+            .checked_add(length)
+            .ok_or(Error::InvalidPackage("entry length overflow"))?;
+        let bytes = data
+            .get(offset..end)
+            .ok_or(Error::InvalidPackage("truncated entry data"))?;
+        offset = end;
+        if length == 0 {
+            continue;
+        }
+        let name = &header[4..];
+        let terminator = name
+            .iter()
+            .position(|&byte| byte == 0)
+            .ok_or(Error::InvalidPackage("unterminated entry name"))?;
+        let (name, _, errors) = GBK.decode(&name[..terminator]);
+        let name = name.replace('\\', "/");
+        if errors
+            || name.is_empty()
+            || name.starts_with('/')
+            || name.contains(':')
+            || name.split('/').any(|part| part == "..")
+        {
+            return Err(Error::InvalidPackage("invalid entry path"));
+        }
+        entries.push((name, bytes));
+    }
+    Ok(entries)
 }
 
 #[cfg(test)]
@@ -114,5 +133,66 @@ mod tests {
         for name in ["../escape.lav", "C:/escape.lav", "/escape.lav"] {
             assert!(Emulator::load_content(&package(&[(name, &[1])])).is_err());
         }
+    }
+
+    #[test]
+    fn matching_packages_only_supply_missing_files_and_preserve_loose_saves() {
+        let mut lav = vec![0; LAV_HEADER_SIZE];
+        lav[..4].copy_from_slice(&LAV_MAGIC);
+        lav.push(0x40);
+        let mut emulator = Emulator::load_content(&lav).unwrap();
+        emulator.files_mut().import_file("slot.sav", vec![9]);
+        emulator
+            .files_mut()
+            .import_file("/LavaData/sprite.dat", vec![8]);
+        let data = package(&[
+            ("LAVA/helper.lav", b"another program"),
+            ("LAVA/main.lav", &lav),
+            ("LavaData/slot.sav", &[0]),
+            ("LavaData/sprite.dat", &[0]),
+            ("CBMap/stagepack.dat", &[1, 2, 3]),
+        ]);
+        assert!(emulator.import_matching_package(&data).unwrap());
+        assert_eq!(emulator.files().file("/LavaData/slot.sav"), Some(&[9][..]));
+        assert_eq!(
+            emulator.files().file("/LavaData/sprite.dat"),
+            Some(&[8][..])
+        );
+        assert_eq!(
+            emulator.files().file("/CBMap/stagepack.dat"),
+            Some(&[1, 2, 3][..])
+        );
+        let handle = emulator
+            .files_mut()
+            .open("/LavaData/slot.sav", "w")
+            .unwrap();
+        emulator.files_mut().write(handle, &[7]);
+        emulator.files_mut().close(handle);
+        assert_eq!(
+            emulator.files_mut().take_dirty_files(),
+            [("/slot.sav".to_owned(), vec![7])]
+        );
+    }
+
+    #[test]
+    fn mismatched_or_incomplete_packages_do_not_import_any_files() {
+        let mut lav = vec![0; LAV_HEADER_SIZE];
+        lav[..4].copy_from_slice(&LAV_MAGIC);
+        lav.push(0x40);
+        let mut emulator = Emulator::load_content(&lav).unwrap();
+        let mut other = lav.clone();
+        other.push(0x40);
+        assert!(
+            !emulator
+                .import_matching_package(&package(&[("main.lav", &other), ("data.dat", &[1])]))
+                .unwrap()
+        );
+        let data = package(&[("main.lav", &lav), ("data.dat", &[1])]);
+        assert!(
+            emulator
+                .import_matching_package(&data[..data.len() - 1])
+                .is_err()
+        );
+        assert!(emulator.files().files().is_empty());
     }
 }

@@ -206,22 +206,26 @@ without an execution error alone does not establish playability.
 
 ## Magic / 神州
 
-- Content: `LAVA1 神州/神州.pac`.
+- Content: `LAVA1 神州/神州.pac` and `非pac/Magic.lav`.
 - Problem: the loose `非pac/Magic.lav` cannot open `GameSource.dat`, which is
-  only present inside the PAC. Previously neither frontend accepted PAC content.
-- Fix: parse PAC entry headers and GBK paths, launch the first embedded LAV,
-  and import every package resource into the virtual filesystem. Standalone and
-  libretro use the shared loader; the core metadata and browser picker accept PAC.
-  Existing disk companions override embedded files so saved progress can reload.
-- Validation: the complete package opens `GameSource.dat`, displays the intro,
+  only present inside the PAC.
+- Fix: both frontends can load the complete PAC. For a loose LAV, they also check
+  PAC files beside it and in its parent directory. A package must contain the exact
+  same program bytes before its missing resources are mounted in memory. Existing
+  files, including loose saves resolved through LavaData aliases, take priority.
+  The search stops at the nearest matching package and does not unpack onto disk.
+- Validation: both the complete package and the loose LAV open `GameSource.dat`, display the intro,
   advances through dialogue, and reaches the map. Right input changes the rendered
   player position compared with an idle clone. Unit tests cover multiple entries,
   Chinese paths, truncated records, invalid paths, and the libretro load lifecycle.
-  Use the complete PAC instead of the incomplete loose LAV for this game.
+  Additional regressions reject mismatched/incomplete companion packages and verify
+  that an existing loose save remains authoritative and writes back to its original file.
 
 | Map | After right movement |
 | --- | --- |
 | ![Map](images/fixes/magic-map.png) | ![Movement](images/fixes/magic-movement.png) |
+
+![Loose LAV after resource matching](images/fixes/magic-loose-map.png)
 
 ## Super Robot Wars (超级机器人大战)
 
