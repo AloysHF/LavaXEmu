@@ -1187,3 +1187,49 @@ fn star_legend_registers_a_character_and_loads_the_map() {
         "up must move the registered character on the map"
     );
 }
+
+#[test]
+#[ignore = "requires the local game corpus via LAVAX_GAME_ROOT"]
+fn flat_cube_selects_shifts_swaps_and_returns_to_the_menu() {
+    for (path, name) in [
+        ("LAVA1 平面魔方/平面魔方.pac", "flat-cube-pac"),
+        ("LAVA1 平面魔方/非pac/平面魔方.lav", "flat-cube-loose"),
+    ] {
+        let mut emulator = load(path);
+        advance(&mut emulator, 300);
+        press(&mut emulator, 22);
+        press(&mut emulator, 13);
+        capture(&emulator, &format!("{name}-board"));
+        let board = emulator.clone();
+        press(&mut emulator, 22);
+        assert!(
+            board.display().indexed_frame() != emulator.display().indexed_frame(),
+            "right must move the selection in {path}"
+        );
+        let mut shifted = board.clone();
+        press(&mut shifted, b'm');
+        press(&mut shifted, 22);
+        capture(&shifted, &format!("{name}-shift"));
+        assert!(
+            board.display().indexed_frame() != shifted.display().indexed_frame(),
+            "M then right must shift a row and increment the move count in {path}"
+        );
+        let mut swapped = board.clone();
+        press(&mut swapped, b'c');
+        press(&mut swapped, 22);
+        press(&mut swapped, 13);
+        capture(&swapped, &format!("{name}-swap"));
+        assert!(
+            board.display().indexed_frame() != swapped.display().indexed_frame(),
+            "C then right and Enter must swap tiles and consume an exchange in {path}"
+        );
+        press(&mut swapped, 27);
+        capture(&swapped, &format!("{name}-exit-confirmation"));
+        press(&mut swapped, b'y');
+        capture(&swapped, &format!("{name}-menu"));
+        assert!(
+            board.display().indexed_frame() != swapped.display().indexed_frame(),
+            "confirming exit must return to the menu in {path}"
+        );
+    }
+}

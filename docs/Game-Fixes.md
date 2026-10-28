@@ -431,3 +431,19 @@ without an execution error alone does not establish playability.
 | Registration | Loaded character | Map movement |
 | --- | --- | --- |
 | ![Success](images/fixes/star-legend-registration.png) | ![Character](images/fixes/star-legend-character.png) | ![Movement](images/fixes/star-legend-movement.png) |
+
+## Flat Cube (平面魔方)
+
+- Content: `LAVA1 平面魔方/平面魔方.pac` and `非pac/平面魔方.lav`.
+- Validation gap: the default menu selection opens instructions, so repeated
+  Enter input never established whether the puzzle itself worked.
+- Validation: Right then Enter starts the challenge. Direction keys select a
+  tile; M then Right shifts a row and increments the move count. C, Right, Enter
+  exchanges two tiles and reduces the exchange allowance from three to two.
+  Esc opens the exit confirmation, and Y returns to the main menu. Both entry
+  points render the full 5-by-5 icon grid and perform these operations. No
+  additional emulator behavior changes were required.
+
+| Starting board | Row shifted | Tiles exchanged |
+| --- | --- | --- |
+| ![Board](images/fixes/flat-cube-loose-board.png) | ![Shift](images/fixes/flat-cube-loose-shift.png) | ![Exchange](images/fixes/flat-cube-loose-swap.png) |
