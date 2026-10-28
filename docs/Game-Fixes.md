@@ -513,3 +513,22 @@ without an execution error alone does not establish playability.
 | Dealt hand | Card selected | Card played | Updated scores |
 | --- | --- | --- | --- |
 | ![Hand](images/fixes/landlord-tc800-dealt.png) | ![Selected](images/fixes/landlord-tc800-selected.png) | ![Played](images/fixes/landlord-tc800-played.png) | ![Scores](images/fixes/landlord-tc800-scores.png) |
+
+## Champion Football Manager (冠军足球经理 05–06 v0.7)
+
+- Content: `LAVA1 冠军足球经理05-06赛季0.7/CFM.lav` with `CFMdata.dat`.
+- Validation gap: startup input did not complete the two password entries or
+  obtain a coaching appointment. As the supplied readme explains, new coaches
+  must approach weaker second-division clubs; stronger clubs reject them.
+- Validation: create a coach, enter and confirm a password, and apply to Venezia
+  in Italy's second division. Accept the appointment, keep the default budget
+  allocation, and finish the season introduction. Training menus open correctly.
+  Start and complete the first fixture; results and standings show Venezia's
+  loss and the manager advances to round two. Save and leave exits normally and
+  writes the 4014-byte `mdata0.sav` plus the manager index. A fresh instance loads
+  that career with the password and restores the next-fixture menu and record
+  pixel-for-pixel. No additional emulator behavior changes were required.
+
+| First fixture | League standings | Reloaded career |
+| --- | --- | --- |
+| ![Fixture](images/fixes/cfm-manager.png) | ![Standings](images/fixes/cfm-standings.png) | ![Reload](images/fixes/cfm-reloaded.png) |

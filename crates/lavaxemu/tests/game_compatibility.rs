@@ -1425,3 +1425,103 @@ fn extreme_landlord_versions_deal_select_play_and_save() {
         );
     }
 }
+
+#[test]
+#[ignore = "requires the local game corpus via LAVAX_GAME_ROOT"]
+fn champion_football_manager_creates_a_coach_and_finishes_a_match() {
+    fn step_key(emulator: &mut Emulator, key: u8) {
+        press(emulator, key);
+        advance(emulator, 27);
+    }
+    let mut emulator = load("LAVA1 冠军足球经理05-06赛季0.7/CFM.lav");
+    advance(&mut emulator, 300);
+    for key in [13]
+        .into_iter()
+        .chain(*b"lava")
+        .chain([13])
+        .chain(*b"test")
+        .chain([13])
+        .chain(*b"test")
+        .chain([13, 13, 13])
+    {
+        step_key(&mut emulator, key);
+    }
+    advance(&mut emulator, 420);
+    for key in [21, 13]
+        .into_iter()
+        .chain([21; 19])
+        .chain([13, 13, 13, 13, 27, 13, 13, 13, 13, 13])
+        .chain([27; 6])
+    {
+        step_key(&mut emulator, key);
+    }
+    capture(&emulator, "cfm-manager");
+    let manager = emulator.display().indexed_frame().to_vec();
+    let mut training = emulator.clone();
+    press(&mut training, 21);
+    press(&mut training, 13);
+    capture(&training, "cfm-training");
+    assert!(
+        manager != training.display().indexed_frame(),
+        "training arrangements must open from the manager menu"
+    );
+    for _ in 0..5 {
+        step_key(&mut emulator, 13);
+    }
+    advance(&mut emulator, 2880);
+    capture(&emulator, "cfm-results");
+    for _ in 0..5 {
+        step_key(&mut emulator, 27);
+    }
+    capture(&emulator, "cfm-next-fixture");
+    let saved_manager = emulator.display().indexed_frame().to_vec();
+    assert!(
+        manager != emulator.display().indexed_frame(),
+        "a completed match must advance the manager's fixture and league record"
+    );
+    let mut statistics = emulator.clone();
+    for key in [21, 21, 13, 13] {
+        step_key(&mut statistics, key);
+    }
+    capture(&statistics, "cfm-standings");
+    for _ in 0..4 {
+        step_key(&mut emulator, 21);
+    }
+    emulator.files_mut().take_dirty_files();
+    emulator.input_mut().set_keys([13]);
+    for _ in 0..60 {
+        let frame = emulator
+            .run_frame()
+            .expect("saving the career must execute");
+        if let FrameStatus::Halted(code) = frame.status {
+            assert_eq!(code, 0);
+            break;
+        }
+    }
+    assert!(
+        !emulator.vm().is_running(),
+        "save and leave must exit normally"
+    );
+    capture(&emulator, "cfm-save-return");
+    let files = emulator.files_mut().take_dirty_files();
+    assert!(
+        files
+            .iter()
+            .any(|(path, bytes)| path.ends_with("mdata0.sav") && bytes.len() == 4014),
+        "leaving must save the played career"
+    );
+    let mut reloaded = load("LAVA1 冠军足球经理05-06赛季0.7/CFM.lav");
+    for (path, bytes) in files {
+        reloaded.files_mut().import_file(&path, bytes);
+    }
+    advance(&mut reloaded, 300);
+    for key in [21, 13, 13].into_iter().chain(*b"test").chain([13]) {
+        step_key(&mut reloaded, key);
+    }
+    advance(&mut reloaded, 300);
+    capture(&reloaded, "cfm-reloaded");
+    assert!(
+        saved_manager == reloaded.display().indexed_frame(),
+        "loading the career must restore its next fixture and league record"
+    );
+}
