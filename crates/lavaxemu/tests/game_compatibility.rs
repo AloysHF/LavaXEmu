@@ -1333,3 +1333,95 @@ fn lazy_yy_versions_feed_pause_and_return_to_the_menu() {
         capture(&emulator, &format!("{name}-menu"));
     }
 }
+
+#[test]
+#[ignore = "requires the local game corpus via LAVAX_GAME_ROOT"]
+fn extreme_landlord_versions_deal_select_play_and_save() {
+    fn step_key(emulator: &mut Emulator, key: u8) {
+        press(emulator, key);
+        advance(emulator, 27);
+    }
+    for (path, name, first_run, pinyin) in [
+        (
+            "LAVA1 极限斗地主/极限斗地主.lav",
+            "landlord-existing",
+            false,
+            false,
+        ),
+        (
+            "LAVA1 极限斗地主3.2/极限斗地主.lav",
+            "landlord-standard",
+            true,
+            false,
+        ),
+        (
+            "LAVA1 极限斗地主3.2/极限斗地主NC1020版.lav",
+            "landlord-nc1020",
+            true,
+            false,
+        ),
+        (
+            "LAVA1 极限斗地主3.2/极限斗地主tc800版.lav",
+            "landlord-tc800",
+            true,
+            true,
+        ),
+    ] {
+        let mut emulator = load(path);
+        advance(&mut emulator, 300);
+        if first_run {
+            for key in [21, 21, 21, b'y'] {
+                step_key(&mut emulator, key);
+            }
+        }
+        for _ in 0..8 {
+            step_key(&mut emulator, 13);
+        }
+        if first_run {
+            if pinyin {
+                step_key(&mut emulator, 26);
+            }
+            for key in b"lava".iter().copied().chain([13, 13, 13, 13]) {
+                step_key(&mut emulator, key);
+            }
+        }
+        advance(&mut emulator, 600);
+        capture(&emulator, &format!("{name}-dealt"));
+        let mut selection = emulator.clone();
+        press(&mut selection, 22);
+        let cursor = selection.display().indexed_frame().to_vec();
+        press(&mut selection, 20);
+        capture(&selection, &format!("{name}-selected"));
+        assert!(
+            cursor != selection.display().indexed_frame(),
+            "up must raise a selected card in {path}"
+        );
+        press(&mut selection, 21);
+        assert!(
+            cursor == selection.display().indexed_frame(),
+            "down must cancel that selection in {path}"
+        );
+        let hand = emulator.display().indexed_frame()[60 * 160..].to_vec();
+        press(&mut emulator, b'p');
+        press(&mut emulator, 13);
+        advance(&mut emulator, 180);
+        capture(&emulator, &format!("{name}-played"));
+        assert!(
+            hand != emulator.display().indexed_frame()[60 * 160..],
+            "confirming the suggested play must change the hand in {path}"
+        );
+        emulator.files_mut().take_dirty_files();
+        for key in [31, b'y', 13] {
+            step_key(&mut emulator, key);
+        }
+        capture(&emulator, &format!("{name}-scores"));
+        assert!(
+            emulator
+                .files_mut()
+                .take_dirty_files()
+                .iter()
+                .any(|(path, bytes)| path.contains("jxddzsave") && !bytes.is_empty()),
+            "ending the round must write the updated score file in {path}"
+        );
+    }
+}

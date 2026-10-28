@@ -492,3 +492,24 @@ without an execution error alone does not establish playability.
 | Monochrome play | Monochrome pause | Grey feeding | Grey pause menu |
 | --- | --- | --- | --- |
 | ![Play](images/fixes/lazy-yy-loose-play.png) | ![Pause](images/fixes/lazy-yy-loose-pause.png) | ![Feed](images/fixes/lazy-yy-grey-feed.png) | ![Menu](images/fixes/lazy-yy-grey-pause.png) |
+
+## Extreme Landlord 3.2 (极限斗地主)
+
+- Content: `LAVA1 极限斗地主/极限斗地主.lav` and all three LAVs in
+  `LAVA1 极限斗地主3.2` (standard, NC1020, TC800).
+- Validation gap: fresh installations wait for Down to page through the first-run
+  notice and Y to accept it. Enter does not advance that notice. The TC800
+  version also starts its built-in name editor in pinyin mode; Shift switches
+  to English entry. The original folder includes an existing player save.
+- Validation: complete first-run setup where needed, enter a player name,
+  choose a game, deal the cards, and bid. Right moves the cursor; Up raises a
+  card and Down cancels that selection, restoring the exact prior frame. P
+  suggests a legal play and Enter plays it, reducing the hand. F4 then Y ends
+  the round with the game's stated score penalty; Enter returns to the scores.
+  This writes the updated `jxddzsave*.dat` file automatically. All four versions
+  execute these flows with correctly rendered hands, card backs, and scores.
+  No additional emulator behavior changes were required.
+
+| Dealt hand | Card selected | Card played | Updated scores |
+| --- | --- | --- | --- |
+| ![Hand](images/fixes/landlord-tc800-dealt.png) | ![Selected](images/fixes/landlord-tc800-selected.png) | ![Played](images/fixes/landlord-tc800-played.png) | ![Scores](images/fixes/landlord-tc800-scores.png) |
