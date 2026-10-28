@@ -560,3 +560,20 @@ without an execution error alone does not establish playability.
 | Character | Attributes | Housework results | Reloaded character |
 | --- | --- | --- | --- |
 | ![Character](images/fixes/pm2-main.png) | ![Attributes](images/fixes/pm2-status.png) | ![Work](images/fixes/pm2-housework.png) | ![Reload](images/fixes/pm2-reloaded.png) |
+
+## Dream World (梦中世界，更新 6)
+
+- Content: `LAVA1 梦中世界（更新6）/梦中世界.lav`, `GameSave.dat`, and `GameNpc.dat`.
+- Validation gap: account forms use Up/Down to choose fields; Enter submits the
+  whole form. Generic Enter input therefore left the required fields empty.
+- Validation: choose Apply for Account, fill the account/password/confirmation
+  fields, name the character, and select a gender. Import the actual generated
+  files into a fresh instance and log in. Down moves the player and scrolls the
+  town map relative to an idle clone. F1 shows the created character and stats.
+  Space opens the system menu; C exits normally and writes the updated
+  11,357-byte character file. Town tiles, sprites, character data, and menus
+  render correctly. No additional emulator behavior changes were required.
+
+| Town map | After movement | Character record | System menu |
+| --- | --- | --- | --- |
+| ![Map](images/fixes/dream-world-map.png) | ![Movement](images/fixes/dream-world-movement.png) | ![Character](images/fixes/dream-world-character.png) | ![Menu](images/fixes/dream-world-system.png) |

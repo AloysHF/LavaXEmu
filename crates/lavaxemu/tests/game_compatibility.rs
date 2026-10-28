@@ -1597,3 +1597,88 @@ fn princess_maker_2_shows_stats_executes_a_plan_and_reloads_its_save() {
         "loading progress must restore the saved character screen"
     );
 }
+
+#[test]
+#[ignore = "requires the local game corpus via LAVAX_GAME_ROOT"]
+fn dream_world_creates_an_account_loads_the_map_and_moves() {
+    fn step_key(emulator: &mut Emulator, key: u8) {
+        press(emulator, key);
+        advance(emulator, 27);
+    }
+    let path = "LAVA1 梦中世界（更新6）/梦中世界.lav";
+    let mut registration = load(path);
+    advance(&mut registration, 300);
+    for key in [21, 21, 13]
+        .into_iter()
+        .chain(*b"lava")
+        .chain([21])
+        .chain(*b"test")
+        .chain([21])
+        .chain(*b"test")
+        .chain([13])
+        .chain(*b"hero")
+        .chain([13, b'a'])
+    {
+        step_key(&mut registration, key);
+    }
+    capture(&registration, "dream-world-registration");
+    let files = registration.files_mut().take_dirty_files();
+    assert!(
+        files
+            .iter()
+            .any(|(path, bytes)| path.ends_with("lava.dmn") && !bytes.is_empty()),
+        "account creation must write the character file"
+    );
+    let mut emulator = load(path);
+    for (path, bytes) in files {
+        emulator.files_mut().import_file(&path, bytes);
+    }
+    advance(&mut emulator, 300);
+    for key in [13]
+        .into_iter()
+        .chain(*b"lava")
+        .chain([21])
+        .chain(*b"test")
+        .chain([13])
+    {
+        step_key(&mut emulator, key);
+    }
+    advance(&mut emulator, 600);
+    capture(&emulator, "dream-world-map");
+    let mut idle = emulator.clone();
+    advance(&mut idle, 60);
+    let mut moved = input_branch(&emulator, 21);
+    capture(&moved, "dream-world-movement");
+    assert!(
+        moved.display().indexed_frame() != idle.display().indexed_frame(),
+        "down must move the player and scroll the map"
+    );
+    let role = input_branch(&emulator, 28);
+    capture(&role, "dream-world-character");
+    assert!(
+        role.display().indexed_frame() != idle.display().indexed_frame(),
+        "F1 must display the character record"
+    );
+    press(&mut moved, 32);
+    capture(&moved, "dream-world-system");
+    moved.input_mut().set_keys([b'c']);
+    for _ in 0..60 {
+        if let FrameStatus::Halted(code) = moved.run_frame().unwrap().status {
+            assert_eq!(code, 0);
+            break;
+        }
+    }
+    capture(&moved, "dream-world-exit");
+    assert!(
+        !moved.vm().is_running(),
+        "the system menu must exit normally"
+    );
+    assert!(
+        moved
+            .files_mut()
+            .take_dirty_files()
+            .iter()
+            .any(|(path, bytes)| path.ends_with("lava.dmn") && bytes.len() == 11357),
+        "leaving must save the played character"
+    );
+}
