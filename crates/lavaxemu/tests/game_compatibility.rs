@@ -1661,7 +1661,7 @@ fn dream_world_creates_an_account_loads_the_map_and_moves() {
     );
     press(&mut moved, 32);
     capture(&moved, "dream-world-system");
-    moved.input_mut().set_keys([b'c']);
+    moved.input_mut().set_keys(*b"c");
     for _ in 0..60 {
         if let FrameStatus::Halted(code) = moved.run_frame().unwrap().status {
             assert_eq!(code, 0);
