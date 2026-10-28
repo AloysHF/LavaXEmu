@@ -137,6 +137,7 @@ impl Emulator {
             true,
             DrawOperation::Invert,
         );
+        self.write_graphics_memory();
     }
 }
 

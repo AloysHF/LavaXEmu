@@ -1233,3 +1233,44 @@ fn flat_cube_selects_shifts_swaps_and_returns_to_the_menu() {
         );
     }
 }
+
+#[test]
+#[ignore = "requires the local game corpus via LAVAX_GAME_ROOT"]
+fn rocket_car_keeps_the_track_visible_and_responds_to_controls() {
+    let mut emulator = load("LAVA1 火箭车/火箭车.lav");
+    advance(&mut emulator, 300);
+    let title = emulator.display().indexed_frame().to_vec();
+    press(&mut emulator, 13);
+    advance(&mut emulator, 600);
+    let frame = emulator.display().indexed_frame();
+    let track_pixels = (0..80)
+        .filter(|&y| !(16..64).contains(&y))
+        .flat_map(|y| &frame[y * 160..y * 160 + 120])
+        .filter(|&&pixel| pixel != 0)
+        .count();
+    assert!(
+        track_pixels > 200,
+        "direct graphics access must preserve the moving track traffic"
+    );
+    capture(&emulator, "rocket-car-track");
+    let mut idle = emulator.clone();
+    advance(&mut idle, 60);
+    let steered = input_branch(&emulator, 20);
+    capture(&steered, "rocket-car-steering");
+    assert!(
+        steered.display().indexed_frame() != idle.display().indexed_frame(),
+        "up must move the player's car relative to idle traffic"
+    );
+    press(&mut emulator, 27);
+    capture(&emulator, "rocket-car-score");
+    for key in b"lava" {
+        press(&mut emulator, *key);
+    }
+    press(&mut emulator, 13);
+    press(&mut emulator, 13);
+    capture(&emulator, "rocket-car-menu");
+    assert!(
+        title == emulator.display().indexed_frame(),
+        "entering the driver name must return to the title menu"
+    );
+}

@@ -266,6 +266,7 @@ impl Emulator {
             filled,
             DrawOperation::from_lava(mode),
         );
+        self.write_graphics_region(target_from_flag(mode as u8, true), x0, y0, x1, y1);
         Ok(HostAction::Continue)
     }
 
@@ -316,6 +317,7 @@ impl Emulator {
             y,
             DrawOperation::from_lava(mode),
         );
+        self.write_graphics_region(target_from_flag(mode as u8, false), x, y, x, y);
         Ok(HostAction::Continue)
     }
 
@@ -375,6 +377,7 @@ impl Emulator {
             filled,
             DrawOperation::from_lava(mode),
         );
+        self.write_graphics_region(BufferTarget::Front, x0, y0, x1, y1);
         Ok(HostAction::Continue)
     }
 

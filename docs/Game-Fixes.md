@@ -183,7 +183,7 @@ without an execution error alone does not establish playability.
 - Validation: dismiss the splash, move the selection, open the file action menu,
   restore a pending picker save state, cancel, and confirm normal exit. Core tests
   cover Chinese names, paging, special keys, reset, and version 2 state migration.
-  Save states now use version 3 and retain version 2 loading support.
+  This introduced save-state version 3; current states retain version 2 loading support.
 
 | Directory picker | File actions |
 | --- | --- |
@@ -447,3 +447,28 @@ without an execution error alone does not establish playability.
 | Starting board | Row shifted | Tiles exchanged |
 | --- | --- | --- |
 | ![Board](images/fixes/flat-cube-loose-board.png) | ![Shift](images/fixes/flat-cube-loose-shift.png) | ![Exchange](images/fixes/flat-cube-loose-swap.png) |
+
+## Rocket Car (火箭车)
+
+- Content: `LAVA1 火箭车/火箭车.lav`.
+- Problem: menus and sprites rendered, but most track traffic disappeared once
+  the initial screen scrolled away. The program accesses `_GRAPH` directly;
+  address zero was returned without actually mapping the packed front buffer.
+- Fix: lazily map GVmaker 1.0's 160-by-80 monochrome front/back buffers at
+  addresses 0 and 1600. Keep guest assignments, memory-copy calls, and drawing
+  calls coherent. Track RAM writes and synchronize small point/rectangle updates
+  by region so repeated cursor drawing does not copy the entire screen.
+  The layout is corroborated by
+  [GVmakerSE RamManager](https://github.com/arucil/GVmakerSE/blob/f87166975bebfb3672c69de89838765a7106dde0/src/main/java/eastsun/jgvm/module/RamManager.java)
+  and [its packed screen buffers](https://github.com/arucil/GVmakerSE/blob/f87166975bebfb3672c69de89838765a7106dde0/src/main/java/eastsun/jgvm/module/DefaultScreenModel.java).
+  Save-state version 4 preserves activation and continues to load versions 2/3.
+  Larger/color displays retain their existing unsupported direct-buffer behavior.
+- Validation: start play and advance beyond the initial traffic. The track
+  continues to render; Up changes the player position against an idle branch.
+  Esc opens the score/name screen; entering a driver name returns to the title.
+  Unit tests cover direct writes, drawing across packed-byte boundaries, bulk
+  copies, and save-state restoration.
+
+| Before | Track after the fix | Steering |
+| --- | --- | --- |
+| ![Missing traffic](images/fixes/rocket-car-before.png) | ![Track](images/fixes/rocket-car-track.png) | ![Steering](images/fixes/rocket-car-steering.png) |

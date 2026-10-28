@@ -12,6 +12,7 @@ const LAVA_TRUE: i32 = -1;
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum StepOutcome {
     Continue,
+    GraphicsBuffer { back: bool },
     SystemCall(u8),
     Halted(i32),
 }
@@ -19,6 +20,7 @@ pub enum StepOutcome {
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum RunOutcome {
     BudgetExhausted,
+    GraphicsBuffer { back: bool },
     SystemCall(u8),
     Halted(i32),
 }
@@ -40,6 +42,8 @@ pub struct Vm {
     function_stack: Vec<u32>,
     running: bool,
     instructions_executed: u64,
+    #[serde(skip)]
+    pub(crate) graphics_memory_dirty: bool,
 }
 
 impl Vm {
@@ -60,6 +64,7 @@ impl Vm {
             function_stack: Vec::new(),
             running: true,
             instructions_executed: 0,
+            graphics_memory_dirty: false,
         }
     }
 
@@ -78,6 +83,7 @@ impl Vm {
         self.function_stack.clear();
         self.running = true;
         self.instructions_executed = 0;
+        self.graphics_memory_dirty = false;
     }
 
     pub const fn program(&self) -> &Program {
@@ -89,6 +95,7 @@ impl Vm {
     }
 
     pub fn memory_mut(&mut self) -> &mut [u8] {
+        self.graphics_memory_dirty = true;
         &mut self.memory
     }
 
@@ -141,6 +148,9 @@ impl Vm {
         for _ in 0..instruction_budget {
             match self.step()? {
                 StepOutcome::Continue => {}
+                StepOutcome::GraphicsBuffer { back } => {
+                    return Ok(RunOutcome::GraphicsBuffer { back });
+                }
                 StepOutcome::SystemCall(call) => return Ok(RunOutcome::SystemCall(call)),
                 StepOutcome::Halted(code) => return Ok(RunOutcome::Halted(code)),
             }
@@ -189,7 +199,8 @@ impl Vm {
             0x04..=0x0c => self.execute_global_push(opcode)?,
             0x0d => self.push_string()?,
             0x0e..=0x19 => self.execute_local_push(opcode)?,
-            0x1a | 0x1b => self.push_value(0)?,
+            0x1a => self.push_value(0)?,
+            0x1b => return Ok(StepOutcome::GraphicsBuffer { back: false }),
             0x1c => {
                 let value = self.pop_value()?.wrapping_neg();
                 self.push_value(value)?;
@@ -225,7 +236,7 @@ impl Vm {
                 return Ok(StepOutcome::Halted(0));
             }
             0x41 => self.preset_memory()?,
-            0x42 => self.push_value(0)?,
+            0x42 => return Ok(StepOutcome::GraphicsBuffer { back: true }),
             0x43 => self.secret = self.fetch_u8()?,
             0x00 | 0x44 => {}
             0x45..=0x51 => self.execute_quick_operation(opcode, opcode_pc)?,
@@ -800,6 +811,7 @@ impl Vm {
     fn write_u8(&mut self, address: u32, value: u8) -> Result<()> {
         let range = self.checked_range(address, 1)?;
         self.memory[range.start] = value;
+        self.graphics_memory_dirty |= address < crate::graphics_memory::MEMORY_SIZE as u32;
         Ok(())
     }
 
@@ -829,6 +841,8 @@ impl Vm {
     fn write_bytes(&mut self, address: u32, bytes: &[u8]) -> Result<()> {
         let range = self.checked_range(address, bytes.len())?;
         self.memory[range].copy_from_slice(bytes);
+        self.graphics_memory_dirty |=
+            address < crate::graphics_memory::MEMORY_SIZE as u32 && !bytes.is_empty();
         Ok(())
     }
 }
@@ -920,13 +934,18 @@ mod tests {
     }
 
     #[test]
-    fn reports_unavailable_host_buffers_as_null() {
+    fn requests_graphics_buffers_from_the_host() {
         let mut vm = vm(&[0x1a, 0x1b, 0x42, 0x40]);
-
+        assert_eq!(
+            vm.run(10).unwrap(),
+            RunOutcome::GraphicsBuffer { back: false }
+        );
+        assert_eq!(vm.pop_value().unwrap(), 0);
+        assert_eq!(
+            vm.run(10).unwrap(),
+            RunOutcome::GraphicsBuffer { back: true }
+        );
         assert_eq!(vm.run(10).unwrap(), RunOutcome::Halted(0));
-        assert_eq!(vm.pop_value().unwrap(), 0);
-        assert_eq!(vm.pop_value().unwrap(), 0);
-        assert_eq!(vm.pop_value().unwrap(), 0);
     }
 
     #[test]

@@ -211,6 +211,7 @@ pub struct Emulator {
     pub(crate) calendar: [u8; 8],
     pub(crate) command_line: Vec<u8>,
     pub(crate) file_list: FileListState,
+    pub(crate) legacy_graphics_memory: bool,
 }
 
 impl Emulator {
@@ -232,6 +233,7 @@ impl Emulator {
             calendar: [0xd0, 0x07, 1, 1, 0, 0, 0, 6],
             command_line: Vec::new(),
             file_list: FileListState::default(),
+            legacy_graphics_memory: false,
         }
     }
 
@@ -249,6 +251,7 @@ impl Emulator {
         self.waiting_for_key = false;
         self.random_seed = 1;
         self.file_list = FileListState::default();
+        self.legacy_graphics_memory = false;
     }
 
     pub const fn vm(&self) -> &Vm {
@@ -322,7 +325,12 @@ impl Emulator {
                 return Ok(self.frame_result(FrameStatus::Running, executed, system_calls));
             }
             let slice = (budget - executed).min(VM_SLICE_INSTRUCTIONS);
-            match self.vm.run(slice)? {
+            let outcome = self.vm.run(slice)?;
+            self.read_graphics_memory();
+            match outcome {
+                RunOutcome::GraphicsBuffer { back } => {
+                    self.request_graphics_memory(back)?;
+                }
                 RunOutcome::BudgetExhausted => {}
                 RunOutcome::Halted(code) => {
                     let executed = (self.vm.instructions_executed() - start) as usize;
@@ -335,6 +343,7 @@ impl Emulator {
                 RunOutcome::SystemCall(call) => {
                     system_calls += 1;
                     let action = self.dispatch_system_call(call)?;
+                    self.sync_graphics_system_call(call);
                     let status = match action {
                         HostAction::Continue => continue,
                         HostAction::Present => FrameStatus::Presented,
