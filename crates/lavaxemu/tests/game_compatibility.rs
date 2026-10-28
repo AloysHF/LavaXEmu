@@ -1682,3 +1682,108 @@ fn dream_world_creates_an_account_loads_the_map_and_moves() {
         "leaving must save the played character"
     );
 }
+
+#[test]
+#[ignore = "requires the local game corpus via LAVAX_GAME_ROOT"]
+fn dragon_legend_selects_classes_moves_and_reloads_a_local_save() {
+    fn step_key(emulator: &mut Emulator, key: u8) {
+        press(emulator, key);
+        advance(emulator, 27);
+    }
+    let path = "LAVA1 龙之传说/非pac/longX.lav";
+    let mut emulator = load(path);
+    advance(&mut emulator, 300);
+    for key in [13, 13, 13, b'q', b'y', b'w', b'y', 13, 13, 13, 13] {
+        step_key(&mut emulator, key);
+    }
+    advance(&mut emulator, 240);
+    for _ in 0..80 {
+        step_key(&mut emulator, 13);
+    }
+    capture(&emulator, "dragon-legend-map");
+    let mut idle = emulator.clone();
+    advance(&mut idle, 60);
+    let moved = input_branch(&emulator, 21);
+    capture(&moved, "dragon-legend-movement");
+    assert!(
+        moved.display().indexed_frame() != idle.display().indexed_frame(),
+        "down must move the party through the town"
+    );
+    let mut character = input_branch(&emulator, b'c');
+    press(&mut character, 13);
+    capture(&character, "dragon-legend-character");
+    assert!(
+        character.display().indexed_frame() != idle.display().indexed_frame(),
+        "C must open the party's character record"
+    );
+    let mut battle = emulator.clone();
+    advance(&mut battle, 1200);
+    for _ in 0..6 {
+        battle.input_mut().set_keys([23]);
+        advance(&mut battle, 1);
+        battle.input_mut().set_keys([]);
+        advance(&mut battle, 11);
+    }
+    for key in [13]
+        .into_iter()
+        .chain([23; 30])
+        .chain([22; 30])
+        .chain([23; 30])
+        .chain([22; 30])
+    {
+        step_key(&mut battle, key);
+    }
+    advance(&mut battle, 2340);
+    capture(&battle, "dragon-legend-battle");
+    let ready = battle.display().indexed_frame().to_vec();
+    let mut attacking = battle.clone();
+    step_key(&mut attacking, b'b');
+    capture(&attacking, "dragon-legend-target");
+    step_key(&mut attacking, 13);
+    capture(&attacking, "dragon-legend-attack");
+    assert!(
+        ready != attacking.display().indexed_frame(),
+        "B and Enter must resolve an ordinary attack"
+    );
+    for _ in 0..10 {
+        step_key(&mut battle, b'h');
+        step_key(&mut battle, 13);
+    }
+    advance(&mut battle, 1200);
+    capture(&battle, "dragon-legend-escaped");
+    // Coordinate bytes distinguish world movement from battle menu input.
+    let position = battle.vm().memory()[0x65d1..0x65d3].to_vec();
+    let walking = input_branch(&battle, 21);
+    assert!(
+        position != walking.vm().memory()[0x65d1..0x65d3],
+        "successful escape must restore world-map movement"
+    );
+    for key in [b'b', 21, 21, 21, 21, 21, 13, 13] {
+        step_key(&mut emulator, key);
+    }
+    capture(&emulator, "dragon-legend-system");
+    let files = emulator.files_mut().take_dirty_files();
+    assert!(
+        files
+            .iter()
+            .any(|(path, bytes)| path.ends_with("lsav.dat") && !bytes.is_empty()),
+        "the system save action must write party progress"
+    );
+    step_key(&mut emulator, 27);
+    step_key(&mut emulator, 27);
+    capture(&emulator, "dragon-legend-saved-map");
+    let saved = emulator.display().indexed_frame()[..64 * 160].to_vec();
+    let mut reloaded = load(path);
+    for (path, bytes) in files {
+        reloaded.files_mut().import_file(&path, bytes);
+    }
+    advance(&mut reloaded, 300);
+    step_key(&mut reloaded, b'c');
+    step_key(&mut reloaded, 13);
+    advance(&mut reloaded, 600);
+    capture(&reloaded, "dragon-legend-reloaded");
+    assert!(
+        saved == reloaded.display().indexed_frame()[..64 * 160],
+        "continue must restore the saved town viewport"
+    );
+}

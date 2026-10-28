@@ -577,3 +577,24 @@ without an execution error alone does not establish playability.
 | Town map | After movement | Character record | System menu |
 | --- | --- | --- | --- |
 | ![Map](images/fixes/dream-world-map.png) | ![Movement](images/fixes/dream-world-movement.png) | ![Character](images/fixes/dream-world-character.png) | ![Menu](images/fixes/dream-world-system.png) |
+
+## Dragon Legend (龙之传说 v1.5)
+
+- Content: `LAVA1 龙之传说/非pac/longX.lav` and `DatLong.dat`.
+- Validation gap: Enter-only input stopped at class selection. Each party member
+  needs a Q/W/E/R class selection and a Y confirmation before the opening story.
+- Validation: choose a swordsman and mage, finish the opening, walk through the
+  town, and use C plus Enter to view the first character's attributes. Leave by
+  the western town exit and walk outside until a battle starts. B selects an
+  ordinary attack and Enter confirms the target; the attack animation resolves
+  (the recorded roll is MISS). Repeated H/Enter attempts eventually escape;
+  movement changes the world-coordinate bytes again after returning to the map.
+  Enemy sprites, party HP/MP, the time gauge, and battle commands render correctly.
+- Persistence: B opens the menu; System → Save writes `LSav.dat`. A fresh
+  instance chooses Continue (C) and confirms the save preview with Enter.
+  The town viewport is restored exactly; the independently advancing footer clock
+  is excluded from the comparison. No additional emulator changes were required.
+
+| Character | Battle | Attack resolution | After escaping |
+| --- | --- | --- | --- |
+| ![Character](images/fixes/dragon-legend-character.png) | ![Battle](images/fixes/dragon-legend-battle.png) | ![Attack](images/fixes/dragon-legend-attack.png) | ![World](images/fixes/dragon-legend-escaped.png) |
