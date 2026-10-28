@@ -472,3 +472,23 @@ without an execution error alone does not establish playability.
 | Before | Track after the fix | Steering |
 | --- | --- | --- |
 | ![Missing traffic](images/fixes/rocket-car-before.png) | ![Track](images/fixes/rocket-car-track.png) | ![Steering](images/fixes/rocket-car-steering.png) |
+
+## Lazy YY Milk Battle (Lazy YY 牛奶大战)
+
+- Content: the loose LAV and PAC in `LAVA1 Lazy YY牛奶大战/Ver1.2`, and the
+  PAC in `Ver1.5 For TC800 Only`.
+- Validation gap: the generic input sequence did not use the game's feeding
+  keys. The empty dashed slots are the item inventory, not an account prompt.
+  Version 1.2 creates `CatUser.dat` automatically when needed.
+- Validation: enter challenge mode and start the first stage. Version 1.2 uses
+  G/J to feed left/right; version 1.5 uses Left/Right. Feeding changes the
+  milk/target state relative to an idle branch; the grey version's remaining
+  target count drops from 150 to 149. Space pauses each version and the scene
+  remains identical over another 60 frames. Space resumes 1.2; Enter selects
+  Continue in 1.5's pause menu. Esc returns to the menu. Monochrome and grey
+  sprites, counters, and menus render correctly. No additional emulator behavior
+  changes were required.
+
+| Monochrome play | Monochrome pause | Grey feeding | Grey pause menu |
+| --- | --- | --- | --- |
+| ![Play](images/fixes/lazy-yy-loose-play.png) | ![Pause](images/fixes/lazy-yy-loose-pause.png) | ![Feed](images/fixes/lazy-yy-grey-feed.png) | ![Menu](images/fixes/lazy-yy-grey-pause.png) |

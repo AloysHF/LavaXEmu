@@ -1274,3 +1274,62 @@ fn rocket_car_keeps_the_track_visible_and_responds_to_controls() {
         "entering the driver name must return to the title menu"
     );
 }
+
+#[test]
+#[ignore = "requires the local game corpus via LAVAX_GAME_ROOT"]
+fn lazy_yy_versions_feed_pause_and_return_to_the_menu() {
+    for (path, name, feed, resume) in [
+        (
+            "LAVA1 Lazy YY牛奶大战/Ver1.2/未打包的文件/LazyYY.lav",
+            "lazy-yy-loose",
+            b'g',
+            32,
+        ),
+        (
+            "LAVA1 Lazy YY牛奶大战/Ver1.2/打包的文件/LazyYY牛奶大战.pac",
+            "lazy-yy-pac",
+            b'g',
+            32,
+        ),
+        (
+            "LAVA1 Lazy YY牛奶大战/Ver1.5 For TC800 Only/Lazy YY牛奶大战.pac",
+            "lazy-yy-grey",
+            23,
+            13,
+        ),
+    ] {
+        let mut emulator = load(path);
+        for frame in 0usize..1200 {
+            let input = frame.saturating_sub(300);
+            emulator
+                .input_mut()
+                .set_keys((frame >= 300 && input / 60 < 5 && input % 60 < 3).then_some(13));
+            advance(&mut emulator, 1);
+        }
+        emulator.input_mut().set_keys([]);
+        capture(&emulator, &format!("{name}-play"));
+        let mut idle = emulator.clone();
+        advance(&mut idle, 60);
+        let fed = input_branch(&emulator, feed);
+        capture(&fed, &format!("{name}-feed"));
+        assert!(
+            fed.display().indexed_frame() != idle.display().indexed_frame(),
+            "feeding must affect the milk/targets in {path}"
+        );
+        let mut paused = input_branch(&emulator, 32);
+        capture(&paused, &format!("{name}-pause"));
+        let pause_frame = paused.display().indexed_frame().to_vec();
+        advance(&mut paused, 60);
+        assert!(
+            pause_frame == paused.display().indexed_frame(),
+            "pause must freeze the scene in {path}"
+        );
+        press(&mut paused, resume);
+        assert!(
+            pause_frame != paused.display().indexed_frame(),
+            "resume must restore play in {path}"
+        );
+        press(&mut emulator, 27);
+        capture(&emulator, &format!("{name}-menu"));
+    }
+}
