@@ -412,3 +412,22 @@ without an execution error alone does not establish playability.
 | Map | System menu | Reloaded character |
 | --- | --- | --- |
 | ![Map](images/fixes/sky-land-map.png) | ![Menu](images/fixes/sky-land-system.png) | ![Reload](images/fixes/sky-land-reloaded.png) |
+
+## Star Legend (星剑传奇)
+
+- Content: `LAVA1 星剑传奇/未打包的[星剑传奇]/星剑注册.lav` and
+  `星剑传奇.lav`; the PAC starts its embedded registration program.
+- Validation gap: generic input stopped at account setup rather than proving
+  that a registered character could enter the game. Both account and password
+  must exceed five characters; the confirmation explicitly requires Y.
+- Validation: enter a six-character account/password, confirm with Y, select a
+  character, and enter a name. Registration writes a real 194-byte
+  `LavaData/S-lavaxx.dat`. A fresh main-game instance reads that file, accepts
+  the credentials, and displays the character summary. Enter opens the map;
+  Up moves the character relative to an equal-duration idle replay. The PAC
+  registration flow also reaches the success screen and writes the same file.
+  No additional emulator behavior changes were required.
+
+| Registration | Loaded character | Map movement |
+| --- | --- | --- |
+| ![Success](images/fixes/star-legend-registration.png) | ![Character](images/fixes/star-legend-character.png) | ![Movement](images/fixes/star-legend-movement.png) |

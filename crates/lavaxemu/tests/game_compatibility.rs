@@ -1131,3 +1131,59 @@ fn sky_and_land_creates_a_local_save_and_moves_on_the_map() {
         "logging into the written account must restore the saved map"
     );
 }
+
+#[test]
+#[ignore = "requires the local game corpus via LAVAX_GAME_ROOT"]
+fn star_legend_registers_a_character_and_loads_the_map() {
+    let directory = "LAVA1 星剑传奇/未打包的[星剑传奇]";
+    let mut registration = load(&format!("{directory}/星剑注册.lav"));
+    advance(&mut registration, 300);
+    for key in [13]
+        .into_iter()
+        .chain(*b"lavaxx")
+        .chain([13])
+        .chain(*b"testxx")
+        .chain([13, b'y', 13])
+        .chain(*b"lava")
+        .chain([13])
+    {
+        press(&mut registration, key);
+    }
+    capture(&registration, "star-legend-registration");
+    let files = registration.files_mut().take_dirty_files();
+    assert!(
+        files
+            .iter()
+            .any(|(path, bytes)| path.ends_with("s-lavaxx.dat") && bytes.len() == 194)
+    );
+    let mut emulator = load(&format!("{directory}/星剑传奇.lav"));
+    for (path, bytes) in files {
+        emulator.files_mut().import_file(&path, bytes);
+    }
+    advance(&mut emulator, 600);
+    capture(&emulator, "star-legend-start");
+    press(&mut emulator, 13);
+    capture(&emulator, "star-legend-login");
+    for key in b"lavaxx"
+        .iter()
+        .copied()
+        .chain([13])
+        .chain(*b"testxx")
+        .chain([13])
+    {
+        press(&mut emulator, key);
+    }
+    advance(&mut emulator, 1200);
+    capture(&emulator, "star-legend-character");
+    press(&mut emulator, 13);
+    advance(&mut emulator, 600);
+    capture(&emulator, "star-legend-map");
+    let mut idle = emulator.clone();
+    advance(&mut idle, 60);
+    let moved = input_branch(&emulator, 20);
+    capture(&moved, "star-legend-movement");
+    assert!(
+        moved.display().indexed_frame() != idle.display().indexed_frame(),
+        "up must move the registered character on the map"
+    );
+}
