@@ -1537,3 +1537,63 @@ fn champion_football_manager_creates_a_coach_and_finishes_a_match() {
         "loading the career must restore its next fixture and league record"
     );
 }
+
+#[test]
+#[ignore = "requires the local game corpus via LAVAX_GAME_ROOT"]
+fn princess_maker_2_shows_stats_executes_a_plan_and_reloads_its_save() {
+    fn step_key(emulator: &mut Emulator, key: u8) {
+        press(emulator, key);
+        advance(emulator, 27);
+    }
+    let path = "LAVA1 美少女梦工厂2黑白版/PM2.lav";
+    let mut emulator = load(path);
+    advance(&mut emulator, 300);
+    for key in [13, 13, 13, b'a', 13, b'y', 13] {
+        step_key(&mut emulator, key);
+    }
+    advance(&mut emulator, 480);
+    for _ in 0..100 {
+        step_key(&mut emulator, 13);
+    }
+    capture(&emulator, "pm2-main");
+    let status = input_branch(&emulator, b'z');
+    capture(&status, "pm2-status");
+    assert!(
+        status.display().indexed_frame() != emulator.display().indexed_frame(),
+        "Z must open the character's attributes"
+    );
+    let mut working = emulator.clone();
+    for key in [b'c', 13, 13, 13, 13] {
+        step_key(&mut working, key);
+    }
+    advance(&mut working, 2100);
+    capture(&working, "pm2-housework");
+    assert!(
+        working.display().indexed_frame() != emulator.display().indexed_frame(),
+        "executing housework must advance the date and character state"
+    );
+    step_key(&mut emulator, b'x');
+    step_key(&mut emulator, 13);
+    capture(&emulator, "pm2-saved");
+    let saved = emulator.display().indexed_frame().to_vec();
+    let files = emulator.files_mut().take_dirty_files();
+    assert!(
+        files
+            .iter()
+            .any(|(path, bytes)| path.ends_with("save.dat") && !bytes.is_empty()),
+        "time stop must write the character save"
+    );
+    let mut reloaded = load(path);
+    for (path, bytes) in files {
+        reloaded.files_mut().import_file(&path, bytes);
+    }
+    advance(&mut reloaded, 300);
+    step_key(&mut reloaded, 21);
+    step_key(&mut reloaded, 13);
+    advance(&mut reloaded, 60);
+    capture(&reloaded, "pm2-reloaded");
+    assert!(
+        saved == reloaded.display().indexed_frame(),
+        "loading progress must restore the saved character screen"
+    );
+}

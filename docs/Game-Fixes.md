@@ -541,3 +541,22 @@ without an execution error alone does not establish playability.
 | First fixture | League standings | Reloaded career |
 | --- | --- | --- |
 | ![Fixture](images/fixes/cfm-manager.png) | ![Standings](images/fixes/cfm-standings.png) | ![Reload](images/fixes/cfm-reloaded.png) |
+
+## Princess Maker 2 monochrome (美少女梦工厂 2 黑白版)
+
+- Content: `LAVA1 美少女梦工厂2黑白版/PM2.lav`, `head.DAT`, and `pic.DAT`.
+- Validation gap: the generic replay stopped at the name confirmation or opening
+  story. The main screen uses letter hotkeys, so arrow/Enter sampling did not
+  establish whether its actions worked.
+- Validation: enter a name, confirm with Y, choose the birthday, and finish the
+  opening story. Z opens the attributes; C schedules work. Choose housekeeping
+  and execute the first ten days: the date advances from January 1 to January 11
+  and attributes/fatigue change. X then Enter chooses Time Stop and writes
+  `LavaData/save.dat`. Import that actual file into a fresh instance and choose
+  Read Progress at the title: the saved character screen is restored exactly.
+  Portraits, dialogue, attributes, and daily work results render correctly.
+  No additional emulator behavior changes were required.
+
+| Character | Attributes | Housework results | Reloaded character |
+| --- | --- | --- | --- |
+| ![Character](images/fixes/pm2-main.png) | ![Attributes](images/fixes/pm2-status.png) | ![Work](images/fixes/pm2-housework.png) | ![Reload](images/fixes/pm2-reloaded.png) |
