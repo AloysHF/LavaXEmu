@@ -6,6 +6,10 @@ use lavaxemu_core::{Emulator, FrameStatus};
 #[allow(dead_code)]
 mod content;
 
+#[path = "../src/standalone/input.rs"]
+#[allow(dead_code)]
+mod host_input;
+
 fn load(relative: &str) -> Emulator {
     let root = PathBuf::from(std::env::var_os("LAVAX_GAME_ROOT").expect("set LAVAX_GAME_ROOT"));
     content::load_emulator(&root.join(relative), &[]).expect("load game and companions")
@@ -1316,7 +1320,15 @@ fn lazy_yy_versions_feed_pause_and_return_to_the_menu() {
             fed.display().indexed_frame() != idle.display().indexed_frame(),
             "feeding must affect the milk/targets in {path}"
         );
-        let mut paused = input_branch(&emulator, 32);
+        let mut paused = emulator.clone();
+        for frame in 0..60 {
+            paused
+                .input_mut()
+                .set_keys(host_input::keyboard_keys(|key| {
+                    frame < 18 && key == minifb::Key::Space
+                }));
+            advance(&mut paused, 1);
+        }
         capture(&paused, &format!("{name}-pause"));
         let pause_frame = paused.display().indexed_frame().to_vec();
         advance(&mut paused, 60);

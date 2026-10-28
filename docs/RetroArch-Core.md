@@ -67,7 +67,10 @@ The core maps RetroPad inputs to LavaX keys:
 | L | Page Up (19) |
 | R | Page Down (14) |
 
-Keyboard input is also available when using RetroArch with a keyboard.
+Keyboard input is polled alongside the joypad. Letters, Enter, Escape, Space,
+arrows, page keys, Shift, and F1–F6 use the same guest codes as the standalone
+emulator. Space sends a real space; B or physical 1 sends B. Physical 2–9 retain
+the N/M/G/H/J/T/Y/U aliases, and 0 and period are available for text input.
 
 ## Features
 

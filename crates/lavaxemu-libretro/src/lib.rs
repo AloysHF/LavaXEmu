@@ -152,7 +152,7 @@ pub unsafe extern "C" fn retro_get_system_av_info(info: *mut SystemAvInfo) {
 
 #[unsafe(no_mangle)]
 pub extern "C" fn retro_set_controller_port_device(port: u32, device: u32) {
-    if port == 0 && device != DEVICE_NONE && device != DEVICE_JOYPAD {
+    if port == 0 && !matches!(device, DEVICE_NONE | DEVICE_JOYPAD | DEVICE_KEYBOARD) {
         log::warn!("unsupported controller device {device} on port {port}");
     }
 }
@@ -228,7 +228,8 @@ pub extern "C" fn retro_run() {
         unsafe { callback() };
     }
     let input_state = core.callbacks.input_state;
-    let keys = read_joypad(input_state);
+    let mut keys = read_joypad(input_state);
+    keys.extend(read_keyboard(input_state));
 
     if core.emulator.is_none() {
         return;
@@ -452,6 +453,51 @@ fn read_joypad(callback: InputStateCallback) -> Vec<u8> {
         .collect()
 }
 
+fn read_keyboard(callback: InputStateCallback) -> Vec<u8> {
+    let Some(callback) = callback else {
+        return Vec::new();
+    };
+    let mut keys = Vec::new();
+    let mut poll = |physical, guest| {
+        if unsafe { callback(0, DEVICE_KEYBOARD, 0, physical) } != 0 {
+            keys.push(guest);
+        }
+    };
+    for letter in b'a'..=b'z' {
+        poll(u32::from(letter), letter);
+    }
+    for (index, guest) in b"bnmghjtyu".iter().copied().enumerate() {
+        poll(u32::from(b'1') + index as u32, guest);
+    }
+    // Physical IDs follow retro_key in libretro.h, not platform virtual keys.
+    for (physical, guest) in [
+        (8, 14),
+        (9, 19),
+        (13, 13),
+        (27, 27),
+        (32, b' '),
+        (46, b'.'),
+        (48, b'0'),
+        (273, 20),
+        (274, 21),
+        (275, 22),
+        (276, 23),
+        (280, 19),
+        (281, 14),
+        (282, 28),
+        (283, 29),
+        (284, 30),
+        (285, 31),
+        (286, 25),
+        (287, 18),
+        (303, 26),
+        (304, 26),
+    ] {
+        poll(physical, guest);
+    }
+    keys
+}
+
 fn read_pointer(callback: InputStateCallback, width: u16, height: u16) -> Option<PointerState> {
     let callback = callback?;
     let pressed = unsafe { callback(0, DEVICE_POINTER, 0, POINTER_PRESSED) != 0 };
@@ -613,6 +659,10 @@ mod tests {
         VIDEO_WIDTH.store(width, Ordering::Relaxed);
     }
 
+    unsafe extern "C" fn space_key(_port: u32, device: u32, _index: u32, id: u32) -> i16 {
+        i16::from(device == DEVICE_KEYBOARD && id == 32)
+    }
+
     #[test]
     fn loads_runs_and_serializes_content() {
         let mut image = [0_u8; 17];
@@ -657,6 +707,31 @@ mod tests {
         retro_run();
         assert_eq!(VIDEO_WIDTH.load(Ordering::Relaxed), 160);
         retro_unload_game();
+
+        let mut keyboard_image = image[..16].to_vec();
+        keyboard_image.extend_from_slice(&[0x81, 0x38, 0x40]);
+        let info = GameInfo {
+            path: ptr::null(),
+            data: keyboard_image.as_ptr().cast(),
+            size: keyboard_image.len(),
+            meta: ptr::null(),
+        };
+        assert!(unsafe { retro_load_game(&info) });
+        retro_set_input_state(Some(space_key));
+        retro_run();
+        assert_eq!(core().emulator.as_ref().unwrap().vm().result(), 32);
+        retro_set_input_state(None);
+        retro_unload_game();
+    }
+
+    #[test]
+    fn polls_keyboard_letters_confirmation_help_and_number_aliases() {
+        unsafe extern "C" fn keyboard(_port: u32, device: u32, _index: u32, id: u32) -> i16 {
+            i16::from(device == DEVICE_KEYBOARD && matches!(id, 13 | 49 | 103 | 273 | 286 | 304))
+        }
+        let mut keys = read_keyboard(Some(keyboard));
+        keys.sort_unstable();
+        assert_eq!(keys, [13, 20, 25, 26, b'b', b'g']);
     }
 
     #[test]

@@ -486,8 +486,17 @@ without an execution error alone does not establish playability.
   target count drops from 150 to 149. Space pauses each version and the scene
   remains identical over another 60 frames. Space resumes 1.2; Enter selects
   Continue in 1.5's pause menu. Esc returns to the menu. Monochrome and grey
-  sprites, counters, and menus render correctly. No additional emulator behavior
-  changes were required.
+  sprites, counters, and menus render correctly.
+- Frontend fix: the window previously translated physical Space to B, so actual
+  keyboard users could not trigger the pause tested with guest key 32. Space now
+  sends 32, and the regression drives the actual window keyboard translator.
+  B/1 retain the B action. RetroArch now polls keyboard input alongside joypad
+  input, exposing the game's Space/G/J keys as well as Enter, letters, page keys,
+  Shift, and F1–F6 needed by other games. Both hosts also accept 0 and period.
+  Keyboard IDs follow the official
+  [libretro keyboard API](https://github.com/libretro/libretro-common/blob/master/include/libretro.h).
+  A libretro lifecycle test delivers physical Space through `retro_run` to a
+  guest GetChar call and checks that it receives 32.
 
 | Monochrome play | Monochrome pause | Grey feeding | Grey pause menu |
 | --- | --- | --- | --- |

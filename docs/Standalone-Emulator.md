@@ -76,7 +76,9 @@ lavaxemu path/to/game.lav -- first second
 | --- | --- |
 | Direction keys | Arrow keys |
 | A–Z | A–Z |
-| B | Space or 1 |
+| B | B or 1 |
+| Space | Space |
+| 0 / period | 0 / period |
 | N | 2 |
 | M | 3 |
 | G | 4 |
