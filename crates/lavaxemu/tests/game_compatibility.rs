@@ -1857,3 +1857,50 @@ fn dragon_kiss_creates_a_chinese_name_moves_and_loads_party_progress() {
         "loading must preserve the Chinese name, class and party attributes"
     );
 }
+
+#[test]
+#[ignore = "requires the local game corpus via LAVAX_GAME_ROOT"]
+fn maze_3d_walks_turns_and_switches_the_satellite_map() {
+    fn viewport(emulator: &Emulator) -> &[u8] {
+        &emulator.display().indexed_frame()[14 * 160..]
+    }
+    let mut emulator = load("LAVA1 3D迷宫/3D迷宫.lav");
+    advance(&mut emulator, 300);
+    for _ in 0..20 {
+        press(&mut emulator, 13);
+        advance(&mut emulator, 27);
+    }
+    press(&mut emulator, 27);
+    advance(&mut emulator, 5700);
+    capture(&emulator, "maze-3d-corridor");
+    let mut idle = emulator.clone();
+    advance(&mut idle, 60);
+    let moved = input_branch(&emulator, 20);
+    capture(&moved, "maze-3d-movement");
+    assert!(
+        viewport(&moved) != viewport(&idle),
+        "Up must change the corridor geometry"
+    );
+    let turned = input_branch(&emulator, 19);
+    capture(&turned, "maze-3d-turn");
+    assert!(
+        (0..14).any(|row| {
+            let direction = row * 160..row * 160 + 48;
+            turned.display().indexed_frame()[direction.clone()]
+                != idle.display().indexed_frame()[direction]
+        }),
+        "Page Up must turn the direction indicator"
+    );
+    let mut map = input_branch(&emulator, 13);
+    capture(&map, "maze-3d-satellite");
+    assert!(
+        viewport(&map) != viewport(&idle),
+        "Enter must open the satellite maze map"
+    );
+    press(&mut map, 27);
+    capture(&map, "maze-3d-returned");
+    assert!(
+        viewport(&map) == viewport(&idle),
+        "Escape must return to the same corridor"
+    );
+}

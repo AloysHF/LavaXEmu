@@ -619,3 +619,21 @@ without an execution error alone does not establish playability.
 | Pinyin candidates | Town | Character | Reloaded character |
 | --- | --- | --- | --- |
 | ![Pinyin](images/fixes/dragon-kiss-pinyin.png) | ![Town](images/fixes/dragon-kiss-town.png) | ![Character](images/fixes/dragon-kiss-character.png) | ![Reload](images/fixes/dragon-kiss-reloaded-character.png) |
+
+
+## 3D Maze (3D 迷宫)
+
+- Content: `LAVA1 3D迷宫/3D迷宫.lav` and `maze.dat`.
+- Validation gap: the opening logo needs a later key press, and Enter in the
+  playable scene opens the satellite map. Repeating Enter therefore obscured
+  movement checks by keeping the overview open.
+- Validation: finish the introduction and dismiss the overview with Escape.
+  Up changes the first-person corridor geometry. Page Up turns the direction
+  indicator from north to west; Page Down turns the other way. Enter opens
+  the satellite maze, and Escape restores the original corridor exactly.
+  Regression comparisons exclude the advancing timer. No additional emulator
+  changes were required.
+
+| First-person corridor | After walking | After turning | Satellite map |
+| --- | --- | --- | --- |
+| ![Corridor](images/fixes/maze-3d-corridor.png) | ![Walking](images/fixes/maze-3d-movement.png) | ![Turning](images/fixes/maze-3d-turn.png) | ![Map](images/fixes/maze-3d-satellite.png) |
