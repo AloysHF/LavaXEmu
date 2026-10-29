@@ -656,3 +656,25 @@ without an execution error alone does not establish playability.
 | Stage selector | Maze | Right movement | Round result |
 | --- | --- | --- | --- |
 | ![Selector](images/fixes/pacman-stage-selector.png) | ![Maze](images/fixes/pacman-maze.png) | ![Movement](images/fixes/pacman-move-22.png) | ![Result](images/fixes/pacman-round-ended.png) |
+
+
+## Cloud / 疾龙云飞
+
+- Content: the `LAVA1 Cloud` and `LAVA1 疾龙云飞` folders each contain the
+  same loose `cloud_all.lav`/`cbo_cloud.dat` and `bobo_cloud.pac` package.
+  All four entry points are exercised independently.
+- Validation gap: generic Enter input misses the first cliff and reaches a
+  zero-score result. Actual play needs a jump near the cliff and another
+  confirmation when the rotating character approaches the landing angle.
+- Validation: open Options, assign Enter to confirmation/jumping and B to
+  acceleration, and finish the speed settings. This writes `cloud_cfg.dat`.
+  Start a round and time Enter near the cliff: the character jumps, the
+  completed attempt receives one Bad judgement and 20 points, whereas the
+  idle branch falls and receives zero. Import the real configuration into a
+  fresh instance and replay the same input: the scored result matches exactly.
+  Intro logos, menu, moving/rotating character, background and result table
+  render correctly. No additional emulator changes were required.
+
+| Ready | Jump | Scored result | Result after reloading settings |
+| --- | --- | --- | --- |
+| ![Ready](images/fixes/cloud-ready.png) | ![Jump](images/fixes/cloud-jump.png) | ![Score](images/fixes/cloud-scored-jump.png) | ![Reload](images/fixes/cloud-reloaded-result.png) |

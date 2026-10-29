@@ -1943,3 +1943,62 @@ fn pacman_versions_select_a_stage_move_and_finish_a_round() {
         assert!(ended, "the idle player must reach the You Lost result");
     }
 }
+
+#[test]
+#[ignore = "requires the local game corpus via LAVAX_GAME_ROOT"]
+fn cloud_versions_configure_keys_jump_and_persist_the_configuration() {
+    for path in [
+        "LAVA1 Cloud/未打包的文件/cloud_all.lav",
+        "LAVA1 Cloud/打包的文件/bobo_cloud.pac",
+        "LAVA1 疾龙云飞/未打包的文件/cloud_all.lav",
+        "LAVA1 疾龙云飞/打包的文件/bobo_cloud.pac",
+    ] {
+        let mut emulator = load(path);
+        advance(&mut emulator, 300);
+        // Configure Enter for jumping and B for acceleration through the UI.
+        for key in [21, 13, 13, b'b', 27, 20, 13, 13, 13] {
+            press(&mut emulator, key);
+            advance(&mut emulator, 27);
+        }
+        advance(&mut emulator, 660);
+        capture(&emulator, "cloud-ready");
+        let files = emulator.files_mut().take_dirty_files();
+        assert!(
+            files.iter().any(|(path, bytes)| {
+                path.ends_with("cloud_cfg.dat") && bytes.starts_with(&[13, b'b'])
+            }),
+            "keyboard settings must be saved"
+        );
+        let mut idle = emulator.clone();
+        press(&mut idle, 13);
+        advance(&mut idle, 327);
+        capture(&idle, "cloud-missed-jump");
+        press(&mut emulator, 13);
+        advance(&mut emulator, 37);
+        press(&mut emulator, 13);
+        capture(&emulator, "cloud-jump");
+        advance(&mut emulator, 257);
+        capture(&emulator, "cloud-scored-jump");
+        let scored = emulator.display().indexed_frame().to_vec();
+        assert!(
+            scored != idle.display().indexed_frame(),
+            "a timed jump must earn a different result from falling"
+        );
+        let mut reloaded = load(path);
+        for (path, bytes) in files {
+            reloaded.files_mut().import_file(&path, bytes);
+        }
+        advance(&mut reloaded, 300);
+        press(&mut reloaded, 13);
+        advance(&mut reloaded, 27);
+        press(&mut reloaded, 13);
+        advance(&mut reloaded, 37);
+        press(&mut reloaded, 13);
+        advance(&mut reloaded, 257);
+        capture(&reloaded, "cloud-reloaded-result");
+        assert!(
+            scored == reloaded.display().indexed_frame(),
+            "reloading the actual configuration must preserve the timed jump result"
+        );
+    }
+}
