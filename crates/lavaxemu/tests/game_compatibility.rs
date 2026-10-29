@@ -12,7 +12,18 @@ mod host_input;
 
 fn load(relative: &str) -> Emulator {
     let root = PathBuf::from(std::env::var_os("LAVAX_GAME_ROOT").expect("set LAVAX_GAME_ROOT"));
-    content::load_emulator(&root.join(relative), &[]).expect("load game and companions")
+    let emulator =
+        content::load_emulator(&root.join(relative), &[]).expect("load game and companions");
+    if let Some(path) = std::env::var_os("LAVAX_AUDIT_LOG") {
+        use std::io::Write;
+        let mut log = std::fs::OpenOptions::new()
+            .create(true)
+            .append(true)
+            .open(path)
+            .unwrap();
+        writeln!(log, "{}", relative.replace('\\', "/")).unwrap();
+    }
+    emulator
 }
 
 fn advance(emulator: &mut Emulator, frames: usize) {

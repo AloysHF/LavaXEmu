@@ -179,15 +179,13 @@ The window also accepts mouse clicks as pointer input on the 160×240 screen.
 
 ## Game Compatibility
 
-The emulator supports LavaX bytecode programs in `.lav` format with 160×240
-display. Compatibility testing is in progress.
+The emulator loads `.lav` programs and uncompressed `.pac` packages. Display
+size and graphics mode come from the program header. Compatibility testing
+is in progress.
 
-| Status | Count |
-|--------|-------|
-| ✅ Pass | — |
-| ❌ Fail | — |
-
-For the full game list with screenshots, see [Game Compatibility](docs/Game-Compatibility.md).
+For verified operations and remaining entries, see the [Corpus Workflow Audit](docs/Game-Corpus-Audit.md)
+and [Game Fixes](docs/Game-Fixes.md). The [Game Compatibility gallery](docs/Game-Compatibility.md)
+contains historical startup screenshots.
 
 ## Testing
 
