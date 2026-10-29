@@ -99,27 +99,34 @@ fn capture(emulator: &Emulator, name: &str) {
 #[test]
 #[ignore = "requires the local game corpus via LAVAX_GAME_ROOT"]
 fn dark_chess_loads_the_board_and_responds_to_moves() {
-    let mut emulator = load("LAVA1 暗子象棋/未打包/暗子象棋.lav");
-    advance(&mut emulator, 360);
-    for _ in 0..3 {
+    for path in [
+        "LAVA1 暗子象棋/未打包/暗子象棋.lav",
+        "LAVA1 暗子象棋/暗子象棋.pac",
+    ] {
+        let mut emulator = load(path);
+        advance(&mut emulator, 360);
+        for _ in 0..3 {
+            press(&mut emulator, 13);
+        }
+        capture(&emulator, "dark-chess-board");
+        let board = emulator.display().indexed_frame().to_vec();
+        assert!(board.iter().any(|&pixel| pixel != board[0]));
+        press(&mut emulator, 22);
+        assert_ne!(
+            board,
+            emulator.display().indexed_frame(),
+            "cursor must move"
+        );
+        let cursor = emulator.display().indexed_frame().to_vec();
         press(&mut emulator, 13);
+        assert_ne!(
+            cursor,
+            emulator.display().indexed_frame(),
+            "piece must flip"
+        );
+        capture(&emulator, "dark-chess-flipped");
+        advance(&mut emulator, 1200);
     }
-    let board = emulator.display().indexed_frame().to_vec();
-    assert!(board.iter().any(|&pixel| pixel != board[0]));
-    press(&mut emulator, 22);
-    assert_ne!(
-        board,
-        emulator.display().indexed_frame(),
-        "cursor must move"
-    );
-    let cursor = emulator.display().indexed_frame().to_vec();
-    press(&mut emulator, 13);
-    assert_ne!(
-        cursor,
-        emulator.display().indexed_frame(),
-        "piece must flip"
-    );
-    advance(&mut emulator, 1200);
 }
 
 #[test]
