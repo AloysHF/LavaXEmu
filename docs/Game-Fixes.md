@@ -699,3 +699,23 @@ without an execution error alone does not establish playability.
 | Monochrome field | Monochrome shot | Grayscale field | Grayscale shot |
 | --- | --- | --- | --- |
 | ![Field](images/fixes/spitting-king-mono-field.png) | ![Shot](images/fixes/spitting-king-mono-shot.png) | ![Field](images/fixes/spitting-king-gray-field.png) | ![Shot](images/fixes/spitting-king-gray-shot.png) |
+
+
+## BoBo Dance / 超级舞者 (Dance_all)
+
+- Content: `LAVA1 Dance_all/未打包的文件/Bobo_Dance.lav`, `cbo_dance.dat`,
+  and the corresponding `BoBo_dance.pac` distribution.
+- Validation gap: input sent before the playable loop is ready is consumed
+  together after loading. The direction sequence then changes with the beat;
+  a generic 60-frame gap between keys can cross into the next sequence.
+- Validation: enter the game and wait for the playable loop. At the recorded
+  Up/Down sequence, input Up, Down and Enter at four-frame intervals. The
+  score reaches 38, whereas an idle clone and an Up/Up/Enter branch remain
+  at zero over the same 600 frames. Both distributions pass independently.
+  The dancer animation, direction glyphs, timing bar and score render correctly.
+  Right/Enter at the title opens Help; all five pages advance and return to the
+  exact original title. No additional emulator changes were required.
+
+| Direction sequence | Scored dance | Help | Returned title |
+| --- | --- | --- | --- |
+| ![Sequence](images/fixes/bobo-dance-sequence.png) | ![Score](images/fixes/bobo-dance-scored.png) | ![Help](images/fixes/bobo-dance-help.png) | ![Title](images/fixes/bobo-dance-returned-title.png) |

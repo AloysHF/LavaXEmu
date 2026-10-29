@@ -2070,3 +2070,70 @@ fn spitting_king_versions_move_shoot_adjust_power_and_confirm_exit() {
         );
     }
 }
+
+#[test]
+#[ignore = "requires the local game corpus via LAVAX_GAME_ROOT"]
+fn bobo_dance_versions_score_the_direction_sequence_and_open_the_help() {
+    fn fast_key(emulator: &mut Emulator, key: u8) {
+        for frame in 0..4 {
+            emulator.input_mut().set_keys((frame < 3).then_some(key));
+            advance(emulator, 1);
+        }
+    }
+    fn score(emulator: &Emulator) -> Vec<u8> {
+        (65..75)
+            .flat_map(|row| {
+                emulator.display().indexed_frame()[row * 160 + 120..row * 160 + 151]
+                    .iter()
+                    .copied()
+            })
+            .collect()
+    }
+    for path in [
+        "LAVA1 Dance_all/未打包的文件/Bobo_Dance.lav",
+        "LAVA1 Dance_all/打包的文件/BoBo_dance.pac",
+    ] {
+        let mut emulator = load(path);
+        advance(&mut emulator, 300);
+        let mut help = emulator.clone();
+        press(&mut emulator, 13);
+        advance(&mut emulator, 867);
+        capture(&emulator, "bobo-dance-sequence");
+        let mut idle = emulator.clone();
+        advance(&mut idle, 600);
+        let mut wrong = emulator.clone();
+        for key in [20, 20, 13] {
+            fast_key(&mut wrong, key);
+        }
+        advance(&mut wrong, 588);
+        assert!(
+            score(&wrong) == score(&idle),
+            "the wrong sequence must not score"
+        );
+        for key in [20, 21, 13] {
+            fast_key(&mut emulator, key);
+        }
+        advance(&mut emulator, 588);
+        capture(&emulator, "bobo-dance-scored");
+        assert!(
+            score(&emulator) != score(&idle),
+            "the correct sequence and timed confirmation must score"
+        );
+        let title = help.display().indexed_frame().to_vec();
+        press(&mut help, 22);
+        press(&mut help, 13);
+        capture(&help, "bobo-dance-help");
+        assert!(
+            title != help.display().indexed_frame(),
+            "Help must show the instructions"
+        );
+        for _ in 0..5 {
+            press(&mut help, 13);
+        }
+        capture(&help, "bobo-dance-returned-title");
+        assert!(
+            title == help.display().indexed_frame(),
+            "the last help page must return to the title"
+        );
+    }
+}
