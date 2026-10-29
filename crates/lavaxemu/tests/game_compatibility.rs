@@ -2002,3 +2002,71 @@ fn cloud_versions_configure_keys_jump_and_persist_the_configuration() {
         );
     }
 }
+
+#[test]
+#[ignore = "requires the local game corpus via LAVAX_GAME_ROOT"]
+fn spitting_king_versions_move_shoot_adjust_power_and_confirm_exit() {
+    for variant in ["口水王2 1.2黑白", "口水王2 1.2灰度"] {
+        let mut emulator = load(&format!("LAVA1 2 口水王1.2/{variant}/口水王2.lav"));
+        advance(&mut emulator, 300);
+        for key in [20, 13, 20, 20, 13, 13, 13, 13] {
+            press(&mut emulator, key);
+            advance(&mut emulator, 27);
+        }
+        advance(&mut emulator, 1020);
+        capture(&emulator, &format!("spitting-king-{variant}-field"));
+        let mut idle = emulator.clone();
+        advance(&mut idle, 60);
+        let moved = input_branch(&emulator, 20);
+        capture(&moved, &format!("spitting-king-{variant}-movement"));
+        assert!(
+            moved.display().indexed_frame() != idle.display().indexed_frame(),
+            "Up must move the player independently of traffic"
+        );
+        let shot = input_branch(&emulator, b's');
+        capture(&shot, &format!("spitting-king-{variant}-shot"));
+        assert!(
+            shot.display().indexed_frame() != idle.display().indexed_frame(),
+            "S must fire a shot"
+        );
+        let powered = input_branch(&emulator, 19);
+        capture(&powered, &format!("spitting-king-{variant}-power"));
+        assert!(
+            powered.display().indexed_frame() != idle.display().indexed_frame(),
+            "Page Up must increase shot power"
+        );
+        emulator = input_branch(&emulator, 27);
+        capture(&emulator, &format!("spitting-king-{variant}-exit-question"));
+        press(&mut emulator, b'n');
+        let mut idle = emulator.clone();
+        advance(&mut idle, 60);
+        let moved = input_branch(&emulator, 20);
+        assert!(
+            moved.display().indexed_frame() != idle.display().indexed_frame(),
+            "N must cancel exit and restore player control"
+        );
+        hold(&mut emulator, 27, 18);
+        press(&mut emulator, b'y');
+        capture(&emulator, &format!("spitting-king-{variant}-exited"));
+        let mut exited = false;
+        for frame in 0..600 {
+            emulator.input_mut().set_keys(if frame < 3 {
+                Some(b'y')
+            } else if (300..303).contains(&frame) {
+                Some(13)
+            } else {
+                None
+            });
+            if let FrameStatus::Halted(code) = emulator.run_frame().unwrap().status {
+                assert_eq!(code, 0);
+                exited = true;
+                break;
+            }
+        }
+        capture(&emulator, "spitting-king-final-confirmation");
+        assert!(
+            exited,
+            "the final Y confirmation must leave the program normally"
+        );
+    }
+}

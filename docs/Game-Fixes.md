@@ -678,3 +678,24 @@ without an execution error alone does not establish playability.
 | Ready | Jump | Scored result | Result after reloading settings |
 | --- | --- | --- | --- |
 | ![Ready](images/fixes/cloud-ready.png) | ![Jump](images/fixes/cloud-jump.png) | ![Score](images/fixes/cloud-scored-jump.png) | ![Reload](images/fixes/cloud-reloaded-result.png) |
+
+
+## Spitting King 2 v1.2 (口水王 2，黑白／灰度)
+
+- Content: both distributions in `LAVA1 2 口水王1.2`, with their corresponding
+  `ksw2.dat` and supplied `kswsav.dat`.
+- Validation gap: the initial selection is the manual, and the stage selector
+  initially points at a locked entry. Select Start Battle, move to the unlocked
+  Suburbs stage, and confirm its introduction before checking gameplay.
+- Validation: Up moves the player independently of the same traffic simulation.
+  S fires and increases the visible score from 10 to 11. Page Up increases the
+  shot-power indicator. Escape opens the exit prompt; N cancels it and restores
+  movement. Confirming the two exit prompts with Y reaches BYE-BYE, where a
+  final Enter exits with code zero. Both monochrome and grayscale scenery,
+  characters, traffic, HUD and prompts render correctly. No additional emulator
+  changes were required. Quitting this practice session does not write new
+  progress; persistence is not claimed by this case.
+
+| Monochrome field | Monochrome shot | Grayscale field | Grayscale shot |
+| --- | --- | --- | --- |
+| ![Field](images/fixes/spitting-king-mono-field.png) | ![Shot](images/fixes/spitting-king-mono-shot.png) | ![Field](images/fixes/spitting-king-gray-field.png) | ![Shot](images/fixes/spitting-king-gray-shot.png) |
