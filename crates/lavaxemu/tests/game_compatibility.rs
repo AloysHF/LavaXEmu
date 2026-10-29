@@ -1904,3 +1904,42 @@ fn maze_3d_walks_turns_and_switches_the_satellite_map() {
         "Escape must return to the same corridor"
     );
 }
+
+#[test]
+#[ignore = "requires the local game corpus via LAVAX_GAME_ROOT"]
+fn pacman_versions_select_a_stage_move_and_finish_a_round() {
+    for path in ["LAVA1 PACMAN/非pac/PACMAN.lav", "LAVA1 PACMAN/PACMAN.pac"] {
+        let mut emulator = load(path);
+        advance(&mut emulator, 300);
+        press(&mut emulator, 13);
+        capture(&emulator, "pacman-stage-selector");
+        // The supplied progress file unlocks only stage one.
+        press(&mut emulator, 13);
+        capture(&emulator, "pacman-maze");
+        let mut idle = emulator.clone();
+        advance(&mut idle, 18);
+        for key in [23, 22, 21] {
+            let mut moving = emulator.clone();
+            moving.input_mut().set_keys([key]);
+            advance(&mut moving, 18);
+            capture(&moving, &format!("pacman-move-{key}"));
+            assert!(
+                moving.display().indexed_frame() != idle.display().indexed_frame(),
+                "directional movement must differ from the same ghost simulation without input"
+            );
+        }
+        let mut ended = false;
+        for _ in 0..600 {
+            let result = emulator
+                .run_frame()
+                .expect("the round must execute without errors");
+            if let FrameStatus::Halted(code) = result.status {
+                assert_eq!(code, 0, "losing must finish normally");
+                ended = true;
+                break;
+            }
+        }
+        capture(&emulator, "pacman-round-ended");
+        assert!(ended, "the idle player must reach the You Lost result");
+    }
+}

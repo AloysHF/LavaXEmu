@@ -637,3 +637,22 @@ without an execution error alone does not establish playability.
 | First-person corridor | After walking | After turning | Satellite map |
 | --- | --- | --- | --- |
 | ![Corridor](images/fixes/maze-3d-corridor.png) | ![Walking](images/fixes/maze-3d-movement.png) | ![Turning](images/fixes/maze-3d-turn.png) | ![Map](images/fixes/maze-3d-satellite.png) |
+
+
+## PACMAN 2.30
+
+- Content: both `LAVA1 PACMAN/非pac/PACMAN.lav` and `PACMAN.pac`, with
+  `stagepac.dat` and the supplied three-byte `sysinfo.dat`.
+- Validation gap: starting requires Enter at the title and another Enter at
+  the stage selector. The supplied progress file unlocks only stage one;
+  unchanged stage selection with Left/Right is not an input failure.
+- Validation: launch both distributions, enter stage one, and compare Left,
+  Right and Down with an idle clone over the same 18-frame ghost simulation.
+  The player moves through the maze and clears pellets along the chosen route.
+  Continued idle play reaches the visible `You Lost!` result and exits with
+  code zero. Bricks, pellets, player and ghosts render correctly. No additional
+  emulator changes were required.
+
+| Stage selector | Maze | Right movement | Round result |
+| --- | --- | --- | --- |
+| ![Selector](images/fixes/pacman-stage-selector.png) | ![Maze](images/fixes/pacman-maze.png) | ![Movement](images/fixes/pacman-move-22.png) | ![Result](images/fixes/pacman-round-ended.png) |
