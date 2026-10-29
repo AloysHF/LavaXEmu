@@ -598,3 +598,24 @@ without an execution error alone does not establish playability.
 | Character | Battle | Attack resolution | After escaping |
 | --- | --- | --- | --- |
 | ![Character](images/fixes/dragon-legend-character.png) | ![Battle](images/fixes/dragon-legend-battle.png) | ![Attack](images/fixes/dragon-legend-attack.png) | ![World](images/fixes/dragon-legend-escaped.png) |
+
+
+## Dragon Kiss demo (龙之吻体验版)
+
+- Content: `LAVA1 龙之吻体验版/l2体验版.lav`, `DatL2.dat`, and the
+  supplied `pinyin.dic`.
+- Validation gap: the animated title needs N to start. That key also appears in
+  the name editor, so delete it with Left before entering a Chinese name.
+  Type `wen`, press Space to show candidates, then Enter to choose 问 and
+  Enter again to finish. Q/W class choices require Y confirmations.
+- Validation: finish the opening dialogue, walk through the town, and use C
+  followed by Enter to view the named swordsman's attributes. B opens a six-row
+  menu; five Down presses select System. Save writes `L2Sav.dat`. Import that
+  actual file into a fresh instance, press C and Enter at the title, and open
+  the character record again: the name, class and attributes match exactly.
+  Town tiles, sprites, pinyin candidates and character menus render correctly.
+  No additional emulator changes were required; combat is not covered here.
+
+| Pinyin candidates | Town | Character | Reloaded character |
+| --- | --- | --- | --- |
+| ![Pinyin](images/fixes/dragon-kiss-pinyin.png) | ![Town](images/fixes/dragon-kiss-town.png) | ![Character](images/fixes/dragon-kiss-character.png) | ![Reload](images/fixes/dragon-kiss-reloaded-character.png) |

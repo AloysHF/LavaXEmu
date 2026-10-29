@@ -1787,3 +1787,73 @@ fn dragon_legend_selects_classes_moves_and_reloads_a_local_save() {
         "continue must restore the saved town viewport"
     );
 }
+
+#[test]
+#[ignore = "requires the local game corpus via LAVAX_GAME_ROOT"]
+fn dragon_kiss_creates_a_chinese_name_moves_and_loads_party_progress() {
+    fn step_key(emulator: &mut Emulator, key: u8) {
+        press(emulator, key);
+        advance(emulator, 27);
+    }
+    let path = "LAVA1 龙之吻体验版/l2体验版.lav";
+    let mut emulator = load(path);
+    advance(&mut emulator, 300);
+    for key in [b'n', 23, b'w', b'e', b'n', 32] {
+        step_key(&mut emulator, key);
+    }
+    capture(&emulator, "dragon-kiss-pinyin");
+    for key in [13, 13, b'q', b'y', 13, b'w', b'y', 13, 13, 13, 13] {
+        step_key(&mut emulator, key);
+    }
+    advance(&mut emulator, 180);
+    for _ in 0..80 {
+        step_key(&mut emulator, 13);
+    }
+    advance(&mut emulator, 5760);
+    capture(&emulator, "dragon-kiss-town");
+    let mut idle = emulator.clone();
+    advance(&mut idle, 60);
+    let moved = input_branch(&emulator, 22);
+    capture(&moved, "dragon-kiss-movement");
+    assert!(
+        (64..80).any(|row| {
+            let coordinates = row * 160..row * 160 + 32;
+            moved.display().indexed_frame()[coordinates.clone()]
+                != idle.display().indexed_frame()[coordinates]
+        }),
+        "right must move the named character through town"
+    );
+    let mut character = input_branch(&emulator, b'c');
+    press(&mut character, 13);
+    capture(&character, "dragon-kiss-character");
+    let attributes = character.display().indexed_frame().to_vec();
+    for key in [b'b', 21, 21, 21, 21, 21, 13, 13] {
+        step_key(&mut emulator, key);
+    }
+    capture(&emulator, "dragon-kiss-save-menu");
+    let files = emulator.files_mut().take_dirty_files();
+    assert!(
+        files
+            .iter()
+            .any(|(path, bytes)| path.ends_with("l2sav.dat") && !bytes.is_empty()),
+        "save must write the demo's party file"
+    );
+    let mut reloaded = load(path);
+    for (path, bytes) in files {
+        reloaded.files_mut().import_file(&path, bytes);
+    }
+    advance(&mut reloaded, 300);
+    for key in [b'c', 13] {
+        step_key(&mut reloaded, key);
+    }
+    advance(&mut reloaded, 600);
+    capture(&reloaded, "dragon-kiss-reloaded-town");
+    for key in [b'c', 13] {
+        step_key(&mut reloaded, key);
+    }
+    capture(&reloaded, "dragon-kiss-reloaded-character");
+    assert!(
+        attributes == reloaded.display().indexed_frame(),
+        "loading must preserve the Chinese name, class and party attributes"
+    );
+}
