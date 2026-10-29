@@ -719,3 +719,25 @@ without an execution error alone does not establish playability.
 | Direction sequence | Scored dance | Help | Returned title |
 | --- | --- | --- | --- |
 | ![Sequence](images/fixes/bobo-dance-sequence.png) | ![Score](images/fixes/bobo-dance-scored.png) | ![Help](images/fixes/bobo-dance-help.png) | ![Title](images/fixes/bobo-dance-returned-title.png) |
+
+
+## Just_Fly 2.7
+
+- Content: `LAVA1 Just_Fly/非pac/Just_Fly.lav` with `justfly.sav`, and
+  `Just_Fly.pac`. The loose copy supplies a best distance of 61; the package
+  supplies an empty record. Both entry points are checked independently.
+- Validation gap: the first key dismisses the title, while the next starts a
+  flight. Repeated short Enter presses can finish a flight before the next
+  screenshot, leaving the instruction screen again.
+- Validation: in mode 1, holding Up climbs and releasing it descends over the
+  same 18-frame interval. F4 opens settings; Page Up selects mode 0, where
+  one Down press changes the flight after Up without requiring a held key.
+  Repeated climbs/releases set a new best distance of 63 and write the actual
+  16,220-byte replay file. A fresh instance imports that file and uses R to
+  replay it: the recorded aircraft/obstacle viewport matches the original
+  trajectory exactly. The replay banner, distance and best-distance HUD are
+  visible. No additional emulator changes were required.
+
+| Held key: climb | Released key: descend | Mode 0 | Saved replay |
+| --- | --- | --- | --- |
+| ![Climb](images/fixes/just-fly-climbing.png) | ![Descend](images/fixes/just-fly-descending.png) | ![Mode zero](images/fixes/just-fly-mode-zero.png) | ![Replay](images/fixes/just-fly-replay.png) |

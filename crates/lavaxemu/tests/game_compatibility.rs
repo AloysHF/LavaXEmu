@@ -2137,3 +2137,85 @@ fn bobo_dance_versions_score_the_direction_sequence_and_open_the_help() {
         );
     }
 }
+
+#[test]
+#[ignore = "requires the local game corpus via LAVAX_GAME_ROOT"]
+fn just_fly_versions_respond_in_both_modes_and_replay_a_saved_record() {
+    fn start_key(emulator: &mut Emulator, key: u8, frames: usize) {
+        emulator.input_mut().set_keys([key]);
+        advance(emulator, frames);
+        emulator.input_mut().set_keys([]);
+    }
+    for path in [
+        "LAVA1 Just_Fly/非pac/Just_Fly.lav",
+        "LAVA1 Just_Fly/Just_Fly.pac",
+    ] {
+        let mut emulator = load(path);
+        let initial_record = u16::from_le_bytes(
+            emulator.files_mut().file("/LavaData/justfly.sav").unwrap()[10..12]
+                .try_into()
+                .unwrap(),
+        );
+        advance(&mut emulator, 300);
+        press(&mut emulator, 13);
+        let mut held = emulator.clone();
+        start_key(&mut held, 20, 18);
+        capture(&held, "just-fly-climbing");
+        let mut released = emulator.clone();
+        start_key(&mut released, 20, 1);
+        advance(&mut released, 17);
+        capture(&released, "just-fly-descending");
+        assert!(
+            held.display().indexed_frame() != released.display().indexed_frame(),
+            "holding must climb while releasing descends"
+        );
+        let mut mode_zero = emulator.clone();
+        press(&mut mode_zero, 31);
+        capture(&mode_zero, "just-fly-settings");
+        press(&mut mode_zero, 19);
+        press(&mut mode_zero, 13);
+        start_key(&mut mode_zero, 20, 3);
+        let mut up = mode_zero.clone();
+        advance(&mut up, 18);
+        start_key(&mut mode_zero, 21, 3);
+        advance(&mut mode_zero, 15);
+        capture(&mode_zero, "just-fly-mode-zero");
+        assert!(
+            up.display().indexed_frame() != mode_zero.display().indexed_frame(),
+            "mode zero must respond to a single Down press after Up"
+        );
+        let mut recorded_scene = Vec::new();
+        for frame in 0..300 {
+            emulator.input_mut().set_keys((frame % 7 < 3).then_some(20));
+            advance(&mut emulator, 1);
+            if frame == 59 {
+                recorded_scene = emulator.display().indexed_frame()[16 * 160..64 * 160].to_vec();
+            }
+        }
+        emulator.input_mut().set_keys([]);
+        advance(&mut emulator, 300);
+        capture(&emulator, "just-fly-new-record");
+        let files = emulator.files_mut().take_dirty_files();
+        assert!(
+            files.iter().any(|(path, bytes)| {
+                path.ends_with("justfly.sav")
+                    && bytes.len() == 16220
+                    && u16::from_le_bytes(bytes[10..12].try_into().unwrap()) > initial_record
+            }),
+            "beating the supplied record must write the replay file"
+        );
+        let mut replay = load(path);
+        for (path, bytes) in files {
+            replay.files_mut().import_file(&path, bytes);
+        }
+        advance(&mut replay, 300);
+        press(&mut replay, 13);
+        start_key(&mut replay, b'r', 1);
+        advance(&mut replay, 59);
+        capture(&replay, "just-fly-replay");
+        assert!(
+            recorded_scene == replay.display().indexed_frame()[16 * 160..64 * 160],
+            "the saved replay must restore the recorded flight trajectory"
+        );
+    }
+}
