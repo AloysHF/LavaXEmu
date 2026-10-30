@@ -759,3 +759,20 @@ without an execution error alone does not establish playability.
 | Held key: climb | Released key: descend | Mode 0 | Saved replay |
 | --- | --- | --- | --- |
 | ![Climb](images/fixes/just-fly-climbing.png) | ![Descend](images/fixes/just-fly-descending.png) | ![Mode zero](images/fixes/just-fly-mode-zero.png) | ![Replay](images/fixes/just-fly-replay.png) |
+
+
+## EMAX Star Legend Fighter (EM 星纪传说—格斗)
+
+- Content: `LAVA1 EM星纪传说—格斗/EM星纪传说—格斗.lav` and `xgdflash.dat`.
+- Validation gap: short input sampled during ongoing combat did not establish
+  movement or attacks. Actions need to span the fighter's animation cycle.
+- Validation: start the bout, hold A and D in separate clones, and confirm
+  different positions under the same opponent simulation. Hold L to animate
+  an attack; its frame differs from an idle clone over the same interval.
+  Unattended play reaches the visible defeat result and exits with code zero.
+  Fighters, attacks, health bars, timer and result text render correctly.
+  No additional emulator changes were required.
+
+| Arena | Movement | Attack | Bout result |
+| --- | --- | --- | --- |
+| ![Arena](images/fixes/em-fighter-arena.png) | ![Movement](images/fixes/em-fighter-right.png) | ![Attack](images/fixes/em-fighter-attack.png) | ![Result](images/fixes/em-fighter-result.png) |

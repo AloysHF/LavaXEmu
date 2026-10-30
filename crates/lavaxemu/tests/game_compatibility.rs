@@ -2263,3 +2263,47 @@ fn just_fly_versions_respond_in_both_modes_and_replay_a_saved_record() {
         );
     }
 }
+
+#[test]
+#[ignore = "requires the local game corpus via LAVAX_GAME_ROOT"]
+fn em_fighter_moves_attacks_and_finishes_the_bout() {
+    let mut emulator = load("LAVA1 EM星纪传说—格斗/EM星纪传说—格斗.lav");
+    advance(&mut emulator, 300);
+    emulator.input_mut().set_keys([13]);
+    advance(&mut emulator, 3);
+    emulator.input_mut().set_keys([]);
+    advance(&mut emulator, 7);
+    capture(&emulator, "em-fighter-arena");
+    let mut left = emulator.clone();
+    hold(&mut left, b'a', 180);
+    let mut right = emulator.clone();
+    hold(&mut right, b'd', 180);
+    capture(&left, "em-fighter-left");
+    capture(&right, "em-fighter-right");
+    assert!(
+        left.display().indexed_frame() != right.display().indexed_frame(),
+        "A and D must move the fighter in different directions"
+    );
+    let mut attacking = emulator.clone();
+    hold(&mut attacking, b'l', 180);
+    let mut idle = emulator.clone();
+    advance(&mut idle, 210);
+    capture(&attacking, "em-fighter-attack");
+    assert!(
+        attacking.display().indexed_frame() != idle.display().indexed_frame(),
+        "L must animate an attack independently of the opponent"
+    );
+    let mut ended = false;
+    for _ in 0..12000 {
+        if let FrameStatus::Halted(code) = emulator.run_frame().unwrap().status {
+            assert_eq!(code, 0);
+            ended = true;
+            break;
+        }
+    }
+    capture(&emulator, "em-fighter-result");
+    assert!(
+        ended,
+        "the unattended bout must reach its result and finish normally"
+    );
+}
