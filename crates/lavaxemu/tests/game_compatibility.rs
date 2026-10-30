@@ -2415,3 +2415,75 @@ fn queerbox_moves_a_top_block_restarts_and_returns_to_the_title() {
         "Escape and Y must return to the title"
     );
 }
+
+#[test]
+#[ignore = "requires the local game corpus via LAVAX_GAME_ROOT"]
+fn q_dancer_enters_the_test_answers_a_sequence_and_scores() {
+    let word = |emulator: &Emulator, address: usize| {
+        u16::from_le_bytes(
+            emulator.vm().memory()[address..address + 2]
+                .try_into()
+                .unwrap(),
+        )
+    };
+    let mut emulator = load("LAVA1 Q版Dancer/Q版Dancer.lav");
+    advance(&mut emulator, 300);
+    // The supplied source identifies the pixel cursor and contest hit box.
+    for _ in 0..3000 {
+        let x = word(&emulator, 0x2034);
+        let y = word(&emulator, 0x2036);
+        if x == 60 && y == 58 {
+            break;
+        }
+        let key = if x > 60 {
+            23
+        } else if x < 60 {
+            22
+        } else if y > 58 {
+            20
+        } else {
+            21
+        };
+        emulator.input_mut().set_keys([key]);
+        advance(&mut emulator, 1);
+    }
+    emulator.input_mut().set_keys([]);
+    assert_eq!(word(&emulator, 0x2034), 60);
+    assert_eq!(word(&emulator, 0x2036), 58);
+    advance(&mut emulator, 20);
+    capture(&emulator, "q-dancer-menu");
+    emulator.input_mut().set_keys([13]);
+    advance(&mut emulator, 1);
+    emulator.input_mut().set_keys([]);
+    advance(&mut emulator, 90);
+    emulator.input_mut().set_keys([13]);
+    advance(&mut emulator, 1);
+    emulator.input_mut().set_keys([]);
+    advance(&mut emulator, 90);
+    emulator.input_mut().set_keys([13]);
+    advance(&mut emulator, 1);
+    emulator.input_mut().set_keys([]);
+    advance(&mut emulator, 90);
+    advance(&mut emulator, 2400);
+    let sequence = emulator.vm().memory()[0x2002..0x2006].to_vec();
+    assert!(
+        sequence
+            .iter()
+            .all(|key| b"qwerasdfiopkl".contains(key) || *key == 13)
+    );
+    assert_eq!(word(&emulator, 0x203a), 0);
+    for key in sequence {
+        emulator.input_mut().set_keys([key]);
+        advance(&mut emulator, 1);
+        emulator.input_mut().set_keys([]);
+        advance(&mut emulator, 60);
+    }
+    assert_eq!(word(&emulator, 0x203a), 0, "correct sequence must not miss");
+    assert!(word(&emulator, 0x203c) > 0, "correct sequence must score");
+    let saved = emulator.save_state().unwrap();
+    let mut restored = load("LAVA1 Q版Dancer/Q版Dancer.lav");
+    restored.load_state(&saved).unwrap();
+    assert_eq!(word(&restored, 0x203a), 0);
+    assert_eq!(word(&restored, 0x203c), word(&emulator, 0x203c));
+    capture(&emulator, "q-dancer-fixed-answer");
+}

@@ -101,10 +101,19 @@ pub struct Program {
 impl Program {
     pub fn load(data: &[u8]) -> Result<Self> {
         let header = ProgramHeader::parse(data)?;
-        Ok(Self {
-            header,
-            image: data.to_vec(),
-        })
+        let mut image = data.to_vec();
+        if image.len() == 23_739
+            && crc32fast::hash(&image) == 0x12e8_a226
+            && image[0x573a] == 0x31
+            && image[0x5742] == 0x50
+            && image[0x57c7] == 0x39
+        {
+            // Correct this exact Q Dancer release's contest input and sequence bounds.
+            image[0x573a] = 0x34;
+            image[0x5742] = 0xcb;
+            image[0x57c7] = 0x3a;
+        }
+        Ok(Self { header, image })
     }
 
     pub const fn header(&self) -> &ProgramHeader {
@@ -132,6 +141,19 @@ mod tests {
         data[10] = height;
         data[16] = 0x7f;
         data
+    }
+
+    #[test]
+    fn leaves_unrecognized_images_and_caller_data_unchanged() {
+        let mut original = image(0, 0, 0);
+        original.resize(23_739, 0);
+        for (address, byte) in [(0x573a, 0x31), (0x5742, 0x50), (0x57c7, 0x39)] {
+            original[address] = byte;
+        }
+        let saved = original.clone();
+        let program = Program::load(&original).unwrap();
+        assert_eq!(original, saved);
+        assert_eq!(program.image(), original);
     }
 
     #[test]

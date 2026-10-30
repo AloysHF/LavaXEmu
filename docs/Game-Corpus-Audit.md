@@ -14,10 +14,10 @@ do not satisfy this status.
 
 ## Current evidence
 
-- Base audit: 2026-10-29; incremental entry checks: 2026-10-30. Emulator behavior at `4abf4fd`, plus test-only entry logging.
-- 43 dedicated release workflows passed in this audit.
-- 73 of 324 entry points were loaded by those successful workflows.
-- 251 entry points still need dedicated workflow verification.
+- Base audit: 2026-10-29; incremental entry checks: 2026-10-30. Base emulator behavior at `4abf4fd`; subsequent guarded Q Dancer correction is described in Game Fixes.
+- 44 dedicated release workflows passed in this audit.
+- 74 of 324 entry points were loaded by those successful workflows.
+- 250 entry points still need dedicated workflow verification.
 - The historical [startup gallery](Game-Compatibility.md) is a separate check
   and must not be interpreted as this workflow audit.
 
@@ -33,30 +33,6 @@ To collect exact entry paths for one test, set `LAVAX_AUDIT_LOG` to a new log
 file and run that test with `--exact`. Only use its logged entries as successful
 evidence after the complete test exits successfully. `LAVAX_CAPTURE_DIR` selects
 an optional screenshot directory. Keep each test's logs and captures separate.
-
-## Open findings
-
-### Q version Dancer: contest input loop
-
-`LAVA1 Q版Dancer/Q版Dancer.lav` remains pending. Its compiled contest loop
-at file offsets `0x5750..0x57d7` continues polling Inkey while the current key
-matches a valid command, then leaves the loop when Inkey returns zero. It
-subsequently compares that zero with the generated dance command and enters
-the miss acknowledgement. The original PC interpreter's `c_inkey` also returns
-zero when no new key is pending; changing this shared API would hide a guest
-logic error and affect other programs.
-
-The supplied `源程序.txt` is useful for identifying the menu hit boxes and
-global variables, but its contest input routine differs from the binary.
-Earlier raw-memory diagnostics formatted bytes in hexadecimal: `65` meant
-hexadecimal `0x65` (the letter e), not decimal 65. No uppercase-key mapping
-fault has been established. The binary also generates four command slots while
-its response loop permits five; this needs to be addressed alongside the input
-condition before claiming a successful error-free contest.
-
-The menu cursor, introductory animation and dancer sprites run, but contest
-scoring is not accepted as verified. No guest-memory edits or shared-input
-changes have been shipped for this finding.
 
 ## Entry matrix
 
@@ -90,7 +66,7 @@ changes have been shipped for this finding.
 | 025 | `LAVA1 puke21/扑克21.lav` | Game / game package | Pending |
 | 026 | `LAVA1 Puzzled Sheep/Psheep.lav` | Game / game package | [Workflow passed: `puzzled_sheep_loads_levels_moves_the_cursor_and_runs_the_simulation`](../crates/lavaxemu/tests/game_compatibility.rs#L319) |
 | 027 | `LAVA1 QUEERBOX/QUEERBOX.lav` | Game / game package | [Workflow passed: `queerbox_moves_a_top_block_restarts_and_returns_to_the_title`](../crates/lavaxemu/tests/game_compatibility.rs#L2375) |
-| 028 | `LAVA1 Q版Dancer/Q版Dancer.lav` | Game / game package | Pending |
+| 028 | `LAVA1 Q版Dancer/Q版Dancer.lav` | Game / game package | [Workflow passed: `q_dancer_enters_the_test_answers_a_sequence_and_scores`](../crates/lavaxemu/tests/game_compatibility.rs#L2421) |
 | 029 | `LAVA1 RC赛车/RC赛车.lav` | Game / game package | Pending |
 | 030 | `LAVA1 Rush_Out/Rush_Out_For_Lava(8K).lav` | Game / game package | Pending |
 | 031 | `LAVA1 Rush_Out/Rush_Out_For_Lava1(16k).lav` | Game / game package | Pending |

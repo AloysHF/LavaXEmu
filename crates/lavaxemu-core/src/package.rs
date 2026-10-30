@@ -24,7 +24,9 @@ impl Emulator {
     pub fn import_matching_package(&mut self, data: &[u8]) -> Result<bool> {
         let entries = package_entries(data)?;
         if !entries.iter().any(|(name, bytes)| {
-            name.to_ascii_lowercase().ends_with(".lav") && *bytes == self.vm.program().image()
+            name.to_ascii_lowercase().ends_with(".lav")
+                && (*bytes == self.vm.program().image()
+                    || Program::load(bytes).is_ok_and(|program| program == *self.vm.program()))
         }) {
             return Ok(false);
         }

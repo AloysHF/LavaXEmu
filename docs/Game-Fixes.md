@@ -813,3 +813,29 @@ without an execution error alone does not establish playability.
 | Board | Transferred tile | Restarted board | Title |
 | --- | --- | --- | --- |
 | ![Board](images/fixes/queerbox-board.png) | ![Transfer](images/fixes/queerbox-transferred.png) | ![Restart](images/fixes/queerbox-restarted.png) | ![Title](images/fixes/queerbox-title.png) |
+
+
+## Q version Dancer (Q 版 Dancer)
+
+- Content: `LAVA1 Q版Dancer/Q版Dancer.lav`, the exact 23,739-byte release
+  with CRC32 `12e8a226`. The supplied source differs from parts of the binary;
+  the correction follows the actual compiled instructions.
+- Problem: the contest input loop waits while a command is valid and accepts
+  zero when no input remains. It also reads five responses for four generated
+  commands and reuses the previous key before polling. Correct play therefore
+  enters the miss acknowledgement instead of scoring normally.
+- Fix: the program loader applies three guarded changes to its in-memory image:
+  poll a fresh key first, finish waiting on a valid command, and read exactly
+  the generated command count. Length, checksum and original instruction bytes
+  must all match. The original file on disk is unchanged; generic Inkey behavior
+  is unchanged. Matching PAC resources compare loaded program identities so
+  embedded originals still match a normalized execution image.
+- Validation: move the pixel cursor with real directional input to the contest
+  hit box, finish the intro, then answer all four generated commands. The score
+  increases while the miss count remains zero. A save-state round trip restores
+  both values. Unrecognized images with the same size/instruction positions
+  remain byte-for-byte unchanged.
+
+| Contest menu | Correct answer animation |
+| --- | --- |
+| ![Menu](images/fixes/q-dancer-menu.png) | ![Answer](images/fixes/q-dancer-answer.png) |
