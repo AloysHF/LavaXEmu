@@ -15,9 +15,9 @@ do not satisfy this status.
 ## Current evidence
 
 - Base audit: 2026-10-29; incremental entry checks: 2026-10-30. Emulator behavior at `4abf4fd`, plus test-only entry logging.
-- 42 dedicated release workflows passed in this audit.
-- 72 of 324 entry points were loaded by those successful workflows.
-- 252 entry points still need dedicated workflow verification.
+- 43 dedicated release workflows passed in this audit.
+- 73 of 324 entry points were loaded by those successful workflows.
+- 251 entry points still need dedicated workflow verification.
 - The historical [startup gallery](Game-Compatibility.md) is a separate check
   and must not be interpreted as this workflow audit.
 
@@ -65,7 +65,7 @@ an optional screenshot directory. Keep each test's logs and captures separate.
 | 024 | `LAVA1 PACMAN/非pac/PACMAN.lav` | Game / game package | [Workflow passed: `pacman_versions_select_a_stage_move_and_finish_a_round`](../crates/lavaxemu/tests/game_compatibility.rs#L1954) |
 | 025 | `LAVA1 puke21/扑克21.lav` | Game / game package | Pending |
 | 026 | `LAVA1 Puzzled Sheep/Psheep.lav` | Game / game package | [Workflow passed: `puzzled_sheep_loads_levels_moves_the_cursor_and_runs_the_simulation`](../crates/lavaxemu/tests/game_compatibility.rs#L319) |
-| 027 | `LAVA1 QUEERBOX/QUEERBOX.lav` | Game / game package | Pending |
+| 027 | `LAVA1 QUEERBOX/QUEERBOX.lav` | Game / game package | [Workflow passed: `queerbox_moves_a_top_block_restarts_and_returns_to_the_title`](../crates/lavaxemu/tests/game_compatibility.rs#L2375) |
 | 028 | `LAVA1 Q版Dancer/Q版Dancer.lav` | Game / game package | Pending |
 | 029 | `LAVA1 RC赛车/RC赛车.lav` | Game / game package | Pending |
 | 030 | `LAVA1 Rush_Out/Rush_Out_For_Lava(8K).lav` | Game / game package | Pending |

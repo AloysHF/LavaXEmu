@@ -2369,3 +2369,49 @@ fn iq_battle_moves_removes_groups_uses_a_bomb_and_returns_to_the_menu() {
         "Start must open another round"
     );
 }
+
+#[test]
+#[ignore = "requires the local game corpus via LAVAX_GAME_ROOT"]
+fn queerbox_moves_a_top_block_restarts_and_returns_to_the_title() {
+    fn steps(emulator: &Emulator) -> Vec<u8> {
+        (40..60)
+            .flat_map(|row| {
+                emulator.display().indexed_frame()[row * 160..row * 160 + 32]
+                    .iter()
+                    .copied()
+            })
+            .collect()
+    }
+    let mut emulator = load("LAVA1 QUEERBOX/QUEERBOX.lav");
+    advance(&mut emulator, 300);
+    let title = emulator.display().indexed_frame().to_vec();
+    for _ in 0..2 {
+        press(&mut emulator, 13);
+        advance(&mut emulator, 27);
+    }
+    capture(&emulator, "queerbox-board");
+    let zero_steps = steps(&emulator);
+    for key in [20, 20, 13, 22, 13] {
+        press(&mut emulator, key);
+        advance(&mut emulator, 27);
+    }
+    capture(&emulator, "queerbox-transferred");
+    assert!(
+        zero_steps != steps(&emulator),
+        "moving the top tile to the next column must count a step"
+    );
+    press(&mut emulator, 28);
+    capture(&emulator, "queerbox-restarted");
+    assert!(
+        zero_steps == steps(&emulator),
+        "F1 must restart with zero steps"
+    );
+    press(&mut emulator, 27);
+    press(&mut emulator, b'y');
+    advance(&mut emulator, 120);
+    capture(&emulator, "queerbox-title");
+    assert!(
+        title == emulator.display().indexed_frame(),
+        "Escape and Y must return to the title"
+    );
+}

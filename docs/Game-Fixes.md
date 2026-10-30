@@ -794,3 +794,22 @@ without an execution error alone does not establish playability.
 | Board | Matching group removed | Bomb used | New round |
 | --- | --- | --- | --- |
 | ![Board](images/fixes/iq-battle-board.png) | ![Removed](images/fixes/iq-battle-removed.png) | ![Bomb](images/fixes/iq-battle-bomb.png) | ![Round](images/fixes/iq-battle-new-round.png) |
+
+
+## QueerBox 1.1 (QUEERBOX)
+
+- Content: `LAVA1 QUEERBOX/QUEERBOX.lav`; controls and extraction rules are
+  documented in the supplied `help.txt`.
+- Validation gap: selecting a bottom tile with two tiles above it does not
+  allow a transfer. This is the game's extraction limit, not failed input.
+- Validation: choose the basic difficulty, move Up twice to a top tile,
+  select it with Enter, and transfer it Right. The destination stack changes
+  and the step counter becomes one. Enter cancels the selection; F1 starts
+  another board with zero steps. Escape followed by Y and completion of the
+  title animation returns to the exact original menu. Board tiles, target
+  markers, selected-tile icon and counters render correctly. No additional
+  emulator changes were required.
+
+| Board | Transferred tile | Restarted board | Title |
+| --- | --- | --- | --- |
+| ![Board](images/fixes/queerbox-board.png) | ![Transfer](images/fixes/queerbox-transferred.png) | ![Restart](images/fixes/queerbox-restarted.png) | ![Title](images/fixes/queerbox-title.png) |
