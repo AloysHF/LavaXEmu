@@ -943,3 +943,35 @@ without an execution error alone does not establish playability.
 | Forest investigation | Battle | Cabin interior | Demo ending |
 | --- | --- | --- | --- |
 | ![Path](images/fixes/travel-loose-path-prompt.png) | ![Battle](images/fixes/travel-loose-battle.png) | ![Room](images/fixes/travel-loose-room.png) | ![Ending](images/fixes/travel-loose-ending.png) |
+
+## WarCraft (loose and PAC)
+
+- Content: `LAVA1 WarCraft/非pac/WarCraft.lav` with `CraftBmp.DAT`, and
+  `LAVA1 WarCraft/WarCraft.pac`. The supplied MHT documents turn-based controls.
+- Problem: character-input history can retain Enter presses from screens that
+  poll physical keys. Opening the system menu then consumes those old presses
+  and selects speed settings without a new confirmation.
+- Fix: a new key transition replaces unconsumed input history; physically
+  releasing a key retains its pending event, and guest ReleaseKey removes that
+  key's pending events. Simultaneously pressed keys retain their existing order.
+  Save-state fields are unchanged. Removing pending input on every physical
+  release was rejected after regressions in other games.
+- Validation: both entry points open the system menu and wait for a fresh
+  command. Train a worker for 75 gold (800 to 725), select its Move command,
+  move it and recenter the cursor to check the changed map tiles. J completes
+  the turn and income raises gold to 755; Shift shows the resource panel.
+  The system Exit item waits for confirmation and calls the game's Exit(1).
+- Limits: the compiled Save Management routine only displays a message that
+  saving cannot solve the problem; it does not write a file. This release has
+  no working save/load routine to validate. Combat and victory are not covered
+  by this workflow. The earlier Dragon Kiss replay was extended through its
+  actual introduction rather than relying on accumulated Enter history; its
+  town movement, party save and fresh-session reload pass again.
+- Regression evidence: rerun all 49 prior game workflows with the input update;
+  48 passed immediately. The updated Dragon Kiss replay and both WarCraft entries
+  then passed dedicated runs. Unit tests also cover physical release, guest
+  ReleaseKey and replacement of stale input by a new press.
+
+| Battlefield | System menu waits | Worker commands | Turn income |
+| --- | --- | --- | --- |
+| ![Board](images/fixes/warcraft-loose-board.png) | ![Menu](images/fixes/warcraft-loose-system-menu.png) | ![Commands](images/fixes/warcraft-loose-unit-menu.png) | ![Income](images/fixes/warcraft-loose-income.png) |

@@ -1850,7 +1850,7 @@ fn dragon_kiss_creates_a_chinese_name_moves_and_loads_party_progress() {
         step_key(&mut emulator, key);
     }
     advance(&mut emulator, 180);
-    for _ in 0..80 {
+    for _ in 0..400 {
         step_key(&mut emulator, 13);
     }
     advance(&mut emulator, 5760);
@@ -2985,5 +2985,90 @@ fn travel_variants_explore_fight_collect_the_tools_and_finish_the_demo() {
             0,
             "the climbing tools must unlock the demo ending"
         );
+    }
+}
+
+#[test]
+#[ignore = "requires the local game corpus via LAVAX_GAME_ROOT"]
+fn warcraft_variants_produce_move_collect_income_and_exit() {
+    let gold =
+        |e: &Emulator| u16::from_le_bytes(e.vm().memory()[0x42bc..0x42be].try_into().unwrap());
+    let tap = |e: &mut Emulator, key| {
+        e.input_mut().set_keys([key]);
+        advance(e, 1);
+        e.input_mut().set_keys([]);
+        advance(e, 59);
+    };
+    for (variant, path) in [
+        ("loose", "LAVA1 WarCraft/非pac/WarCraft.lav"),
+        ("pac", "LAVA1 WarCraft/WarCraft.pac"),
+    ] {
+        let mut e = load(path);
+        for frame in 0..1200 {
+            e.input_mut()
+                .set_keys(((300..660).contains(&frame) && (frame - 300) % 60 < 3).then_some(13));
+            advance(&mut e, 1);
+        }
+        assert_eq!(gold(&e), 800);
+        capture(&e, &format!("warcraft-{variant}-board"));
+        let mut menu = e.clone();
+        tap(&mut menu, 25);
+        assert_eq!(
+            menu.run_frame().unwrap().status,
+            FrameStatus::WaitingForInput
+        );
+        let pixels = menu.display().indexed_frame();
+        let background = pixels[60 * 160 + 50];
+        assert!(
+            (16..65).all(|y| (16..74).all(|x| pixels[y * 160 + x] == background)),
+            "opening the system menu must not consume an old Enter and open speed settings"
+        );
+        capture(&menu, &format!("warcraft-{variant}-system-menu"));
+        tap(&mut e, 19);
+        tap(&mut e, 13);
+        tap(&mut e, 13);
+        assert_eq!(gold(&e), 725, "training a worker must cost 75 gold");
+        capture(&e, &format!("warcraft-{variant}-trained"));
+        let before_move = e.display().indexed_frame().to_vec();
+        tap(&mut e, 23);
+        tap(&mut e, 13);
+        capture(&e, &format!("warcraft-{variant}-unit-menu"));
+        for key in [13, 21, 13, 19] {
+            tap(&mut e, key);
+        }
+        assert!(
+            (32..64).any(|y| {
+                let tile = y * 160 + 64..y * 160 + 80;
+                before_move[tile.clone()] != e.display().indexed_frame()[tile]
+            }),
+            "moving the worker must change its map tiles after recentering the cursor"
+        );
+        capture(&e, &format!("warcraft-{variant}-moved"));
+        tap(&mut e, b'j');
+        advance(&mut e, 540);
+        assert_eq!(gold(&e), 755, "ending a turn must collect worker income");
+        for _ in 0..30 {
+            e.input_mut().set_keys([26]);
+            advance(&mut e, 1);
+        }
+        capture(&e, &format!("warcraft-{variant}-income"));
+        e.input_mut().set_keys([]);
+        tap(&mut e, 13);
+        tap(&mut e, 25);
+        for _ in 0..3 {
+            tap(&mut e, 21);
+        }
+        let mut exited = false;
+        for frame in 0..1200 {
+            e.input_mut()
+                .set_keys((frame == 0 || frame == 180).then_some(13));
+            if let FrameStatus::Halted(code) = e.run_frame().unwrap().status {
+                assert_eq!(code, 1);
+                exited = true;
+                break;
+            }
+        }
+        capture(&e, &format!("warcraft-{variant}-exit"));
+        assert!(exited, "the system Exit item must exit normally");
     }
 }
