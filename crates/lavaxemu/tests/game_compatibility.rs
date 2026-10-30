@@ -2487,3 +2487,69 @@ fn q_dancer_enters_the_test_answers_a_sequence_and_scores() {
     assert_eq!(word(&restored, 0x203c), word(&emulator, 0x203c));
     capture(&emulator, "q-dancer-fixed-answer");
 }
+
+#[test]
+#[ignore = "requires the local game corpus via LAVAX_GAME_ROOT"]
+fn rc_racing_accelerates_steers_pauses_and_returns_to_the_menu() {
+    let mut emulator = load("LAVA1 RC赛车/RC赛车.lav");
+    advance(&mut emulator, 300);
+    for _ in 0..2 {
+        press(&mut emulator, 13);
+        advance(&mut emulator, 27);
+    }
+    advance(&mut emulator, 780);
+    let menu = emulator.display().indexed_frame().to_vec();
+    press(&mut emulator, 13);
+    advance(&mut emulator, 27);
+    capture(&emulator, "rc-racing-track");
+    let mut idle = emulator.clone();
+    advance(&mut idle, 120);
+    for _ in 0..120 {
+        emulator.input_mut().set_keys(*b"a");
+        advance(&mut emulator, 1);
+    }
+    emulator.input_mut().set_keys([]);
+    capture(&emulator, "rc-racing-speed");
+    assert!(
+        (65..80).any(|row| {
+            let speed = row * 160 + 88..row * 160 + 150;
+            emulator.display().indexed_frame()[speed.clone()]
+                != idle.display().indexed_frame()[speed]
+        }),
+        "A must increase the speed indicator"
+    );
+    let mut left = emulator.clone();
+    let mut right = emulator.clone();
+    for _ in 0..45 {
+        left.input_mut().set_keys([b'a', 23]);
+        advance(&mut left, 1);
+        right.input_mut().set_keys([b'a', 22]);
+        advance(&mut right, 1);
+    }
+    capture(&right, "rc-racing-steering");
+    assert!(
+        left.display().indexed_frame() != right.display().indexed_frame(),
+        "opposite steering inputs must change the race view"
+    );
+    press(&mut emulator, b'p');
+    capture(&emulator, "rc-racing-paused");
+    let paused = emulator.display().indexed_frame().to_vec();
+    advance(&mut emulator, 120);
+    assert!(
+        paused == emulator.display().indexed_frame(),
+        "pause must freeze the race view"
+    );
+    press(&mut emulator, 13);
+    hold(&mut emulator, b'a', 30);
+    assert!(
+        paused != emulator.display().indexed_frame(),
+        "confirmation must resume the race"
+    );
+    press(&mut emulator, 27);
+    advance(&mut emulator, 300);
+    capture(&emulator, "rc-racing-menu");
+    assert!(
+        menu == emulator.display().indexed_frame(),
+        "Escape must return to the race menu"
+    );
+}

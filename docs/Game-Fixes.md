@@ -839,3 +839,22 @@ without an execution error alone does not establish playability.
 | Contest menu | Correct answer animation |
 | --- | --- |
 | ![Menu](images/fixes/q-dancer-menu.png) | ![Answer](images/fixes/q-dancer-answer.png) |
+
+
+## RC Racing (RC 赛车)
+
+- Content: `LAVA1 RC赛车/RC赛车.lav` and `cv_car.dat`.
+- Validation gap: the introductory animation needs to finish before Start is
+  selected, and acceleration requires holding A. Releasing A slows the car,
+  so a screenshot taken after an input helper's release interval can show zero
+  speed despite a successful acceleration.
+- Validation: start the race and hold A for 120 frames; speed reaches 90 km/h
+  while the idle clone stays at zero. Left and Right with A produce different
+  race views. P shows PAUSE and freezes the framebuffer for another 120 frames;
+  Enter resumes. Escape returns to the exact original race menu. Track scenery,
+  car, minimap, speed and pause overlay render correctly. No additional emulator
+  changes were required.
+
+| Track | Accelerating | Steering | Paused |
+| --- | --- | --- | --- |
+| ![Track](images/fixes/rc-racing-track.png) | ![Speed](images/fixes/rc-racing-speed.png) | ![Steering](images/fixes/rc-racing-steering.png) | ![Pause](images/fixes/rc-racing-paused.png) |
