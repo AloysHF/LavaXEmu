@@ -15,9 +15,9 @@ do not satisfy this status.
 ## Current evidence
 
 - Base audit: 2026-10-29; incremental entry checks: 2026-10-30. Full rerun of 44 workflows at `641903a` on 2026-10-30; subsequent entry checks use the same emulator behavior.
-- 48 dedicated release workflows passed in this audit.
-- 81 of 324 entry points were loaded by those successful workflows.
-- 243 entry points still need dedicated workflow verification.
+- 49 dedicated release workflows passed in this audit.
+- 83 of 324 entry points were loaded by those successful workflows.
+- 241 entry points still need dedicated workflow verification.
 - The historical [startup gallery](Game-Compatibility.md) is a separate check
   and must not be interpreted as this workflow audit.
 
@@ -74,8 +74,8 @@ an optional screenshot directory. Keep each test's logs and captures separate.
 | 033 | `LAVA1 SnowFight(打雪仗)/SnowFight.lav` | Game / game package | [Workflow passed: `snow_fight_opens_help_moves_throws_and_finishes_a_round`](../crates/lavaxemu/tests/game_compatibility.rs#L2699) |
 | 034 | `LAVA1 SpaceWars/SWR无延时.lav` | Game / game package | [Workflow passed: `space_wars_variants_move_fire_and_exit_the_mission`](../crates/lavaxemu/tests/game_compatibility.rs#L2782) |
 | 035 | `LAVA1 SpaceWars/SWR有延时.lav` | Game / game package | [Workflow passed: `space_wars_variants_move_fire_and_exit_the_mission`](../crates/lavaxemu/tests/game_compatibility.rs#L2782) |
-| 036 | `LAVA1 TRAVEL/travel.lav` | Game / game package | Pending |
-| 037 | `LAVA1 TRAVEL/打包travel.pac` | Game / game package | Pending |
+| 036 | `LAVA1 TRAVEL/travel.lav` | Game / game package | [Workflow passed: `travel_variants_explore_fight_collect_the_tools_and_finish_the_demo`](../crates/lavaxemu/tests/game_compatibility.rs#L2860) |
+| 037 | `LAVA1 TRAVEL/打包travel.pac` | Game / game package | [Workflow passed: `travel_variants_explore_fight_collect_the_tools_and_finish_the_demo`](../crates/lavaxemu/tests/game_compatibility.rs#L2860) |
 | 038 | `LAVA1 WarCraft/WarCraft.pac` | Game / game package | Pending |
 | 039 | `LAVA1 WarCraft/非pac/WarCraft.lav` | Game / game package | Pending |
 | 040 | `LAVA1 七彩泡泡/七彩泡泡.lav` | Game / game package | Pending |

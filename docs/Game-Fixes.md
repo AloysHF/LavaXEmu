@@ -921,3 +921,25 @@ without an execution error alone does not establish playability.
 | Mission | Moving right | Shooting | Returned title |
 | --- | --- | --- | --- |
 | ![Mission](images/fixes/space-wars-fast-mission.png) | ![Move](images/fixes/space-wars-fast-moved.png) | ![Shot](images/fixes/space-wars-fast-shot.png) | ![Title](images/fixes/space-wars-fast-title.png) |
+
+## Endless Travel demo (无尽的旅程试玩版)
+
+- Content: `LAVA1 TRAVEL/travel.lav` with `Mapdata.dat`, and `打包travel.pac`.
+  The supplied manual describes five scenes, one battle and a climbing-tool
+  puzzle. Only Attack is implemented in the trial battle menu.
+- Validation gap: the long automatic introduction must finish before navigation
+  starts. Investigation uses a small directional cursor, not a walking character.
+  Scene indices restart when the next resource group loads; the cabin legitimately
+  becomes index zero while showing the new artwork.
+- Validation: finish the introduction, move the cursor to the forest path and
+  investigate with Enter. Trigger the encounter and repeatedly choose Attack
+  until exploration resumes. Continue to the mountain, take the side path to
+  the cabin, enter it and investigate the cabinet. The climbing-tool flag becomes
+  set. Return to the mountain and climb to the trial ending. Escape also exits
+  an exploration clone normally. Both exact entry points follow the same route;
+  scenery, Chinese dialogue, battle sprites and gauges render correctly.
+  No additional emulator changes were required.
+
+| Forest investigation | Battle | Cabin interior | Demo ending |
+| --- | --- | --- | --- |
+| ![Path](images/fixes/travel-loose-path-prompt.png) | ![Battle](images/fixes/travel-loose-battle.png) | ![Room](images/fixes/travel-loose-room.png) | ![Ending](images/fixes/travel-loose-ending.png) |

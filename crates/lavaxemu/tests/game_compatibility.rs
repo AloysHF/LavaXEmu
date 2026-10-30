@@ -2854,3 +2854,136 @@ fn space_wars_variants_move_fire_and_exit_the_mission() {
         assert!(exited, "Escape must exit the active mission: {variant}");
     }
 }
+
+#[test]
+#[ignore = "requires the local game corpus via LAVAX_GAME_ROOT"]
+fn travel_variants_explore_fight_collect_the_tools_and_finish_the_demo() {
+    let word = |e: &Emulator, p| u16::from_le_bytes(e.vm().memory()[p..p + 2].try_into().unwrap());
+    let tap = |e: &mut Emulator, key| {
+        press(e, key);
+        advance(e, 27);
+    };
+    let walk = |e: &mut Emulator, x: u16, y: u16| {
+        for (address, target, lower, higher) in [(0x48bf, x, 23, 22), (0x48c1, y, 20, 21)] {
+            for _ in 0..300 {
+                let current = word(e, address);
+                if current.abs_diff(target) <= 1 {
+                    break;
+                }
+                e.input_mut()
+                    .set_keys([if current < target { higher } else { lower }]);
+                advance(e, 1);
+            }
+            assert!(
+                word(e, address).abs_diff(target) <= 1,
+                "cursor {address:x} must reach {target}, got {} pc {:x}",
+                word(e, address),
+                e.vm().pc()
+            );
+        }
+        e.input_mut().set_keys([]);
+    };
+    for (variant, path) in [
+        ("loose", "LAVA1 TRAVEL/travel.lav"),
+        ("pac", "LAVA1 TRAVEL/打包travel.pac"),
+    ] {
+        let mut e = load(path);
+        advance(&mut e, 13200);
+        for _ in 0..5 {
+            tap(&mut e, 13);
+        }
+        assert_eq!(word(&e, 0x48c3), 0);
+        capture(&e, &format!("travel-{variant}-forest"));
+        walk(&mut e, 78, 44);
+        capture(&e, &format!("travel-{variant}-path-prompt"));
+        tap(&mut e, 13);
+        assert_eq!(word(&e, 0x48c3), 1);
+        walk(&mut e, 24, 44);
+        for _ in 0..5 {
+            tap(&mut e, 13);
+        }
+        capture(&e, &format!("travel-{variant}-battle"));
+        for frame in 0..8000 {
+            e.input_mut().set_keys((frame % 60 < 3).then_some(13));
+            advance(&mut e, 1);
+            if frame == 600 {
+                capture(&e, &format!("travel-{variant}-battle"));
+            }
+            if word(&e, 0x4803) == 1 {
+                break;
+            }
+        }
+        assert_eq!(word(&e, 0x4803), 1, "the trial battle must finish");
+        e.input_mut().set_keys([]);
+        capture(&e, &format!("travel-{variant}-battle-result"));
+        for _ in 0..2 {
+            tap(&mut e, 13);
+        }
+        walk(&mut e, 6, 18);
+        tap(&mut e, 13);
+        assert_eq!(word(&e, 0x48c3), 2);
+        for _ in 0..3 {
+            tap(&mut e, 13);
+        }
+        capture(&e, &format!("travel-{variant}-mountain"));
+        walk(&mut e, 150, 64);
+        tap(&mut e, 13);
+        for _ in 0..3 {
+            tap(&mut e, 13);
+        }
+        assert_eq!(word(&e, 0x48c3), 0);
+        capture(&e, &format!("travel-{variant}-cabin"));
+        walk(&mut e, 56, 56);
+        tap(&mut e, 13);
+        for _ in 0..4 {
+            tap(&mut e, 13);
+        }
+        assert_eq!(word(&e, 0x48c3), 1);
+        capture(&e, &format!("travel-{variant}-room"));
+        walk(&mut e, 128, 50);
+        tap(&mut e, 13);
+        for _ in 0..8 {
+            tap(&mut e, 13);
+        }
+        assert_eq!(
+            word(&e, 0x47f5),
+            1,
+            "the cabinet must supply climbing tools"
+        );
+        capture(&e, &format!("travel-{variant}-tools"));
+        let mut quit = e.clone();
+        for _ in 0..10 {
+            quit.input_mut().set_keys([27]);
+            if matches!(quit.run_frame().unwrap().status, FrameStatus::Halted(0)) {
+                break;
+            }
+        }
+        assert!(!quit.vm().is_running(), "Escape must exit exploration");
+        walk(&mut e, 80, 74);
+        tap(&mut e, 13);
+        assert_eq!(word(&e, 0x48c3), 0);
+        walk(&mut e, 16, 64);
+        tap(&mut e, 13);
+        assert_eq!(word(&e, 0x48c3), 2);
+        walk(&mut e, 78, 10);
+        tap(&mut e, 13);
+        for _ in 0..1200 {
+            e.input_mut().set_keys([]);
+            let status = e.run_frame().unwrap().status;
+            if matches!(
+                status,
+                FrameStatus::WaitingForInput | FrameStatus::Halted(_)
+            ) {
+                break;
+            }
+        }
+        tap(&mut e, 13);
+        capture(&e, &format!("travel-{variant}-ending"));
+        assert_eq!(e.run_frame().unwrap().status, FrameStatus::WaitingForInput);
+        assert_eq!(
+            word(&e, 0x48bd),
+            0,
+            "the climbing tools must unlock the demo ending"
+        );
+    }
+}
