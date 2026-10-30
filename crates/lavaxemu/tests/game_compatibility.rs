@@ -2693,3 +2693,86 @@ fn rush_out_variants_fly_drop_bombs_pause_and_return_to_the_menu() {
         }
     }
 }
+
+#[test]
+#[ignore = "requires the local game corpus via LAVAX_GAME_ROOT"]
+fn snow_fight_opens_help_moves_throws_and_finishes_a_round() {
+    let mut emulator = load("LAVA1 SnowFight(打雪仗)/SnowFight.lav");
+    advance(&mut emulator, 300);
+    let menu = emulator.display().indexed_frame().to_vec();
+    let menu_matches = |emulator: &Emulator| {
+        (30..74).all(|row| {
+            let choices = row * 160 + 14..row * 160 + 73;
+            menu[choices.clone()] == emulator.display().indexed_frame()[choices]
+        })
+    };
+    press(&mut emulator, 21);
+    advance(&mut emulator, 27);
+    press(&mut emulator, 13);
+    advance(&mut emulator, 27);
+    capture(&emulator, "snow-fight-help");
+    assert!(menu != emulator.display().indexed_frame());
+    press(&mut emulator, 13);
+    advance(&mut emulator, 27);
+    capture(&emulator, "snow-fight-help-return");
+    assert!(menu_matches(&emulator));
+    press(&mut emulator, 13);
+    advance(&mut emulator, 900);
+    capture(&emulator, "snow-fight-field");
+    let left = input_branch(&emulator, b'a');
+    let right = input_branch(&emulator, b'd');
+    let player_x = |emulator: &Emulator| {
+        (15..140)
+            .find(|&x| {
+                (x..x + 4).all(|x| {
+                    let display = emulator.display();
+                    display.palette()[usize::from(display.indexed_frame()[72 * 160 + x])]
+                        == [0, 0, 0]
+                })
+            })
+            .expect("the player's body must be visible")
+    };
+    assert!(
+        player_x(&left) < player_x(&right),
+        "A and D must move in opposite directions"
+    );
+    capture(&right, "snow-fight-moved");
+    let attack = input_branch(&emulator, b'l');
+    let mut idle = emulator.clone();
+    advance(&mut idle, 60);
+    assert!(
+        (60..79).any(|row| {
+            let player = row * 160 + 60..row * 160 + 100;
+            attack.display().indexed_frame()[player.clone()]
+                != idle.display().indexed_frame()[player]
+        }),
+        "L must animate the player's throwing pose"
+    );
+    capture(&attack, "snow-fight-throw");
+    for _ in 0..12000 {
+        emulator.input_mut().set_keys(*b"l");
+        advance(&mut emulator, 1);
+    }
+    emulator.input_mut().set_keys([]);
+    assert_eq!(
+        emulator.run_frame().unwrap().status,
+        FrameStatus::WaitingForInput
+    );
+    capture(&emulator, "snow-fight-result");
+    press(&mut emulator, 13);
+    advance(&mut emulator, 120);
+    assert!(
+        menu_matches(&emulator),
+        "confirming the result must reopen the menu"
+    );
+    press(&mut emulator, 21);
+    press(&mut emulator, 21);
+    for frame in 0..120 {
+        emulator.input_mut().set_keys((frame < 3).then_some(13));
+        if let FrameStatus::Halted(code) = emulator.run_frame().unwrap().status {
+            assert_eq!(code, 0);
+            return;
+        }
+    }
+    panic!("the Exit menu item must finish the game");
+}

@@ -882,3 +882,22 @@ without an execution error alone does not establish playability.
 | Rising submarine | Bomb used | Paused | Saved replay |
 | --- | --- | --- | --- |
 | ![Flight](images/fixes/rush-out-8k-flying.png) | ![Bomb](images/fixes/rush-out-lava2-bomb.png) | ![Pause](images/fixes/rush-out-lava2-paused.png) | ![Replay](images/fixes/rush-out-lava2-saved-slot.png) |
+
+## Snow Fight (打雪仗)
+
+- Content: `LAVA1 SnowFight(打雪仗)/SnowFight.lav`. The in-game help specifies
+  A/D movement and L attack; arrow keys control the title menu.
+- Validation gap: arrow-key probes do not exercise the actual player controls.
+  Closing Help resets the selection to Start, and the title greeting can change
+  between visits, so menu comparisons use the choice panel.
+- Validation: open and close Help, start a round, and compare A/D branches over
+  the same interval. The visible player's body moves in opposite directions.
+  L changes the throwing pose compared with an idle clone. A complete round
+  reaches the defeat result, Enter returns to the menu, and Exit terminates
+  normally. Snowfield, characters, gauges, help and result text render correctly.
+  No additional emulator changes were required. This workflow does not claim
+  a victory or verify the hit-rate calculation.
+
+| Help | Moving | Throwing | Round result |
+| --- | --- | --- | --- |
+| ![Help](images/fixes/snow-fight-help.png) | ![Move](images/fixes/snow-fight-moved.png) | ![Throw](images/fixes/snow-fight-throw.png) | ![Result](images/fixes/snow-fight-result.png) |

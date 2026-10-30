@@ -15,9 +15,9 @@ do not satisfy this status.
 ## Current evidence
 
 - Base audit: 2026-10-29; incremental entry checks: 2026-10-30. Full rerun of 44 workflows at `641903a` on 2026-10-30; subsequent entry checks use the same emulator behavior.
-- 46 dedicated release workflows passed in this audit.
-- 78 of 324 entry points were loaded by those successful workflows.
-- 246 entry points still need dedicated workflow verification.
+- 47 dedicated release workflows passed in this audit.
+- 79 of 324 entry points were loaded by those successful workflows.
+- 245 entry points still need dedicated workflow verification.
 - The historical [startup gallery](Game-Compatibility.md) is a separate check
   and must not be interpreted as this workflow audit.
 
@@ -71,7 +71,7 @@ an optional screenshot directory. Keep each test's logs and captures separate.
 | 030 | `LAVA1 Rush_Out/Rush_Out_For_Lava(8K).lav` | Game / game package | [Workflow passed: `rush_out_variants_fly_drop_bombs_pause_and_return_to_the_menu`](../crates/lavaxemu/tests/game_compatibility.rs#L2559) |
 | 031 | `LAVA1 Rush_Out/Rush_Out_For_Lava1(16k).lav` | Game / game package | [Workflow passed: `rush_out_variants_fly_drop_bombs_pause_and_return_to_the_menu`](../crates/lavaxemu/tests/game_compatibility.rs#L2559) |
 | 032 | `LAVA1 Rush_Out/Rush_Out_For_Lava2(16k).lav` | Game / game package | [Workflow passed: `rush_out_variants_fly_drop_bombs_pause_and_return_to_the_menu`](../crates/lavaxemu/tests/game_compatibility.rs#L2559) |
-| 033 | `LAVA1 SnowFight(打雪仗)/SnowFight.lav` | Game / game package | Pending |
+| 033 | `LAVA1 SnowFight(打雪仗)/SnowFight.lav` | Game / game package | [Workflow passed: `snow_fight_opens_help_moves_throws_and_finishes_a_round`](../crates/lavaxemu/tests/game_compatibility.rs#L2699) |
 | 034 | `LAVA1 SpaceWars/SWR无延时.lav` | Game / game package | Pending |
 | 035 | `LAVA1 SpaceWars/SWR有延时.lav` | Game / game package | Pending |
 | 036 | `LAVA1 TRAVEL/travel.lav` | Game / game package | Pending |
