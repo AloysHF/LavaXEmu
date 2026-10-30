@@ -776,3 +776,21 @@ without an execution error alone does not establish playability.
 | Arena | Movement | Attack | Bout result |
 | --- | --- | --- | --- |
 | ![Arena](images/fixes/em-fighter-arena.png) | ![Movement](images/fixes/em-fighter-right.png) | ![Attack](images/fixes/em-fighter-attack.png) | ![Result](images/fixes/em-fighter-result.png) |
+
+
+## Frog IQ Battle (IQ 大作战)
+
+- Content: `LAVA1 IQ大作战/IQ大作战.lav`.
+- Validation gap: startup passes through the completed-loading prompt and studio
+  logo before the actual menu. Generic input did not establish tile removal
+  or bomb use.
+- Validation: enter Start Game; Right moves the selection, Enter removes the
+  initial matching group of five, and B removes a single tile while reducing
+  the bomb counter from one to zero. These actions are compared with an idle
+  clone over the same interval. Escape returns to the exact original menu;
+  Start opens another round. The board, selection, mascot and counters render
+  correctly. No additional emulator changes were required.
+
+| Board | Matching group removed | Bomb used | New round |
+| --- | --- | --- | --- |
+| ![Board](images/fixes/iq-battle-board.png) | ![Removed](images/fixes/iq-battle-removed.png) | ![Bomb](images/fixes/iq-battle-bomb.png) | ![Round](images/fixes/iq-battle-new-round.png) |

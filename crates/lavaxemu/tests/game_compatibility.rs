@@ -2307,3 +2307,65 @@ fn em_fighter_moves_attacks_and_finishes_the_bout() {
         "the unattended bout must reach its result and finish normally"
     );
 }
+
+#[test]
+#[ignore = "requires the local game corpus via LAVAX_GAME_ROOT"]
+fn iq_battle_moves_removes_groups_uses_a_bomb_and_returns_to_the_menu() {
+    fn board(emulator: &Emulator) -> Vec<u8> {
+        (0..80)
+            .flat_map(|row| {
+                emulator.display().indexed_frame()[row * 160..row * 160 + 82]
+                    .iter()
+                    .copied()
+            })
+            .collect()
+    }
+    let mut emulator = load("LAVA1 IQ大作战/IQ大作战.lav");
+    advance(&mut emulator, 300);
+    for _ in 0..2 {
+        press(&mut emulator, 13);
+        advance(&mut emulator, 27);
+    }
+    let menu = emulator.display().indexed_frame().to_vec();
+    press(&mut emulator, 13);
+    advance(&mut emulator, 747);
+    capture(&emulator, "iq-battle-board");
+    let mut idle = emulator.clone();
+    advance(&mut idle, 60);
+    let moved = input_branch(&emulator, 22);
+    capture(&moved, "iq-battle-cursor");
+    assert!(
+        board(&moved) != board(&idle),
+        "Right must move the selection"
+    );
+    let removed = input_branch(&emulator, 13);
+    capture(&removed, "iq-battle-removed");
+    assert!(
+        board(&removed) != board(&idle),
+        "Enter must remove the selected matching group"
+    );
+    let mut bomb = input_branch(&emulator, b'b');
+    capture(&bomb, "iq-battle-bomb");
+    assert!(board(&bomb) != board(&idle), "B must remove a single tile");
+    assert!(
+        (40..60).any(|row| {
+            let counter = row * 160 + 90..row * 160 + 160;
+            bomb.display().indexed_frame()[counter.clone()]
+                != idle.display().indexed_frame()[counter]
+        }),
+        "using a bomb must update its counter"
+    );
+    hold(&mut bomb, 27, 18);
+    capture(&bomb, "iq-battle-menu");
+    assert!(
+        menu == bomb.display().indexed_frame(),
+        "Escape must return to the original menu"
+    );
+    press(&mut bomb, 13);
+    advance(&mut bomb, 300);
+    capture(&bomb, "iq-battle-new-round");
+    assert!(
+        menu != bomb.display().indexed_frame(),
+        "Start must open another round"
+    );
+}

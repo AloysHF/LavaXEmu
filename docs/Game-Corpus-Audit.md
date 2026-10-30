@@ -15,9 +15,9 @@ do not satisfy this status.
 ## Current evidence
 
 - Base audit: 2026-10-29; incremental entry checks: 2026-10-30. Emulator behavior at `4abf4fd`, plus test-only entry logging.
-- 41 dedicated release workflows passed in this audit.
-- 71 of 324 entry points were loaded by those successful workflows.
-- 253 entry points still need dedicated workflow verification.
+- 42 dedicated release workflows passed in this audit.
+- 72 of 324 entry points were loaded by those successful workflows.
+- 252 entry points still need dedicated workflow verification.
 - The historical [startup gallery](Game-Compatibility.md) is a separate check
   and must not be interpreted as this workflow audit.
 
@@ -51,7 +51,7 @@ an optional screenshot directory. Keep each test's logs and captures separate.
 | 010 | `LAVA1 Dance_all/打包的文件/BoBo_dance.pac` | Game / game package | [Workflow passed: `bobo_dance_versions_score_the_direction_sequence_and_open_the_help`](../crates/lavaxemu/tests/game_compatibility.rs#L2120) |
 | 011 | `LAVA1 Dance_all/未打包的文件/Bobo_Dance.lav` | Game / game package | [Workflow passed: `bobo_dance_versions_score_the_direction_sequence_and_open_the_help`](../crates/lavaxemu/tests/game_compatibility.rs#L2120) |
 | 012 | `LAVA1 EM星纪传说—格斗/EM星纪传说—格斗.lav` | Game / game package | [Workflow passed: `em_fighter_moves_attacks_and_finishes_the_bout`](../crates/lavaxemu/tests/game_compatibility.rs#L2269) |
-| 013 | `LAVA1 IQ大作战/IQ大作战.lav` | Game / game package | Pending |
+| 013 | `LAVA1 IQ大作战/IQ大作战.lav` | Game / game package | [Workflow passed: `iq_battle_moves_removes_groups_uses_a_bomb_and_returns_to_the_menu`](../crates/lavaxemu/tests/game_compatibility.rs#L2313) |
 | 014 | `LAVA1 Just_Fly/Just_Fly.pac` | Game / game package | [Workflow passed: `just_fly_versions_respond_in_both_modes_and_replay_a_saved_record`](../crates/lavaxemu/tests/game_compatibility.rs#L2187) |
 | 015 | `LAVA1 Just_Fly/非pac/Just_Fly.lav` | Game / game package | [Workflow passed: `just_fly_versions_respond_in_both_modes_and_replay_a_saved_record`](../crates/lavaxemu/tests/game_compatibility.rs#L2187) |
 | 016 | `LAVA1 LAVA2 江湖2_demo/world2.lav` | Game / game package | Pending |
