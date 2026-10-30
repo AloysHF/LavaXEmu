@@ -34,6 +34,30 @@ file and run that test with `--exact`. Only use its logged entries as successful
 evidence after the complete test exits successfully. `LAVAX_CAPTURE_DIR` selects
 an optional screenshot directory. Keep each test's logs and captures separate.
 
+## Open findings
+
+### Q version Dancer: contest input loop
+
+`LAVA1 Q版Dancer/Q版Dancer.lav` remains pending. Its compiled contest loop
+at file offsets `0x5750..0x57d7` continues polling Inkey while the current key
+matches a valid command, then leaves the loop when Inkey returns zero. It
+subsequently compares that zero with the generated dance command and enters
+the miss acknowledgement. The original PC interpreter's `c_inkey` also returns
+zero when no new key is pending; changing this shared API would hide a guest
+logic error and affect other programs.
+
+The supplied `源程序.txt` is useful for identifying the menu hit boxes and
+global variables, but its contest input routine differs from the binary.
+Earlier raw-memory diagnostics formatted bytes in hexadecimal: `65` meant
+hexadecimal `0x65` (the letter e), not decimal 65. No uppercase-key mapping
+fault has been established. The binary also generates four command slots while
+its response loop permits five; this needs to be addressed alongside the input
+condition before claiming a successful error-free contest.
+
+The menu cursor, introductory animation and dancer sprites run, but contest
+scoring is not accepted as verified. No guest-memory edits or shared-input
+changes have been shipped for this finding.
+
 ## Entry matrix
 
 | ID | Entry | Purpose | Workflow evidence |
