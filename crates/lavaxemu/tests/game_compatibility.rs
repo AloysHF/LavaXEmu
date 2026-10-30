@@ -3154,3 +3154,100 @@ fn rainbow_bubbles_moves_fires_pauses_and_replays_a_saved_round() {
     }
     panic!("Exit must finish the game");
 }
+
+#[test]
+#[ignore = "requires the local game corpus via LAVAX_GAME_ROOT"]
+fn color_lines_selects_moves_cancels_and_scores_a_line() {
+    let tap = |e: &mut Emulator, key| {
+        e.input_mut().set_keys([key]);
+        advance(e, 1);
+        e.input_mut().set_keys([]);
+        advance(e, 5);
+    };
+    let point = |e: &mut Emulator, cell: usize| {
+        for _ in 0..8 {
+            tap(e, 23);
+            tap(e, 20);
+        }
+        for _ in 0..cell / 9 {
+            tap(e, 22);
+        }
+        for _ in 0..cell % 9 {
+            tap(e, 21);
+        }
+    };
+    let balls = |e: &Emulator| {
+        e.vm().memory()[0x2358..0x23a9]
+            .iter()
+            .filter(|&&v| v != 0)
+            .count()
+    };
+    let score =
+        |e: &Emulator| u16::from_le_bytes(e.vm().memory()[0x23ad..0x23af].try_into().unwrap());
+    let path = "LAVA1 七彩连珠/七彩连珠.lav";
+    let mut e = load(path);
+    for frame in 0..1200 {
+        e.input_mut()
+            .set_keys(((300..480).contains(&frame) && (frame - 300) % 60 < 3).then_some(13));
+        advance(&mut e, 1);
+    }
+    capture(&e, "color-lines-selected");
+    let initial_balls = balls(&e);
+    tap(&mut e, 27);
+    assert_eq!(balls(&e), initial_balls, "cancel must preserve all balls");
+    assert_eq!(score(&e), 0);
+    let route = [
+        (7, 6),
+        (30, 31),
+        (31, 39),
+        (29, 30),
+        (52, 61),
+        (24, 32),
+        (61, 62),
+        (68, 59),
+        (80, 71),
+        (31, 59),
+        (34, 59),
+        (3, 2),
+        (35, 43),
+        (21, 12),
+        (24, 42),
+    ];
+    for (turn, (source, destination)) in route.into_iter().enumerate() {
+        let before = balls(&e);
+        point(&mut e, source);
+        tap(&mut e, 13);
+        point(&mut e, destination);
+        if turn == 14 {
+            capture(&e, "color-lines-before-clear");
+        }
+        tap(&mut e, 13);
+        advance(&mut e, 60);
+        if turn == 0 {
+            assert_eq!(
+                balls(&e),
+                before + 3,
+                "a non-scoring move must add three balls"
+            );
+            capture(&e, "color-lines-moved");
+        }
+        if turn == 14 {
+            assert!(balls(&e) < before, "the completed line must remove balls");
+        }
+    }
+    assert_eq!(score(&e), 10, "the completed line must award points");
+    capture(&e, "color-lines-scored");
+    let mut menu = load(path);
+    advance(&mut menu, 300);
+    for _ in 0..3 {
+        tap(&mut menu, 21);
+    }
+    for frame in 0..1200 {
+        menu.input_mut().set_keys((frame % 60 < 3).then_some(13));
+        if let FrameStatus::Halted(code) = menu.run_frame().unwrap().status {
+            assert_eq!(code, 0);
+            return;
+        }
+    }
+    panic!("the title Exit choice must terminate the game");
+}

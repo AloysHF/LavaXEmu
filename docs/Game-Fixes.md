@@ -997,3 +997,25 @@ without an execution error alone does not establish playability.
 | Round | Moving hero | Paused | Statistics |
 | --- | --- | --- | --- |
 | ![Round](images/fixes/rainbow-bubbles-field.png) | ![Move](images/fixes/rainbow-bubbles-moving.png) | ![Pause](images/fixes/rainbow-bubbles-paused.png) | ![Stats](images/fixes/rainbow-bubbles-statistics.png) |
+
+## Color Liner 1.1.7.17 (七彩连珠)
+
+- Content: `LAVA1 七彩连珠/七彩连珠.lav`. The embedded instructions specify
+  directional selection, Enter to select a ball and destination, and Escape
+  to cancel. A move needs a connected empty path; non-scoring moves add three
+  balls.
+- Validation gap: early startup input can leave a ball selected, so the workflow
+  explicitly cancels before its move sequence. Escape during play cancels a
+  selection; the title's Exit choice shows acknowledgements before terminating.
+- Validation: cancel without changing the ball count, then execute a recorded
+  sequence of 15 legal moves using only real directional and Enter input.
+  The first non-scoring move adds three balls. The final move reduces the ball
+  count and raises the score to 10. Read-only board/score checks accompany the
+  rendered cursor, ball patterns, preview and counters. A fresh title session
+  chooses Exit and confirms the closing pages before normal termination.
+  No additional emulator changes were required. Board saturation, leaderboard
+  name entry and persistence are not covered by this workflow.
+
+| Selected ball | First move | Before clearing | Scored line |
+| --- | --- | --- | --- |
+| ![Selected](images/fixes/color-lines-selected.png) | ![Move](images/fixes/color-lines-moved.png) | ![Before](images/fixes/color-lines-before-clear.png) | ![Score](images/fixes/color-lines-scored.png) |
