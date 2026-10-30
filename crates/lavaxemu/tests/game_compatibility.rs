@@ -2776,3 +2776,81 @@ fn snow_fight_opens_help_moves_throws_and_finishes_a_round() {
     }
     panic!("the Exit menu item must finish the game");
 }
+
+#[test]
+#[ignore = "requires the local game corpus via LAVAX_GAME_ROOT"]
+fn space_wars_variants_move_fire_and_exit_the_mission() {
+    let word = |emulator: &Emulator, address| {
+        u16::from_le_bytes(
+            emulator.vm().memory()[address..address + 2]
+                .try_into()
+                .unwrap(),
+        )
+    };
+    let branch = |original: &Emulator, key| {
+        let mut emulator = original.clone();
+        for frame in 0..30 {
+            emulator.input_mut().set_keys((frame < 18).then_some(key));
+            advance(&mut emulator, 1);
+        }
+        emulator
+    };
+    for (variant, path) in [
+        ("fast", "LAVA1 SpaceWars/SWR无延时.lav"),
+        ("delayed", "LAVA1 SpaceWars/SWR有延时.lav"),
+    ] {
+        let mut emulator = load(path);
+        advance(&mut emulator, 300);
+        let title = emulator.display().indexed_frame().to_vec();
+        press(&mut emulator, b's');
+        advance(&mut emulator, 57);
+        capture(&emulator, &format!("space-wars-{variant}-mission"));
+        assert_eq!(word(&emulator, 0x3187), 70);
+        assert_eq!(word(&emulator, 0x3189), 60);
+        let idle = branch(&emulator, 0);
+        let left = branch(&emulator, b'a');
+        let right = branch(&emulator, b'd');
+        let up = branch(&emulator, b'w');
+        let down = branch(&emulator, b's');
+        assert!(word(&left, 0x3187) < word(&idle, 0x3187));
+        assert!(word(&right, 0x3187) > word(&idle, 0x3187));
+        assert!(word(&up, 0x3189) < word(&idle, 0x3189));
+        assert!(word(&down, 0x3189) > word(&idle, 0x3189));
+        capture(&right, &format!("space-wars-{variant}-moved"));
+        let mut shot = emulator.clone();
+        for _ in 0..6 {
+            shot.input_mut().set_keys(*b"l");
+            advance(&mut shot, 1);
+        }
+        assert_eq!(word(&emulator, 0x3209), 0);
+        assert_eq!(
+            word(&shot, 0x3209),
+            4,
+            "L must create a four-pixel projectile"
+        );
+        assert_eq!(word(&shot, 0x31c1), word(&shot, 0x3187) + 4);
+        assert!(
+            word(&shot, 0x31cd) < word(&shot, 0x3189),
+            "the projectile must travel above the ship"
+        );
+        assert!(shot.display().indexed_frame() != emulator.display().indexed_frame());
+        capture(&shot, &format!("space-wars-{variant}-shot"));
+        let mut defeated = emulator.clone();
+        advance(&mut defeated, 600);
+        capture(&defeated, &format!("space-wars-{variant}-title"));
+        assert!(
+            title[..55 * 160] == defeated.display().indexed_frame()[..55 * 160],
+            "a lost mission must return to the title"
+        );
+        let mut exited = false;
+        for _ in 0..30 {
+            emulator.input_mut().set_keys([27]);
+            if let FrameStatus::Halted(code) = emulator.run_frame().unwrap().status {
+                assert_eq!(code, 0);
+                exited = true;
+                break;
+            }
+        }
+        assert!(exited, "Escape must exit the active mission: {variant}");
+    }
+}

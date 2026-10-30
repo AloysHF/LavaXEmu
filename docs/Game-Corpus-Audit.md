@@ -15,9 +15,9 @@ do not satisfy this status.
 ## Current evidence
 
 - Base audit: 2026-10-29; incremental entry checks: 2026-10-30. Full rerun of 44 workflows at `641903a` on 2026-10-30; subsequent entry checks use the same emulator behavior.
-- 47 dedicated release workflows passed in this audit.
-- 79 of 324 entry points were loaded by those successful workflows.
-- 245 entry points still need dedicated workflow verification.
+- 48 dedicated release workflows passed in this audit.
+- 81 of 324 entry points were loaded by those successful workflows.
+- 243 entry points still need dedicated workflow verification.
 - The historical [startup gallery](Game-Compatibility.md) is a separate check
   and must not be interpreted as this workflow audit.
 
@@ -72,8 +72,8 @@ an optional screenshot directory. Keep each test's logs and captures separate.
 | 031 | `LAVA1 Rush_Out/Rush_Out_For_Lava1(16k).lav` | Game / game package | [Workflow passed: `rush_out_variants_fly_drop_bombs_pause_and_return_to_the_menu`](../crates/lavaxemu/tests/game_compatibility.rs#L2559) |
 | 032 | `LAVA1 Rush_Out/Rush_Out_For_Lava2(16k).lav` | Game / game package | [Workflow passed: `rush_out_variants_fly_drop_bombs_pause_and_return_to_the_menu`](../crates/lavaxemu/tests/game_compatibility.rs#L2559) |
 | 033 | `LAVA1 SnowFight(打雪仗)/SnowFight.lav` | Game / game package | [Workflow passed: `snow_fight_opens_help_moves_throws_and_finishes_a_round`](../crates/lavaxemu/tests/game_compatibility.rs#L2699) |
-| 034 | `LAVA1 SpaceWars/SWR无延时.lav` | Game / game package | Pending |
-| 035 | `LAVA1 SpaceWars/SWR有延时.lav` | Game / game package | Pending |
+| 034 | `LAVA1 SpaceWars/SWR无延时.lav` | Game / game package | [Workflow passed: `space_wars_variants_move_fire_and_exit_the_mission`](../crates/lavaxemu/tests/game_compatibility.rs#L2782) |
+| 035 | `LAVA1 SpaceWars/SWR有延时.lav` | Game / game package | [Workflow passed: `space_wars_variants_move_fire_and_exit_the_mission`](../crates/lavaxemu/tests/game_compatibility.rs#L2782) |
 | 036 | `LAVA1 TRAVEL/travel.lav` | Game / game package | Pending |
 | 037 | `LAVA1 TRAVEL/打包travel.pac` | Game / game package | Pending |
 | 038 | `LAVA1 WarCraft/WarCraft.pac` | Game / game package | Pending |

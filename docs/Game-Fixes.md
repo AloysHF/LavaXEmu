@@ -901,3 +901,23 @@ without an execution error alone does not establish playability.
 | Help | Moving | Throwing | Round result |
 | --- | --- | --- | --- |
 | ![Help](images/fixes/snow-fight-help.png) | ![Move](images/fixes/snow-fight-moved.png) | ![Throw](images/fixes/snow-fight-throw.png) | ![Result](images/fixes/snow-fight-result.png) |
+
+## SpaceWars (with and without delay)
+
+- Content: `LAVA1 SpaceWars/SWR无延时.lav` and `SWR有延时.lav`.
+  The supplied README specifies WASD movement, L shooting and Escape to exit.
+- Validation gap: the title starts with S; Enter-only startup probes remain at
+  the title. Its `Press key S` prompt blinks, so title comparisons exclude that
+  prompt while retaining the title artwork.
+- Validation: start Mission 1 in both releases and compare all four movement
+  directions with an idle clone over equal intervals. Guest ship coordinates
+  decrease/increase on the expected axes. Holding L creates a four-pixel-wide
+  projectile above the ship at its firing position, also visible in the frame.
+  An idle mission reaches Game Over and returns to the title. Escape from an
+  active mission exits normally. Scenery, ship, projectiles and title display
+  correctly. No additional emulator changes were required. Later stages and
+  weapon upgrades have not been verified by this workflow.
+
+| Mission | Moving right | Shooting | Returned title |
+| --- | --- | --- | --- |
+| ![Mission](images/fixes/space-wars-fast-mission.png) | ![Move](images/fixes/space-wars-fast-moved.png) | ![Shot](images/fixes/space-wars-fast-shot.png) | ![Title](images/fixes/space-wars-fast-title.png) |
