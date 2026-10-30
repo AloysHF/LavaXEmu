@@ -15,9 +15,9 @@ do not satisfy this status.
 ## Current evidence
 
 - Base audit: 2026-10-29; incremental entry checks: 2026-10-30. Full rerun of 44 workflows at `641903a` on 2026-10-30; subsequent entry checks use the same emulator behavior.
-- 45 dedicated release workflows passed in this audit.
-- 75 of 324 entry points were loaded by those successful workflows.
-- 249 entry points still need dedicated workflow verification.
+- 46 dedicated release workflows passed in this audit.
+- 78 of 324 entry points were loaded by those successful workflows.
+- 246 entry points still need dedicated workflow verification.
 - The historical [startup gallery](Game-Compatibility.md) is a separate check
   and must not be interpreted as this workflow audit.
 
@@ -68,9 +68,9 @@ an optional screenshot directory. Keep each test's logs and captures separate.
 | 027 | `LAVA1 QUEERBOX/QUEERBOX.lav` | Game / game package | [Workflow passed: `queerbox_moves_a_top_block_restarts_and_returns_to_the_title`](../crates/lavaxemu/tests/game_compatibility.rs#L2375) |
 | 028 | `LAVA1 Q版Dancer/Q版Dancer.lav` | Game / game package | [Workflow passed: `q_dancer_enters_the_test_answers_a_sequence_and_scores`](../crates/lavaxemu/tests/game_compatibility.rs#L2421) |
 | 029 | `LAVA1 RC赛车/RC赛车.lav` | Game / game package | [Workflow passed: `rc_racing_accelerates_steers_pauses_and_returns_to_the_menu`](../crates/lavaxemu/tests/game_compatibility.rs#L2493) |
-| 030 | `LAVA1 Rush_Out/Rush_Out_For_Lava(8K).lav` | Game / game package | Pending |
-| 031 | `LAVA1 Rush_Out/Rush_Out_For_Lava1(16k).lav` | Game / game package | Pending |
-| 032 | `LAVA1 Rush_Out/Rush_Out_For_Lava2(16k).lav` | Game / game package | Pending |
+| 030 | `LAVA1 Rush_Out/Rush_Out_For_Lava(8K).lav` | Game / game package | [Workflow passed: `rush_out_variants_fly_drop_bombs_pause_and_return_to_the_menu`](../crates/lavaxemu/tests/game_compatibility.rs#L2559) |
+| 031 | `LAVA1 Rush_Out/Rush_Out_For_Lava1(16k).lav` | Game / game package | [Workflow passed: `rush_out_variants_fly_drop_bombs_pause_and_return_to_the_menu`](../crates/lavaxemu/tests/game_compatibility.rs#L2559) |
+| 032 | `LAVA1 Rush_Out/Rush_Out_For_Lava2(16k).lav` | Game / game package | [Workflow passed: `rush_out_variants_fly_drop_bombs_pause_and_return_to_the_menu`](../crates/lavaxemu/tests/game_compatibility.rs#L2559) |
 | 033 | `LAVA1 SnowFight(打雪仗)/SnowFight.lav` | Game / game package | Pending |
 | 034 | `LAVA1 SpaceWars/SWR无延时.lav` | Game / game package | Pending |
 | 035 | `LAVA1 SpaceWars/SWR有延时.lav` | Game / game package | Pending |

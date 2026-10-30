@@ -2553,3 +2553,143 @@ fn rc_racing_accelerates_steers_pauses_and_returns_to_the_menu() {
         "Escape must return to the race menu"
     );
 }
+
+#[test]
+#[ignore = "requires the local game corpus via LAVAX_GAME_ROOT"]
+fn rush_out_variants_fly_drop_bombs_pause_and_return_to_the_menu() {
+    for (variant, path) in [
+        ("8k", "LAVA1 Rush_Out/Rush_Out_For_Lava(8K).lav"),
+        ("lava1", "LAVA1 Rush_Out/Rush_Out_For_Lava1(16k).lav"),
+        ("lava2", "LAVA1 Rush_Out/Rush_Out_For_Lava2(16k).lav"),
+    ] {
+        let mut emulator = load(path);
+        advance(&mut emulator, 300);
+        press(&mut emulator, 13);
+        advance(&mut emulator, 567);
+        let menu = emulator.display().indexed_frame().to_vec();
+        press(&mut emulator, 13);
+        advance(&mut emulator, 237);
+        capture(&emulator, &format!("rush-out-{variant}-tunnel"));
+        let ready = emulator.clone();
+        let mut idle = emulator.clone();
+        let mut bomb = emulator.clone();
+        for _ in 0..60 {
+            emulator.input_mut().set_keys([20]);
+            advance(&mut emulator, 1);
+            bomb.input_mut().set_keys(*b"x");
+            advance(&mut bomb, 1);
+            advance(&mut idle, 1);
+        }
+        assert!(
+            (10..16).any(|row| {
+                let hud = row * 160 + 5..row * 160 + 33;
+                bomb.display().indexed_frame()[hud.clone()] != idle.display().indexed_frame()[hud]
+            }),
+            "X must reduce the available bomb indicator: {variant}"
+        );
+        capture(&bomb, &format!("rush-out-{variant}-bomb"));
+        let avatar_y = |emulator: &Emulator| {
+            let pixels = emulator.display().indexed_frame();
+            let water = pixels[30 * 160 + 30];
+            (18..79).find(|row| (16..24).any(|x| pixels[row * 160 + x] != water))
+        };
+        let mut positions = None;
+        for _ in 0..8 {
+            emulator.input_mut().set_keys([20]);
+            advance(&mut emulator, 1);
+            advance(&mut idle, 1);
+            if let (Some(up), Some(down)) = (avatar_y(&emulator), avatar_y(&idle)) {
+                positions = Some((up, down));
+                break;
+            }
+        }
+        let (up, down) = positions.expect("both submarines must be visible between redraws");
+        assert!(
+            up < down,
+            "Up must lift the submarine above the released-key branch: {variant}"
+        );
+        capture(&emulator, &format!("rush-out-{variant}-flying"));
+        emulator = ready.clone();
+        hold(&mut emulator, b'z', 12);
+        let paused = emulator.display().indexed_frame().to_vec();
+        capture(&emulator, &format!("rush-out-{variant}-paused"));
+        advance(&mut emulator, 120);
+        assert!(
+            paused == emulator.display().indexed_frame(),
+            "pause must freeze {variant}"
+        );
+        hold(&mut emulator, 20, 12);
+        assert!(
+            paused != emulator.display().indexed_frame(),
+            "Up must resume {variant}"
+        );
+        hold(&mut emulator, 27, 12);
+        press(&mut emulator, b'y');
+        advance(&mut emulator, 300);
+        capture(&emulator, &format!("rush-out-{variant}-menu"));
+        assert!(
+            menu == emulator.display().indexed_frame(),
+            "Escape must return to the menu: {variant}"
+        );
+        if variant != "8k" {
+            idle.input_mut().set_keys([]);
+            advance(&mut idle, 600);
+            let game_over = idle.display().indexed_frame().to_vec();
+            for _ in 0..2 {
+                press(&mut idle, 13);
+                advance(&mut idle, 87);
+            }
+            capture(&idle, &format!("rush-out-{variant}-name"));
+            press(&mut idle, 13);
+            advance(&mut idle, 27);
+            press(&mut idle, b' ');
+            advance(&mut idle, 87);
+            capture(&idle, &format!("rush-out-{variant}-top-five"));
+            press(&mut idle, 13);
+            advance(&mut idle, 87);
+            press(&mut idle, b'y');
+            advance(&mut idle, 87);
+            press(&mut idle, 13);
+            advance(&mut idle, 207);
+            let files = idle.files_mut().take_dirty_files();
+            let top = files
+                .iter()
+                .find(|(name, _)| name.ends_with("rush_top.dat"))
+                .unwrap();
+            assert_eq!(top.1.len(), 55);
+            assert_eq!(top.1[0], b'A', "the entered name must be saved");
+            assert!(u16::from_le_bytes(top.1[45..47].try_into().unwrap()) > 0);
+            let recording = files
+                .iter()
+                .find(|(name, _)| name.ends_with("rush_rpl.dat"))
+                .unwrap();
+            assert_eq!(recording.1.len(), 12012);
+            assert_eq!(recording.1[0], 1, "the first replay slot must be populated");
+            let mut replay = load(path);
+            for (name, bytes) in files {
+                replay.files_mut().import_file(&name, bytes);
+            }
+            advance(&mut replay, 300);
+            press(&mut replay, 13);
+            advance(&mut replay, 567);
+            press(&mut replay, 21);
+            advance(&mut replay, 27);
+            press(&mut replay, 13);
+            advance(&mut replay, 27);
+            capture(&replay, &format!("rush-out-{variant}-saved-slot"));
+            press(&mut replay, 13);
+            advance(&mut replay, 237);
+            capture(&replay, &format!("rush-out-{variant}-replaying"));
+            assert!(
+                replay.display().indexed_frame()[18 * 160..]
+                    == ready.display().indexed_frame()[18 * 160..],
+                "a fresh session must replay the initial tunnel: {variant}"
+            );
+            advance(&mut replay, 600);
+            assert!(
+                game_over == replay.display().indexed_frame(),
+                "the recorded collision must end at the same game-over screen: {variant}"
+            );
+        }
+    }
+}

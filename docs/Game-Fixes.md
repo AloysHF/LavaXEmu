@@ -858,3 +858,27 @@ without an execution error alone does not establish playability.
 | Track | Accelerating | Steering | Paused |
 | --- | --- | --- | --- |
 | ![Track](images/fixes/rc-racing-track.png) | ![Speed](images/fixes/rc-racing-speed.png) | ![Steering](images/fixes/rc-racing-steering.png) | ![Pause](images/fixes/rc-racing-paused.png) |
+
+## Rush Out the Tunnel (8K, Lava1 16K, Lava2 16K)
+
+- Content: the three `Rush_Out_For_Lava*.lav` releases under `LAVA1 Rush_Out`.
+  The supplied MHT manual documents lift, bombs, pause and the 16K recording
+  features. The 8K release intentionally omits names, rankings and replays.
+- Validation gap: the author captions (including `QQ:171290999~`) are intentional,
+  not corrupt scores. Independent GVmakerSE execution confirms these captions
+  and the sparse initial tunnel. The game redraws the tunnel and submarine in
+  separate presentations, so isolated screenshots can omit the submarine.
+- Validation: compare held Up with released input over the same interval and
+  assert that the visible submarine is higher. X reduces the bomb indicator;
+  Z pauses, another 120 frames preserve the exact paused image, and Up resumes.
+  Escape followed by Y returns to the exact original menu in all three versions.
+- Persistence: in both 16K releases, complete a run, enter A as the name, and save
+  the first replay slot. The 55-byte leaderboard contains the name and a positive
+  score; the 12,012-byte replay file marks its first slot populated. Import those
+  game-created files into a fresh session and play the saved slot. Its initial
+  tunnel and eventual collision screen match the original run exactly.
+  No additional emulator changes were required.
+
+| Rising submarine | Bomb used | Paused | Saved replay |
+| --- | --- | --- | --- |
+| ![Flight](images/fixes/rush-out-8k-flying.png) | ![Bomb](images/fixes/rush-out-lava2-bomb.png) | ![Pause](images/fixes/rush-out-lava2-paused.png) | ![Replay](images/fixes/rush-out-lava2-saved-slot.png) |
