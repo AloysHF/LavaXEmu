@@ -100,7 +100,7 @@ without an execution error alone does not establish playability.
 
 ## Counter-Strike 1.3 (CS 1.3)
 
-- Content: `LAVA1 CS 1.3/非pac/Cs(lav)1_3.lav`.
+- Content: `LAVA1 CS 1.3/非pac/Cs(lav)1_3.lav` and `LAVA1 CS 1.3/Cs(lav)1_3.pac`.
 - Problem: the flat bundle's `Csgun.dat` and other resources could not be
   opened through `/LavaData`, preventing normal startup.
 - Fix: shared resource resolution restores startup, animation and mission
@@ -110,6 +110,17 @@ without an execution error alone does not establish playability.
   Direction input changes the actual camera coordinate, and the mission
   framebuffer changes as well. Stage checks follow guest execution rather
   than assuming a fixed animation duration.
+  Both entry points run the same mission workflow. Wait for the first scene
+  to render after the loading loop, then open B, choose the pistol category
+  with B and confirm USP with Enter. Holding Z consumes ammunition (12 to 7)
+  and renders the firing animation. Menu transition animations are allowed
+  to finish before the next selection. Reserve-ammunition purchasing is not
+  covered by this regression.
+
+| Packaged mission | Pistol selection | After firing |
+| --- | --- | --- |
+| ![Mission](images/fixes/cs13-packaged-mission.png) | ![Pistol](images/fixes/cs13-packaged-pistol.png) | ![Firing](images/fixes/cs13-packaged-fire.png) |
+
 
 | Title | Mission |
 | --- | --- |

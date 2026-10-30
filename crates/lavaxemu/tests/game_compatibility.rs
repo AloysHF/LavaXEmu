@@ -387,56 +387,82 @@ fn hit_loads_the_logo_runs_and_pauses_with_the_keyboard() {
 #[test]
 #[ignore = "requires the local game corpus via LAVAX_GAME_ROOT"]
 fn counter_strike_13_loads_resources_and_enters_a_mission() {
-    let mut emulator = load("LAVA1 CS 1.3/非pac/Cs(lav)1_3.lav");
-    advance(&mut emulator, 3600);
-    let title = emulator.display().indexed_frame().to_vec();
-    capture(&emulator, "cs13-title");
-    hold(&mut emulator, 13, 18);
-    capture(&emulator, "cs13-after-enter");
-    advance(&mut emulator, 1200);
-    capture(&emulator, "cs13-setup");
-    for key in [21, 21, 21, 13] {
-        press(&mut emulator, key);
-    }
-    for _ in 0..3600 {
-        if emulator.vm().pc() == 0x4ca4 {
-            break;
+    for path in [
+        "LAVA1 CS 1.3/非pac/Cs(lav)1_3.lav",
+        "LAVA1 CS 1.3/Cs(lav)1_3.pac",
+    ] {
+        let mut emulator = load(path);
+        advance(&mut emulator, 3600);
+        let title = emulator.display().indexed_frame().to_vec();
+        capture(&emulator, "cs13-title");
+        hold(&mut emulator, 13, 18);
+        capture(&emulator, "cs13-after-enter");
+        advance(&mut emulator, 1200);
+        capture(&emulator, "cs13-setup");
+        for key in [21, 21, 21, 13] {
+            press(&mut emulator, key);
         }
-        advance(&mut emulator, 1);
-    }
-    assert_eq!(
-        emulator.vm().pc(),
-        0x4ca4,
-        "mission must reach Ready confirmation"
-    );
-    press(&mut emulator, 13);
-    for _ in 0..3600 {
-        if (0x5205..0x5f1c).contains(&emulator.vm().pc()) {
-            break;
+        for _ in 0..3600 {
+            if emulator.vm().pc() == 0x4ca4 {
+                break;
+            }
+            advance(&mut emulator, 1);
         }
-        advance(&mut emulator, 1);
+        assert_eq!(
+            emulator.vm().pc(),
+            0x4ca4,
+            "mission must reach Ready confirmation"
+        );
+        press(&mut emulator, 13);
+        for _ in 0..3600 {
+            if (0x5205..0x5f1c).contains(&emulator.vm().pc()) {
+                break;
+            }
+            advance(&mut emulator, 1);
+        }
+        assert!(
+            (0x5205..0x5f1c).contains(&emulator.vm().pc()),
+            "mission loading must finish, pc={:x}",
+            emulator.vm().pc()
+        );
+        advance(&mut emulator, 60);
+        let mission = emulator.display().indexed_frame().to_vec();
+        capture(&emulator, "cs13-mission");
+        let mut buying = input_branch(&emulator, b'b');
+        advance(&mut buying, 300);
+        capture(&buying, "cs13-buy-menu");
+        press(&mut buying, b'b');
+        advance(&mut buying, 300);
+        capture(&buying, "cs13-pistol-list");
+        press(&mut buying, 13);
+        advance(&mut buying, 300);
+        capture(&buying, "cs13-purchased");
+        let clip_before =
+            u16::from_le_bytes(buying.vm().memory()[0x201c..0x201e].try_into().unwrap());
+        let mut firing = buying.clone();
+        hold(&mut firing, b'z', 120);
+        capture(&firing, "cs13-fire");
+        let clip_after =
+            u16::from_le_bytes(firing.vm().memory()[0x201c..0x201e].try_into().unwrap());
+        assert!(
+            clip_before > 0 && clip_after < clip_before,
+            "Z must fire the purchased pistol and consume ammunition"
+        );
+        assert!(
+            title != mission,
+            "start must leave the title and load a mission"
+        );
+        let camera = u16::from_le_bytes(emulator.vm().memory()[0x2062..0x2064].try_into().unwrap());
+        assert!(camera <= 140);
+        hold(&mut emulator, if camera == 140 { 23 } else { 22 }, 45);
+        let moved = u16::from_le_bytes(emulator.vm().memory()[0x2062..0x2064].try_into().unwrap());
+        assert_ne!(camera, moved, "direction input must move the camera");
+        capture(&emulator, "cs13-look");
+        assert!(
+            mission != emulator.display().indexed_frame(),
+            "mission controls must update the view"
+        );
     }
-    assert!(
-        (0x5205..0x5f1c).contains(&emulator.vm().pc()),
-        "mission loading must finish, pc={:x}",
-        emulator.vm().pc()
-    );
-    let mission = emulator.display().indexed_frame().to_vec();
-    capture(&emulator, "cs13-mission");
-    assert!(
-        title != mission,
-        "start must leave the title and load a mission"
-    );
-    let camera = u16::from_le_bytes(emulator.vm().memory()[0x2062..0x2064].try_into().unwrap());
-    assert!(camera <= 140);
-    hold(&mut emulator, if camera == 140 { 23 } else { 22 }, 45);
-    let moved = u16::from_le_bytes(emulator.vm().memory()[0x2062..0x2064].try_into().unwrap());
-    assert_ne!(camera, moved, "direction input must move the camera");
-    capture(&emulator, "cs13-look");
-    assert!(
-        mission != emulator.display().indexed_frame(),
-        "mission controls must update the view"
-    );
 }
 
 #[test]
