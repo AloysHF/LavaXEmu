@@ -3072,3 +3072,85 @@ fn warcraft_variants_produce_move_collect_income_and_exit() {
         assert!(exited, "the system Exit item must exit normally");
     }
 }
+
+#[test]
+#[ignore = "requires the local game corpus via LAVAX_GAME_ROOT"]
+fn rainbow_bubbles_moves_fires_pauses_and_replays_a_saved_round() {
+    let path = "LAVA1 七彩泡泡/七彩泡泡.lav";
+    let mut e = load(path);
+    for frame in 0..1200 {
+        e.input_mut()
+            .set_keys(((300..480).contains(&frame) && (frame - 300) % 60 < 3).then_some(13));
+        advance(&mut e, 1);
+    }
+    press(&mut e, 13);
+    advance(&mut e, 267);
+    capture(&e, "rainbow-bubbles-field");
+    let left = input_branch(&e, 23);
+    let right = input_branch(&e, 22);
+    assert!(
+        left.display().indexed_frame()[64 * 160..] != right.display().indexed_frame()[64 * 160..],
+        "opposite directions must move the hero"
+    );
+    capture(&right, "rainbow-bubbles-moving");
+    let mut paused = e.clone();
+    press(&mut paused, b'p');
+    let frozen = paused.display().indexed_frame().to_vec();
+    capture(&paused, "rainbow-bubbles-paused");
+    advance(&mut paused, 120);
+    assert!(frozen == paused.display().indexed_frame());
+    press(&mut paused, 13);
+    assert!(
+        frozen != paused.display().indexed_frame(),
+        "confirmation must resume the round"
+    );
+    for _ in 0..2400 {
+        e.input_mut().set_keys(*b"q");
+        advance(&mut e, 1);
+    }
+    e.input_mut().set_keys([]);
+    let game_over = e.display().indexed_frame().to_vec();
+    capture(&e, "rainbow-bubbles-game-over");
+    assert!(
+        e.vm().memory()[0x565c] > 0,
+        "shots must hit bubbles during the round"
+    );
+    press(&mut e, 13);
+    capture(&e, "rainbow-bubbles-statistics");
+    press(&mut e, 13);
+    press(&mut e, b's');
+    advance(&mut e, 267);
+    capture(&e, "rainbow-bubbles-menu");
+    let files = e.files_mut().take_dirty_files();
+    let recording = files
+        .iter()
+        .find(|(name, _)| name.ends_with("bu_replay.dat"))
+        .expect("S must write the recording");
+    assert!(recording.1.len() > 16);
+    let mut replay = load(path);
+    for (name, bytes) in files {
+        replay.files_mut().import_file(&name, bytes);
+    }
+    advance(&mut replay, 300);
+    press(&mut replay, 13);
+    advance(&mut replay, 267);
+    press(&mut replay, 22);
+    press(&mut replay, 13);
+    advance(&mut replay, 3000);
+    capture(&replay, "rainbow-bubbles-replayed");
+    assert!(
+        game_over == replay.display().indexed_frame(),
+        "a fresh session must replay the same round ending"
+    );
+    for _ in 0..3 {
+        press(&mut e, 22);
+    }
+    for frame in 0..1200 {
+        e.input_mut().set_keys((frame % 60 < 3).then_some(13));
+        if let FrameStatus::Halted(code) = e.run_frame().unwrap().status {
+            assert_eq!(code, 0);
+            return;
+        }
+    }
+    panic!("Exit must finish the game");
+}

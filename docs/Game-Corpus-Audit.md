@@ -14,10 +14,10 @@ do not satisfy this status.
 
 ## Current evidence
 
-- Input update checked on 2026-10-31: full rerun of 49 workflows, followed by a corrected Dragon Kiss intro replay and the dedicated WarCraft workflow. All 50 workflows passed with the updated input behavior.
-- 50 dedicated release workflows passed in this audit.
-- 85 of 324 entry points were loaded by those successful workflows.
-- 239 entry points still need dedicated workflow verification.
+- Input update checked on 2026-10-31: full rerun of 49 workflows, followed by a corrected Dragon Kiss intro replay and the dedicated WarCraft workflow. Those 50 workflows passed with the updated input behavior; later entries have separate incremental checks.
+- 51 dedicated release workflows passed in this audit.
+- 86 of 324 entry points were loaded by those successful workflows.
+- 238 entry points still need dedicated workflow verification.
 - The historical [startup gallery](Game-Compatibility.md) is a separate check
   and must not be interpreted as this workflow audit.
 
@@ -78,7 +78,7 @@ an optional screenshot directory. Keep each test's logs and captures separate.
 | 037 | `LAVA1 TRAVEL/打包travel.pac` | Game / game package | [Workflow passed: `travel_variants_explore_fight_collect_the_tools_and_finish_the_demo`](../crates/lavaxemu/tests/game_compatibility.rs#L2860) |
 | 038 | `LAVA1 WarCraft/WarCraft.pac` | Game / game package | [Workflow passed: `warcraft_variants_produce_move_collect_income_and_exit`](../crates/lavaxemu/tests/game_compatibility.rs#L2993) |
 | 039 | `LAVA1 WarCraft/非pac/WarCraft.lav` | Game / game package | [Workflow passed: `warcraft_variants_produce_move_collect_income_and_exit`](../crates/lavaxemu/tests/game_compatibility.rs#L2993) |
-| 040 | `LAVA1 七彩泡泡/七彩泡泡.lav` | Game / game package | Pending |
+| 040 | `LAVA1 七彩泡泡/七彩泡泡.lav` | Game / game package | [Workflow passed: `rainbow_bubbles_moves_fires_pauses_and_replays_a_saved_round`](../crates/lavaxemu/tests/game_compatibility.rs#L3078) |
 | 041 | `LAVA1 七彩连珠/七彩连珠.lav` | Game / game package | Pending |
 | 042 | `LAVA1 七王五二三/七王五二三.lav` | Game / game package | Pending |
 | 043 | `LAVA1 三国志/三国志.pac` | Game / game package | Pending |

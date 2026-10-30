@@ -975,3 +975,25 @@ without an execution error alone does not establish playability.
 | Battlefield | System menu waits | Worker commands | Turn income |
 | --- | --- | --- | --- |
 | ![Board](images/fixes/warcraft-loose-board.png) | ![Menu](images/fixes/warcraft-loose-system-menu.png) | ![Commands](images/fixes/warcraft-loose-unit-menu.png) | ![Income](images/fixes/warcraft-loose-income.png) |
+
+## Rainbow Bubbles 3.0 beta (七彩泡泡)
+
+- Content: `LAVA1 七彩泡泡/七彩泡泡.lav`. The README specifies Left/Right
+  movement, Q shooting and P pause. Main-menu choices use Left/Right;
+  the replay choice is one step Right from Start.
+- Validation gap: early Enter presses leave the game at the difficulty screen;
+  another confirmation is required before entering a playable round. The actual
+  recording filename is `bu_replay.dat`, unlike the older name in the README.
+- Validation: start a normal round, compare opposite movement branches and
+  check that P freezes the exact framebuffer for 120 frames. Enter resumes.
+  Hold Q through a complete round; the hit counter becomes positive and the
+  statistics screen displays elapsed time, hits and score. Confirm that screen,
+  then S writes the replay. Import the game-created files into a fresh session,
+  choose Replay and verify the exact same Game Over screen. Exit terminates
+  normally. Bubbles, hero, weapon, timer and text render correctly.
+  No additional emulator changes were required. This test completes a losing
+  round; it does not claim a cleared stage or verify every power-up.
+
+| Round | Moving hero | Paused | Statistics |
+| --- | --- | --- | --- |
+| ![Round](images/fixes/rainbow-bubbles-field.png) | ![Move](images/fixes/rainbow-bubbles-moving.png) | ![Pause](images/fixes/rainbow-bubbles-paused.png) | ![Stats](images/fixes/rainbow-bubbles-statistics.png) |
