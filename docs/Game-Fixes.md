@@ -1394,3 +1394,30 @@ without an execution error alone does not establish playability.
   code zero. No guest memory writes manufacture progress.
 - Captures cover hidden targets, incorrect guesses, every correct hit,
   upgrades and both endings. Game images and captures are not distributed.
+
+## Volley Shooting v1.5 (凌空抽射 1.5)
+
+- Bugs: creating a record file writes only the chosen score without reserving
+  the three mode slots. Seeks to the other slots can then fail, leaving later
+  records at the wrong offset. Updating an existing shooting record also
+  writes from the read cursor instead of slot zero. The original workflow
+  produced a one-byte file after three goals and 15 points.
+- Identify the exact release by length, CRC and expected instructions. In its
+  loaded copy, pad the record file to at least three bytes during startup,
+  preserving existing bytes, and rewind before replacing the shooting score.
+  Similar images with different CRCs remain unchanged. The general file-seek
+  bounds and original game file stay intact.
+- Verify A/D movement, then replay a deterministic button sequence until three
+  goals have each added five points. Check an actual kicked ball and the goal
+  counter. Quit training and inspect the real record bytes. Enter goalkeeper
+  training, wait for a saved shot worth three points without a conceded goal,
+  and branch to J/K/L to verify left dive, jump and right dive positions.
+  Save the goalkeeper record while retaining the shooting record.
+- Import the file into a fresh emulator and verify both records in the ranking
+  display. Confirm the farewell screen and normal exit. Separately start with
+  empty, one-byte and two-byte record files and check that startup preserves
+  their bytes while adding missing slots. Captured gameplay, records and
+  goalkeeper poses are reviewed locally.
+- Coverage is training mode and record persistence. Cup rounds, extra time
+  and winning a tournament remain unverified. Captures, records and game
+  resources are not distributed.

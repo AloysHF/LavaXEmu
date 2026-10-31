@@ -15,9 +15,9 @@ do not satisfy this status.
 ## Current evidence
 
 - Input update checked on 2026-10-31: full rerun of 49 workflows, followed by a corrected Dragon Kiss intro replay and the dedicated WarCraft workflow. Those 50 workflows passed with the updated input behavior; later entries have separate incremental checks.
-- 68 dedicated release workflows passed in this audit.
-- 110 of 324 entry points were loaded by those successful workflows.
-- 214 entry points still need dedicated workflow verification.
+- 69 dedicated release workflows passed in this audit.
+- 111 of 324 entry points were loaded by those successful workflows.
+- 213 entry points still need dedicated workflow verification.
 - The historical [startup gallery](Game-Compatibility.md) is a separate check
   and must not be interpreted as this workflow audit.
 
@@ -107,7 +107,7 @@ an optional screenshot directory. Keep each test's logs and captures separate.
 | 066 | `LAVA1 冒险岛IV/黑白版/未打包的文件/冒险岛IV.lav` | Game / game package | [Workflow passed: `adventure_island_iv_versions_clear_a_stage_and_restore_custom_controls`](../crates/lavaxemu/tests/game_compatibility.rs#L5108) |
 | 067 | `LAVA1 冠军足球经理05-06赛季0.7/CFM.lav` | Game / game package | [Workflow passed: `champion_football_manager_creates_a_coach_and_finishes_a_match`](../crates/lavaxemu/tests/game_compatibility.rs#L1516) |
 | 068 | `LAVA1 决战娜美克/决战娜美克.lav` | Game / game package | [Workflow passed: `namek_retries_after_three_misses_and_completes_five_stages`](../crates/lavaxemu/tests/game_compatibility.rs#L5350) |
-| 069 | `LAVA1 凌空抽射1.5/凌空抽射v1.5.lav` | Game / game package | Pending |
+| 069 | `LAVA1 凌空抽射1.5/凌空抽射v1.5.lav` | Game / game package | [Workflow passed: `volley_shooting_scores_saves_records_and_drives_goalkeeper_controls`](../crates/lavaxemu/tests/game_compatibility.rs#L5443) |
 | 070 | `LAVA1 凤凰战斗机/Fighter.lav` | Game / game package | Pending |
 | 071 | `LAVA1 动力滑雪/滑雪.lav` | Game / game package | Pending |
 | 072 | `LAVA1 勇者传说/勇者传说.lav` | Game / game package | Pending |

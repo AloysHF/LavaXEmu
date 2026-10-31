@@ -158,6 +158,36 @@ impl Program {
                 (trampoline >> 16) as u8,
             ]);
         }
+        if image.len() == 32_559
+            && crc32fast::hash(&image) == 0x6f8d_adb3
+            && image[0x33e5..0x33eb] == [0x04, 0x7a, 0x4f, 0xaf, 0x8e, 0x89]
+            && image[0x3098..0x309d] == [0x04, 0x47, 0x4f, 0xb6, 0x38]
+        {
+            // Give this release's three records real file offsets before saving.
+            let trampoline = image.len() as u32;
+            let entry = image[0x33e5..0x33eb].to_vec();
+            image.extend_from_slice(&entry);
+            image.extend_from_slice(&[0x03, 0x46, 0x4f, 0x01, 0x00, 0x0d]);
+            image.extend_from_slice(b"/LavaData/zqtop.dat\0");
+            image.extend_from_slice(&[
+                0x0d, b'a', b'+', 0x00, 0xae, 0x35, 0x38, 0x04, 0x46, 0x4f, 0x01, 0x00, 0x01, 0x02,
+                0xb2, 0x38,
+            ]);
+            let pad_loop = image.len() as u32;
+            image.extend_from_slice(&[0x04, 0x46, 0x4f, 0xb3, 0x4f, 0x03, 0x00, 0x38, 0x39]);
+            let done_branch = image.len();
+            image.extend_from_slice(&[0, 0, 0]);
+            image.extend_from_slice(&[0x01, 0x00, 0x04, 0x46, 0x4f, 0xb7, 0x38, 0x3b]);
+            image.extend_from_slice(&pad_loop.to_le_bytes()[..3]);
+            let done = image.len() as u32;
+            image[done_branch..done_branch + 3].copy_from_slice(&done.to_le_bytes()[..3]);
+            image.extend_from_slice(&[0x04, 0x46, 0x4f, 0xaf, 0x3b, 0xeb, 0x33, 0x00]);
+            image[0x33e5] = 0x3b;
+            image[0x33e6..0x33e9].copy_from_slice(&trampoline.to_le_bytes()[..3]);
+            image[0x33e9..0x33eb].fill(0);
+            // Rewind after reading the shooting record before replacing slot zero.
+            image[0x3098..0x309d].copy_from_slice(&[0x04, 0x46, 0x4f, 0xb5, 0x00]);
+        }
         Ok(Self { header, image })
     }
 
@@ -219,6 +249,18 @@ mod tests {
         original.resize(8_201, 0);
         original[0x185a..0x185e].copy_from_slice(&[0x3b, 0x99, 0x1a, 0x00]);
         original[0x1aed] = 0x27;
+        let saved = original.clone();
+        let program = Program::load(&original).unwrap();
+        assert_eq!(original, saved);
+        assert_eq!(program.image(), original);
+    }
+
+    #[test]
+    fn leaves_similar_sports_record_programs_unmodified() {
+        let mut original = image(0, 0, 0);
+        original.resize(32_559, 0);
+        original[0x33e5..0x33eb].copy_from_slice(&[0x04, 0x7a, 0x4f, 0xaf, 0x8e, 0x89]);
+        original[0x3098..0x309d].copy_from_slice(&[0x04, 0x47, 0x4f, 0xb6, 0x38]);
         let saved = original.clone();
         let program = Program::load(&original).unwrap();
         assert_eq!(original, saved);

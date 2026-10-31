@@ -5437,3 +5437,169 @@ fn namek_retries_after_three_misses_and_completes_five_stages() {
     e.input_mut().release_all();
     assert_eq!(wait(&mut e), FrameStatus::Halted(0));
 }
+
+#[test]
+#[ignore = "requires the local game corpus via LAVAX_GAME_ROOT"]
+fn volley_shooting_scores_saves_records_and_drives_goalkeeper_controls() {
+    fn word(e: &Emulator, p: usize) -> u16 {
+        u16::from_le_bytes(e.vm().memory()[p..p + 2].try_into().unwrap())
+    }
+    fn tap(e: &mut Emulator, k: u8) {
+        e.input_mut().set_keys([k]);
+        advance(e, 3);
+        e.input_mut().set_keys([]);
+        advance(e, 57);
+    }
+    fn menu(e: &mut Emulator) {
+        tap(e, 13);
+        tap(e, 13);
+        advance(e, 180);
+        assert_eq!(word(e, 0x204a), 10);
+    }
+    fn quit(e: &mut Emulator, expected: &[u8], pc: usize) {
+        e.input_mut().set_keys(*b"q");
+        advance(e, 60);
+        e.input_mut().set_keys([]);
+        advance(e, 240);
+        assert_eq!(e.vm().pc(), pc);
+        let files = e.files_mut().take_dirty_files();
+        assert_eq!(
+            files
+                .iter()
+                .find(|(p, _)| p.ends_with("zqtop.dat"))
+                .unwrap()
+                .1,
+            expected
+        );
+    }
+    let path = fixture_path("凌空抽射v1.5.lav");
+    let mut e = load(&path);
+    for f in 0..2400 {
+        e.input_mut()
+            .set_keys((f >= 300 && (f - 300) / 60 < 10 && (f - 300) % 60 < 3).then_some(13));
+        advance(&mut e, 1);
+    }
+    e.input_mut().set_keys([]);
+    assert_eq!(word(&e, 0x2050), 0);
+    assert_eq!(word(&e, 0x2000), 74);
+    capture(&e, "volley-shooting-start");
+    for (key, left) in [(b'a', true), (b'd', false)] {
+        let mut branch = e.clone();
+        branch.input_mut().set_keys([key]);
+        advance(&mut branch, 60);
+        assert_eq!(word(&branch, 0x2000), if left { 49 } else { 99 });
+        capture(&branch, &format!("volley-move-{key}"));
+    }
+    let mut rng = 1_234_567u32;
+    let mut key = 0;
+    let mut score = 0;
+    let mut kicked = false;
+    for f in 0..65_000 {
+        if f % 12 == 0 {
+            rng = rng.wrapping_mul(1_664_525).wrapping_add(1_013_904_223);
+            key = [0, 13, 13, 0, b'a', b'd', 0, 13][(rng >> 24) as usize % 8];
+        }
+        e.input_mut().set_keys((key != 0).then_some(key));
+        advance(&mut e, 1);
+        if word(&e, 0x200e) < 77 && !kicked {
+            kicked = true;
+            capture(&e, "volley-kicked-ball");
+        }
+        let next = word(&e, 0x2050);
+        if next != score {
+            assert_eq!(next, score + 5);
+            score = next;
+            assert_eq!(word(&e, 0x2052), score / 5);
+            capture(&e, &format!("volley-goals-{}", score / 5));
+        }
+        if score == 15 {
+            break;
+        }
+    }
+    assert!(kicked);
+    assert_eq!(score, 15);
+    quit(&mut e, &[15, 0, 0], 0x3117);
+    capture(&e, "volley-shooting-record");
+    menu(&mut e);
+    for k in [13, 13, 21, 13] {
+        tap(&mut e, k);
+    }
+    for _ in 0..6000 {
+        advance(&mut e, 1);
+        if word(&e, 0x2050) >= 3 {
+            break;
+        }
+    }
+    assert_eq!(word(&e, 0x2050), 3);
+    assert_eq!(
+        word(&e, 0x2052),
+        0,
+        "the saved shot must not count as a conceded goal"
+    );
+    capture(&e, "volley-goalkeeper-save");
+    for (key, field) in [(b'j', 0x202c), (b'k', 0x2028), (b'l', 0x202e)] {
+        let mut branch = e.clone();
+        branch.input_mut().set_keys([key]);
+        advance(&mut branch, 30);
+        assert_eq!(word(&branch, field), 1);
+        if key == b'j' {
+            assert!(word(&branch, 0x2004) < word(&e, 0x2004));
+        }
+        if key == b'l' {
+            assert!(word(&branch, 0x2004) > word(&e, 0x2004));
+        }
+        assert!(word(&branch, 0x2006) < 18);
+        capture(&branch, &format!("volley-goalkeeper-{key}"));
+    }
+    quit(&mut e, &[15, 3, 0], 0x57f9);
+    capture(&e, "volley-goalkeeper-record");
+    let saved = e.files().file("/lavadata/zqtop.dat").unwrap().to_vec();
+    let mut restored = load(&path);
+    restored
+        .files_mut()
+        .import_file("/lavadata/zqtop.dat", saved);
+    for f in 0..1200 {
+        restored
+            .input_mut()
+            .set_keys((f >= 300 && (f - 300) / 60 < 2 && (f - 300) % 60 < 3).then_some(13));
+        advance(&mut restored, 1);
+    }
+    tap(&mut restored, 21);
+    tap(&mut restored, 13);
+    assert_eq!(&restored.vm().memory()[0x4f47..0x4f4a], &[15, 3, 0]);
+    capture(&restored, "volley-restored-records");
+    for key in [13, 21, 21, 13] {
+        tap(&mut restored, key);
+    }
+    assert_eq!(restored.vm().pc(), 0x3520);
+    capture(&restored, "volley-farewell");
+    restored.input_mut().set_keys([13]);
+    let mut exited = false;
+    for frame in 0..180 {
+        if frame == 3 {
+            restored.input_mut().set_keys([]);
+        }
+        if let FrameStatus::Halted(code) = restored.run_frame().unwrap().status {
+            assert_eq!(code, 0);
+            exited = true;
+            break;
+        }
+    }
+    assert!(exited);
+    for bytes in [vec![], vec![7], vec![7, 2]] {
+        let mut recovered = load(&path);
+        recovered
+            .files_mut()
+            .import_file("/lavadata/zqtop.dat", bytes.clone());
+        advance(&mut recovered, 300);
+        tap(&mut recovered, 13);
+        tap(&mut recovered, 13);
+        advance(&mut recovered, 900);
+        let mut expected = bytes;
+        expected.resize(3, 0);
+        assert_eq!(
+            recovered.files().file("/lavadata/zqtop.dat").unwrap(),
+            expected
+        );
+    }
+}

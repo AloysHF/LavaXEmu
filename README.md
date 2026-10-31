@@ -67,6 +67,8 @@ the first stage, exercising damage and respawn, and restoring custom controls.
 Battle on Namek has a workflow covering incorrect guesses, restarting after
 three misses, all five stages and normal victory exit. A fingerprinted repair
 restores new-game counters and makes its ending reachable.
+Volley Shooting v1.5 has a workflow for shooting goals, goalkeeper actions and
+record restoration. A fingerprinted repair preserves the separate record slots.
 
 ## Usage
 
