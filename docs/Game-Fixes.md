@@ -1148,3 +1148,26 @@ without an execution error alone does not establish playability.
 | Capture | File picker | Restored game | TXT record first move |
 | --- | --- | --- | --- |
 | ![Capture](images/fixes/xiangqi-captured.png) | ![Files](images/fixes/xiangqi-file-picker.png) | ![Restored](images/fixes/xiangqi-restored.png) | ![Record](images/fixes/xiangqi-text-record.png) |
+
+## Chinese Mahjong (中国麻将)
+
+- Content: `LAVA1 中国麻将/中国麻将.lav`. This release presents a
+  two-player hand against the computer, with Enter for drawing/discarding and
+  Left/Right for choosing a tile. Escape ends the hand when the wall is empty.
+- Validation gap: a dealt-hand screenshot did not prove tile selection,
+  drawing, discarding, computer responses or transition to the next hand.
+- Validation: draw and verify the wall decreases by one and a valid tile
+  occupies the fourteenth hand slot. Move selection left/right/left and
+  discard the selected tile. The remaining hand must exactly match the sorted
+  original tiles with that selected tile removed; the computer takes its turn
+  and consumes more wall tiles. Continue real draw/discard input to a hand
+  result, using Escape if the wall runs out. Acknowledge the result, verify
+  fresh valid tiles and a replenished wall, and continue to the next hand.
+  Tile faces, cursor, discards, revealed result and next hand render correctly.
+  No additional emulator changes were required.
+- Scope: this workflow does not claim coverage of every chow/pung/kong/hu
+  combination or scoring pattern.
+
+| Selected tile | Discard and computer response | Hand result | Next hand |
+| --- | --- | --- | --- |
+| ![Selection](images/fixes/chinese-mahjong-selected.png) | ![Discard](images/fixes/chinese-mahjong-discarded.png) | ![Result](images/fixes/chinese-mahjong-hand-result.png) | ![Next](images/fixes/chinese-mahjong-next-hand.png) |

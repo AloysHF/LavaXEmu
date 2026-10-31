@@ -3883,3 +3883,71 @@ fn xiangqi_moves_captures_undoes_and_reloads_a_saved_game() {
     }
     panic!("confirmed exit must terminate normally");
 }
+
+#[test]
+#[ignore = "requires the local game corpus via LAVAX_GAME_ROOT"]
+fn chinese_mahjong_draws_selects_discards_and_finishes_a_hand() {
+    fn word(e: &Emulator, address: usize) -> u16 {
+        u16::from_le_bytes(e.vm().memory()[address..address + 2].try_into().unwrap())
+    }
+    let mut e = load("LAVA1 中国麻将/中国麻将.lav");
+    for frame in 0..1200 {
+        e.input_mut()
+            .set_keys(((300..480).contains(&frame) && (frame - 300) % 60 < 3).then_some(13));
+        advance(&mut e, 1);
+    }
+    capture(&e, "chinese-mahjong-dealt");
+    let wall = word(&e, 0x2186);
+    assert_eq!(word(&e, 0x2210), 0);
+    assert_eq!(e.vm().memory()[0x21a9], 254);
+    press(&mut e, 13);
+    assert_eq!(word(&e, 0x2186), wall - 1);
+    assert!(e.vm().memory()[0x21a9] < 34);
+    assert_eq!(word(&e, 0x221c), 13);
+    capture(&e, "chinese-mahjong-drawn");
+    press(&mut e, 23);
+    assert_eq!(word(&e, 0x221c), 12);
+    press(&mut e, 22);
+    assert_eq!(word(&e, 0x221c), 13);
+    press(&mut e, 23);
+    let mut remaining = e.vm().memory()[0x219c..0x21aa].to_vec();
+    remaining.remove(12);
+    remaining.sort_unstable();
+    remaining.push(254);
+    capture(&e, "chinese-mahjong-selected");
+    press(&mut e, 13);
+    advance(&mut e, 120);
+    assert_eq!(&e.vm().memory()[0x219c..0x21aa], remaining);
+    assert!(
+        word(&e, 0x2186) < wall - 1,
+        "the computer must take its turn"
+    );
+    capture(&e, "chinese-mahjong-discarded");
+    let mut finished = false;
+    for frame in 0..18000 {
+        let key = if word(&e, 0x2186) == 0 { 27 } else { 13 };
+        e.input_mut().set_keys((frame % 60 < 3).then_some(key));
+        advance(&mut e, 1);
+        if word(&e, 0x2210) != 0 {
+            finished = true;
+            break;
+        }
+    }
+    assert!(finished, "draw/discard input must reach a hand result");
+    let result = word(&e, 0x2210);
+    assert!((1..=3).contains(&result));
+    e.input_mut().set_keys([]);
+    advance(&mut e, 120);
+    capture(&e, "chinese-mahjong-hand-result");
+    assert_eq!(word(&e, 0x2210), result);
+    press(&mut e, 13);
+    advance(&mut e, 600);
+    assert_eq!(word(&e, 0x2210), 0);
+    assert!(word(&e, 0x2186) > 50);
+    assert!(
+        e.vm().memory()[0x219c..0x21a9]
+            .iter()
+            .all(|&tile| tile < 34)
+    );
+    capture(&e, "chinese-mahjong-next-hand");
+}
