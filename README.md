@@ -51,7 +51,8 @@ Compatibility evidence is tracked in the [workflow audit](docs/Game-Corpus-Audit
 Five in a Row v0.80 has reproducible monochrome and grayscale workflows for
 winning, undo/redo, record persistence, restarting and confirmed exit.
 Five Tigers has complete-round workflows for alternating play, all five
-scoring categories, restarting and exit.
+scoring categories, restarting and exit. Yahtzee has a full-game workflow
+covering held dice, reroll limits, all 14 scoring choices and final settlement.
 
 ## Usage
 

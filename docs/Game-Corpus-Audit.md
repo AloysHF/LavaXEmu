@@ -15,9 +15,9 @@ do not satisfy this status.
 ## Current evidence
 
 - Input update checked on 2026-10-31: full rerun of 49 workflows, followed by a corrected Dragon Kiss intro replay and the dedicated WarCraft workflow. Those 50 workflows passed with the updated input behavior; later entries have separate incremental checks.
-- 61 dedicated release workflows passed in this audit.
-- 98 of 324 entry points were loaded by those successful workflows.
-- 226 entry points still need dedicated workflow verification.
+- 62 dedicated release workflows passed in this audit.
+- 99 of 324 entry points were loaded by those successful workflows.
+- 225 entry points still need dedicated workflow verification.
 - The historical [startup gallery](Game-Compatibility.md) is a separate check
   and must not be interpreted as this workflow audit.
 
@@ -91,7 +91,7 @@ an optional screenshot directory. Keep each test's logs and captures separate.
 | 050 | `LAVA1 五子连珠/WZLZ_16灰度.lav` | Game / game package | [Workflow passed: `five_in_a_row_versions_win_undo_save_reload_and_restart`](../crates/lavaxemu/tests/game_compatibility.rs#L4189) |
 | 051 | `LAVA1 五子连珠/WZLZ_黑白.lav` | Game / game package | [Workflow passed: `five_in_a_row_versions_win_undo_save_reload_and_restart`](../crates/lavaxemu/tests/game_compatibility.rs#L4189) |
 | 052 | `LAVA1 五虎/Fivet.lav` | Game / game package | [Workflow passed: `five_tigers_scores_complete_boards_and_restarts`](../crates/lavaxemu/tests/game_compatibility.rs#L4334) |
-| 053 | `LAVA1 五骰Yahtzee/Yahtzee.lav` | Game / game package | Pending |
+| 053 | `LAVA1 五骰Yahtzee/Yahtzee.lav` | Game / game package | [Workflow passed: `yahtzee_holds_rerolls_scores_every_category_and_finishes`](../crates/lavaxemu/tests/game_compatibility.rs#L4434) |
 | 054 | `LAVA1 仙剑后传/Pala.lav` | Game / game package | Pending |
 | 055 | `LAVA1 仙剑后传/Pala_.lav` | Game / game package | Pending |
 | 056 | `LAVA1 仙剑后传/Pala_TC800.lav` | Game / game package | Pending |

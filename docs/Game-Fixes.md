@@ -1242,3 +1242,26 @@ without an execution error alone does not establish playability.
   and turn count. Escape exits with code zero. No emulator core changes were
   needed; the shared fixture lookup is also rechecked by the preceding game's
   dual-edition workflow. Captures and game data are not distributed.
+
+## Five Dice Yahtzee (五骰 Yahtzee)
+
+- Validation gap: a dice display does not prove retention during rerolls,
+  roll limits, one-use scoring choices or completion of the full game.
+- Actual controls are Enter to roll/score, Space to toggle a selected die's
+  hold flag, Up/Down to switch regions and Left/Right to select. The supplied
+  numeric-key instructions differ from the program's actual key handling.
+- The regression selects and holds two dice, rerolls, checks that both values
+  remain unchanged and waits for the complete animation before comparing
+  results. After the reroll limit, another Enter leaves all dice unchanged.
+  Release both holds and cancel the quit prompt.
+- Complete all 14 scoring choices. For every sampled roll, independently
+  compute the selected category's preview from the five actual values, then
+  check its used flag and accumulated score after confirmation. Attempting
+  to reuse the first category preserves the roll count and used-category
+  count. The final score, category selection, hold marks, dice faces and
+  return to the main menu were inspected locally. Choose Exit and verify
+  normal termination with code zero.
+- No additional core changes were required. This workflow samples the rolls
+  generated during one complete game; it does not exhaustively cover every
+  combination or demonstrate the upper-section bonus threshold. Captures
+  and game resources are not distributed.

@@ -4428,3 +4428,180 @@ fn five_tigers_scores_complete_boards_and_restarts() {
     }
     assert!(exited, "Escape must exit the game");
 }
+
+#[test]
+#[ignore = "requires the local game corpus via LAVAX_GAME_ROOT"]
+fn yahtzee_holds_rerolls_scores_every_category_and_finishes() {
+    fn tap(e: &mut Emulator, key: u8) {
+        press(e, key);
+        for _ in 0..3000 {
+            let result = e.run_frame().unwrap();
+            assert!(!matches!(result.status, FrameStatus::Halted(_)));
+            if result.status == FrameStatus::WaitingForInput {
+                return;
+            }
+        }
+        panic!("the animation must return to input waiting");
+    }
+    fn word(e: &Emulator, at: usize) -> u16 {
+        u16::from_le_bytes(e.vm().memory()[at..at + 2].try_into().unwrap())
+    }
+    fn expected(dice: &[u8], category: usize) -> u16 {
+        let mut counts = [0u16; 7];
+        for &die in dice {
+            assert!((1..=6).contains(&die));
+            counts[usize::from(die)] += 1;
+        }
+        let sum = dice.iter().map(|&d| u16::from(d)).sum();
+        match category {
+            1..=6 => counts[category] * category as u16,
+            7 => {
+                if counts.iter().filter(|&&n| n >= 2).count() >= 2 {
+                    sum
+                } else {
+                    0
+                }
+            }
+            8 => {
+                if counts.iter().any(|&n| n >= 3) {
+                    sum
+                } else {
+                    0
+                }
+            }
+            9 => {
+                if counts.iter().any(|&n| n >= 4) {
+                    sum
+                } else {
+                    0
+                }
+            }
+            10 => {
+                if counts.contains(&2) && counts.contains(&3) {
+                    25
+                } else {
+                    0
+                }
+            }
+            11 => {
+                if (1..=3).any(|start| (start..start + 4).all(|v| counts[v] > 0)) {
+                    30
+                } else {
+                    0
+                }
+            }
+            12 => {
+                if (1..=2).any(|start| (start..start + 5).all(|v| counts[v] > 0)) {
+                    40
+                } else {
+                    0
+                }
+            }
+            13 => sum,
+            14 => {
+                if counts.contains(&5) {
+                    50
+                } else {
+                    0
+                }
+            }
+            _ => unreachable!(),
+        }
+    }
+    let mut e = load(&fixture_path("Yahtzee.lav"));
+    for frame in 0..1800 {
+        e.input_mut()
+            .set_keys(((300..480).contains(&frame) && (frame - 300) % 60 < 3).then_some(13));
+        advance(&mut e, 1);
+    }
+    assert_eq!(e.vm().memory()[0x317b], 1);
+    tap(&mut e, 32);
+    assert_eq!(e.vm().memory()[0x3184], 1);
+    tap(&mut e, 22);
+    assert_eq!(e.vm().memory()[0x317c], 2);
+    tap(&mut e, 32);
+    assert_eq!(e.vm().memory()[0x3185], 1);
+    tap(&mut e, 23);
+    let held = e.vm().memory()[0x317f];
+    let held_second = e.vm().memory()[0x3180];
+    while e.vm().memory()[0x317e] < 2 {
+        tap(&mut e, 13);
+        assert_eq!(e.vm().memory()[0x317f], held);
+        assert_eq!(e.vm().memory()[0x3180], held_second);
+    }
+    capture(&e, "yahtzee-held-die");
+    let exhausted = e.vm().memory()[0x317f..0x3184].to_vec();
+    tap(&mut e, 13);
+    assert_eq!(&e.vm().memory()[0x317f..0x3184], exhausted);
+    tap(&mut e, 32);
+    assert_eq!(e.vm().memory()[0x3184], 0);
+    tap(&mut e, 22);
+    tap(&mut e, 32);
+    assert_eq!(e.vm().memory()[0x3185], 0);
+    tap(&mut e, 23);
+    tap(&mut e, 27);
+    tap(&mut e, b'n');
+    let mut upper = 0u16;
+    let mut lower = 0u16;
+    for category in 1..=14 {
+        if e.vm().memory()[0x317b] == 1 {
+            tap(&mut e, 20);
+        }
+        for _ in 0..14 {
+            if usize::from(e.vm().memory()[0x317d]) == category {
+                break;
+            }
+            tap(&mut e, 22);
+        }
+        assert_eq!(usize::from(e.vm().memory()[0x317d]), category);
+        let score = expected(&e.vm().memory()[0x317f..0x3184], category);
+        assert_eq!(
+            u16::from(e.vm().memory()[0x3189 + category - 1]),
+            score,
+            "category {category} preview"
+        );
+        if category <= 6 {
+            upper += score;
+        } else {
+            lower += score;
+        }
+        tap(&mut e, 13);
+        assert_eq!(e.vm().memory()[0x3197 + category - 1], 1);
+        assert_eq!(
+            word(&e, 0x3264),
+            upper + lower + if upper >= 63 { 50 } else { 0 }
+        );
+        if category == 1 {
+            if e.vm().memory()[0x317b] == 1 {
+                tap(&mut e, 20);
+            }
+            let before = e.vm().memory()[0x317e];
+            tap(&mut e, 13);
+            assert_eq!(e.vm().memory()[0x317e], before);
+            assert_eq!(
+                e.vm().memory()[0x3197..0x31a5]
+                    .iter()
+                    .filter(|&&v| v == 1)
+                    .count(),
+                1
+            );
+        }
+    }
+    assert!(e.vm().memory()[0x3197..0x31a5].iter().all(|&v| v == 1));
+    capture(&e, "yahtzee-final-score");
+    tap(&mut e, 13);
+    capture(&e, "yahtzee-menu-after-game");
+    for key in [21, 21] {
+        tap(&mut e, key);
+    }
+    e.input_mut().set_keys([13]);
+    let mut exited = false;
+    for _ in 0..120 {
+        if let FrameStatus::Halted(code) = e.run_frame().unwrap().status {
+            assert_eq!(code, 0);
+            exited = true;
+            break;
+        }
+    }
+    assert!(exited, "the menu exit must terminate normally");
+}
