@@ -64,6 +64,9 @@ line clearing, scoring and ranking persistence. A fingerprinted compatibility
 repair prevents corrupted ranking names in the monochrome release.
 Adventure Island IV has monochrome and grayscale LAV/PAC workflows completing
 the first stage, exercising damage and respawn, and restoring custom controls.
+Battle on Namek has a workflow covering incorrect guesses, restarting after
+three misses, all five stages and normal victory exit. A fingerprinted repair
+restores new-game counters and makes its ending reachable.
 
 ## Usage
 

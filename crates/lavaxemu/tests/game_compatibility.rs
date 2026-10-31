@@ -5344,3 +5344,96 @@ fn adventure_island_iv_versions_clear_a_stage_and_restore_custom_controls() {
         capture(&e, &format!("adventure4-{version}-stage-two"));
     }
 }
+
+#[test]
+#[ignore = "requires the local game corpus via LAVAX_GAME_ROOT"]
+fn namek_retries_after_three_misses_and_completes_five_stages() {
+    fn word(e: &Emulator, address: usize) -> u16 {
+        u16::from_le_bytes(e.vm().memory()[address..address + 2].try_into().unwrap())
+    }
+    fn wait(e: &mut Emulator) -> FrameStatus {
+        for _ in 0..6000 {
+            let status = e.run_frame().unwrap().status;
+            if matches!(
+                status,
+                FrameStatus::WaitingForInput | FrameStatus::Halted(_)
+            ) {
+                return status;
+            }
+        }
+        panic!("the next interaction must be reachable");
+    }
+    fn key(e: &mut Emulator, value: u8) {
+        e.input_mut().release_all();
+        e.input_mut().set_keys([value]);
+        advance(e, 1);
+        e.input_mut().release_all();
+        assert_eq!(wait(e), FrameStatus::WaitingForInput);
+    }
+    fn start(e: &mut Emulator) {
+        for frame in 0..1800 {
+            e.input_mut().set_keys(
+                (frame >= 300 && (frame - 300) / 60 < 10 && (frame - 300) % 60 < 3).then_some(13),
+            );
+            advance(e, 1);
+        }
+        e.input_mut().release_all();
+        assert_eq!(e.vm().pc(), 0x1cdc);
+        assert_eq!(word(e, 0x3632), 1);
+        assert_eq!(word(e, 0x3634), 0);
+        assert_eq!(word(e, 0x3636), 0);
+    }
+    let path = fixture_path("决战娜美克.lav");
+    let mut e = load(&path);
+    start(&mut e);
+    capture(&e, "namek-hidden-target");
+    let first_scene = e.display().indexed_frame().to_vec();
+    for misses in 1..=3 {
+        let target = word(&e, 0x362a);
+        key(&mut e, b"bnmghjtyu"[(target % 9) as usize]);
+        assert_eq!(e.vm().pc(), 0x1ef7);
+        assert_eq!(word(&e, 0x3636), misses);
+        assert_eq!(word(&e, 0x3634), 0);
+        capture(&e, &format!("namek-miss-{misses}"));
+        key(&mut e, 13);
+    }
+    assert_eq!(e.vm().pc(), 0x1f62);
+    capture(&e, "namek-loss");
+    key(&mut e, 13);
+    assert_eq!(e.vm().pc(), 0x16a1);
+    start(&mut e);
+    for stage in 1..=5 {
+        assert_eq!(word(&e, 0x3632), stage);
+        assert_eq!(word(&e, 0x3638), 200 - 30 * (stage - 1));
+        for hit in 1..=3 {
+            assert_eq!(e.vm().pc(), 0x1cdc);
+            let target = word(&e, 0x362a);
+            assert!((1..=9).contains(&target));
+            assert_eq!(word(&e, 0x362c), 38 + 36 * ((target - 1) % 3));
+            assert_eq!(word(&e, 0x362e), 26 * (2 - (target - 1) / 3));
+            key(&mut e, b"bnmghjtyu"[(target - 1) as usize]);
+            assert_eq!(e.vm().pc(), 0x1e70);
+            assert_eq!(word(&e, 0x3628), target);
+            assert_eq!(word(&e, 0x3634), hit);
+            assert_eq!(word(&e, 0x3636), 0);
+            assert_ne!(e.display().indexed_frame(), first_scene);
+            capture(&e, &format!("namek-stage-{stage}-hit-{hit}"));
+            key(&mut e, 13);
+        }
+        assert_eq!(e.vm().pc(), 0x1ad0);
+        assert_eq!(word(&e, 0x3632), stage + 1);
+        assert_eq!(word(&e, 0x3634), 0);
+        capture(&e, &format!("namek-upgrade-{stage}"));
+        key(&mut e, 13);
+    }
+    assert_ne!(
+        e.vm().pc(),
+        0x1cdc,
+        "five stages must reach the ending rather than stage six"
+    );
+    capture(&e, "namek-victory");
+    e.input_mut().set_keys([13]);
+    e.run_frame().unwrap();
+    e.input_mut().release_all();
+    assert_eq!(wait(&mut e), FrameStatus::Halted(0));
+}

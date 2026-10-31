@@ -1372,3 +1372,25 @@ without an execution error alone does not establish playability.
   behavior was also rechecked with the complete picture-puzzle workflow.
   Later stages, advanced devices and leaderboard scoring remain unverified.
   Captures, settings files and game resources are not distributed.
+
+## Battle on Namek (决战娜美克)
+
+- Bugs: three hits reset the per-stage hit count before a victory condition
+  requires that count to reach five, making the ending unreachable. Perfect
+  play continues beyond the advertised five stages until the motion delay
+  underflows. Starting again after three misses also retains the miss count
+  and immediately loses. Both failures were reproduced before the repair.
+- Match the exact image length, CRC and expected instructions. In the loaded
+  copy, allow the completed fifth stage to reach the ending and redirect the
+  new-game branch through initialization of the stage, hit/miss counters and
+  delay parameters. A guard test leaves a similar image with a different CRC
+  unchanged. The original content file and general VM semantics stay intact.
+- Use actual number-key aliases for every guess. Three deliberate misses
+  increment the failure count, display defeat and return to the title. Start
+  again in the same emulator and check stage one with zero hits and misses.
+  Then land three hits in each of five stages, checking the chosen position,
+  target coordinates, hit counter, stage transition and each faster delay.
+  Acknowledge the final upgrade, inspect victory and verify normal exit with
+  code zero. No guest memory writes manufacture progress.
+- Captures cover hidden targets, incorrect guesses, every correct hit,
+  upgrades and both endings. Game images and captures are not distributed.

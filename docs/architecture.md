@@ -47,8 +47,10 @@ crates/
 `Program` also applies narrowly scoped repairs to identified legacy releases
 in the loaded image. Length and CRC checks protect unrelated programs. The
 monochrome Tetris v1.3 repair initializes its name-entry buffer from the current
-name before the guest reads reused local storage. These repairs do not modify
-the content file or change the VM's general stack and local-variable rules.
+name before the guest reads reused local storage. The Battle on Namek repair
+initializes round counters when starting a game and fixes the unreachable
+five-stage ending predicate. These repairs do not modify the content file or
+change the VM's general stack and local-variable rules.
 
 ## Bytecode Execution
 

@@ -129,6 +129,35 @@ impl Program {
             ]);
             image[0x0ffb..0x1000].fill(0);
         }
+        if image.len() == 8_201
+            && crc32fast::hash(&image) == 0xf533_81e2
+            && image[0x185a..0x185e] == [0x3b, 0x99, 0x1a, 0x00]
+            && image[0x1aed] == 0x27
+        {
+            // Restore this release's new-game state and reachable five-stage ending.
+            image[0x1aed] = 0x28;
+            let trampoline = image.len() as u32;
+            for (address, value) in [
+                (0x3632u16, 1u16),
+                (0x3634, 0),
+                (0x3636, 0),
+                (0x3638, 200),
+                (0x363a, 580),
+            ] {
+                let [low, high] = address.to_le_bytes();
+                let [value_low, value_high] = value.to_le_bytes();
+                image.extend_from_slice(&[
+                    0x03, low, high, 0x02, 0x00, 0x02, value_low, value_high, 0x35, 0x38,
+                ]);
+            }
+            image.extend_from_slice(&[0x3b, 0x99, 0x1a, 0x00]);
+            image[0x185a..0x185e].copy_from_slice(&[
+                0x3b,
+                trampoline as u8,
+                (trampoline >> 8) as u8,
+                (trampoline >> 16) as u8,
+            ]);
+        }
         Ok(Self { header, image })
     }
 
@@ -178,6 +207,18 @@ mod tests {
         original.resize(18_430, 0);
         original[0x0ff7..0x1000]
             .copy_from_slice(&[0x03, 0x15, 0x00, 0x81, 0x00, 0x01, 0x01, 0x35, 0x38]);
+        let saved = original.clone();
+        let program = Program::load(&original).unwrap();
+        assert_eq!(original, saved);
+        assert_eq!(program.image(), original);
+    }
+
+    #[test]
+    fn leaves_similar_five_stage_programs_unmodified() {
+        let mut original = image(0, 0, 0);
+        original.resize(8_201, 0);
+        original[0x185a..0x185e].copy_from_slice(&[0x3b, 0x99, 0x1a, 0x00]);
+        original[0x1aed] = 0x27;
         let saved = original.clone();
         let program = Program::load(&original).unwrap();
         assert_eq!(original, saved);
