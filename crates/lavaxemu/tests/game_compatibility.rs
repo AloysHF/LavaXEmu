@@ -3740,3 +3740,146 @@ fn chinese_fireworks_rotates_connects_scores_pauses_and_confirms_exit() {
     }
     panic!("Stop Fireworks must exit after the closing pages");
 }
+
+#[test]
+#[ignore = "requires the local game corpus via LAVAX_GAME_ROOT"]
+fn xiangqi_moves_captures_undoes_and_reloads_a_saved_game() {
+    fn start(e: &mut Emulator) {
+        for frame in 0..1200 {
+            e.input_mut()
+                .set_keys(((300..480).contains(&frame) && (frame - 300) % 60 < 3).then_some(13));
+            advance(e, 1);
+        }
+    }
+    fn point(e: &mut Emulator, row: u16, col: u16) {
+        let bp = e.vm().local_bp() as usize;
+        for (address, target, negative, positive) in
+            [(bp + 12, row, 20, 21), (bp + 14, col, 23, 22)]
+        {
+            for _ in 0..16 {
+                let current =
+                    u16::from_le_bytes(e.vm().memory()[address..address + 2].try_into().unwrap());
+                if current == target {
+                    break;
+                }
+                press(e, if current < target { positive } else { negative });
+            }
+            assert_eq!(
+                u16::from_le_bytes(e.vm().memory()[address..address + 2].try_into().unwrap()),
+                target
+            );
+        }
+    }
+    fn board(e: &Emulator) -> &[u8] {
+        &e.vm().memory()[0x274a..0x27b8]
+    }
+    fn cell(e: &Emulator, row: usize, col: usize) -> u8 {
+        board(e)[row * 11 + col]
+    }
+    let path = "LAVA1 中国象棋/象棋90.lav";
+    let mut e = load(path);
+    start(&mut e);
+    capture(&e, "xiangqi-board");
+    assert_eq!(cell(&e, 5, 4), 1);
+    assert_eq!(cell(&e, 5, 7), 11);
+    point(&mut e, 5, 4);
+    press(&mut e, 13);
+    point(&mut e, 5, 5);
+    press(&mut e, 13);
+    assert_eq!(cell(&e, 5, 4), 0);
+    assert_eq!(cell(&e, 5, 5), 1);
+    point(&mut e, 5, 7);
+    press(&mut e, 13);
+    point(&mut e, 5, 6);
+    press(&mut e, 13);
+    assert_eq!(cell(&e, 5, 7), 0);
+    assert_eq!(cell(&e, 5, 6), 11);
+    let before_capture = board(&e).to_vec();
+    point(&mut e, 5, 5);
+    press(&mut e, 13);
+    point(&mut e, 5, 6);
+    press(&mut e, 13);
+    assert_eq!(cell(&e, 5, 5), 0);
+    assert_eq!(
+        cell(&e, 5, 6),
+        1,
+        "the black pawn must capture the red pawn"
+    );
+    let captured = board(&e).to_vec();
+    capture(&e, "xiangqi-captured");
+    press(&mut e, b'i');
+    assert_eq!(board(&e), before_capture);
+    capture(&e, "xiangqi-undone");
+    press(&mut e, b'o');
+    assert_eq!(board(&e), captured);
+    for key in [29, b'y', b'e', b'm', b'u', 13, 13] {
+        press(&mut e, key);
+    }
+    let files = e.files_mut().take_dirty_files();
+    let saved = files
+        .iter()
+        .find(|(name, _)| name.ends_with("emu.cxq"))
+        .expect("F2 must write the named game");
+    assert!(saved.1.starts_with(b"[SCXQ_CXQ]"));
+    capture(&e, "xiangqi-saved");
+    let mut restored = load(path);
+    for (name, bytes) in files {
+        restored.files_mut().import_file(&name, bytes);
+    }
+    start(&mut restored);
+    for key in [30, b'y'] {
+        press(&mut restored, key);
+    }
+    capture(&restored, "xiangqi-file-picker");
+    for key in [13, 13] {
+        press(&mut restored, key);
+    }
+    capture(&restored, "xiangqi-restored");
+    assert_eq!(
+        board(&restored),
+        captured,
+        "loading CXQ must restore the moved and captured pieces"
+    );
+    let mut text_record = load(path);
+    start(&mut text_record);
+    let initial = board(&text_record).to_vec();
+    let text_keys = [30, b'y', 13, b'n', 13, 13];
+    for frame in 0..1200 {
+        text_record.input_mut().set_keys(
+            (frame / 60 < text_keys.len() && frame % 60 < 3)
+                .then_some(text_keys[(frame / 60) % text_keys.len()]),
+        );
+        advance(&mut text_record, 1);
+    }
+    capture(&text_record, "xiangqi-text-record-start");
+    assert_eq!(board(&text_record), initial);
+    press(&mut text_record, b'o');
+    advance(&mut text_record, 120);
+    assert_eq!(cell(&text_record, 3, 4), 0);
+    assert_eq!(cell(&text_record, 3, 5), 1);
+    assert_ne!(board(&text_record), initial);
+    capture(&text_record, "xiangqi-text-record");
+    press(&mut text_record, b'i');
+    advance(&mut text_record, 120);
+    assert_eq!(board(&text_record), initial);
+    press(&mut restored, 27);
+    capture(&restored, "xiangqi-confirm-exit");
+    press(&mut restored, b'n');
+    assert_eq!(board(&restored), captured);
+    press(&mut restored, 27);
+    for frame in 0..1200 {
+        let key = if frame < 3 {
+            Some(b'y')
+        } else if frame % 60 < 3 {
+            Some(13)
+        } else {
+            None
+        };
+        restored.input_mut().set_keys(key);
+        if let FrameStatus::Halted(code) = restored.run_frame().unwrap().status {
+            assert_eq!(code, 255);
+            return;
+        }
+    }
+    panic!("confirmed exit must terminate normally");
+}

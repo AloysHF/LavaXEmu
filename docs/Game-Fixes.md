@@ -1124,3 +1124,27 @@ without an execution error alone does not establish playability.
 | Fuse board | Paused | Lit fireworks | Saved high score |
 | --- | --- | --- | --- |
 | ![Board](images/fixes/chinese-fireworks-board.png) | ![Pause](images/fixes/chinese-fireworks-paused.png) | ![Fireworks](images/fixes/chinese-fireworks-scored.png) | ![Score](images/fixes/chinese-fireworks-high-score.png) |
+
+## Chinese Chess (中国象棋 v0.89)
+
+- Content: `LAVA1 中国象棋/象棋90.lav`, with the supplied
+  `LavaData/CXQ` records. This release is a two-player board and record viewer;
+  it does not provide a computer opponent. The supplied initial board starts
+  with the black side to move.
+- Validation gap: startup alone did not verify legal moves, captures, undo,
+  record navigation or the native file picker used when loading.
+- Validation: move the black pawn forward, advance the opposing red pawn,
+  then capture it. Read-only board assertions check all three moves. I undoes
+  the capture and O redoes it. F2 saves `emu.cxq`; a fresh emulator imports the
+  written file and F3 selects it through FileList, restoring the exact captured
+  board. A separate fresh session loads the supplied `QIPU1.TXT`, acknowledges
+  the end/start prompts, advances its first pawn move and reverses it. Escape/N
+  preserves play; Escape/Y and the closing-page acknowledgements reach the
+  program's explicit exit code 255. Board, cursor, Chinese prompts and file
+  names render correctly. No additional emulator changes were required.
+- Scope: the other supplied TXT records, custom layout editor and autoplay
+  are not covered by this workflow.
+
+| Capture | File picker | Restored game | TXT record first move |
+| --- | --- | --- | --- |
+| ![Capture](images/fixes/xiangqi-captured.png) | ![Files](images/fixes/xiangqi-file-picker.png) | ![Restored](images/fixes/xiangqi-restored.png) | ![Record](images/fixes/xiangqi-text-record.png) |
