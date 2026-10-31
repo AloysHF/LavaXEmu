@@ -1224,3 +1224,21 @@ without an execution error alone does not establish playability.
   additional emulator changes were needed. Local captures were inspected
   but are not distributed. Autoplay and every numeric shortcut are outside
   this workflow's scope.
+
+## Five Tigers (五虎 v1.0)
+
+- Validation gap: the opening board did not verify alternating play, occupied
+  cell rejection or the scoring performed only when all 25 cells are filled.
+- The real-input workflow checks both arrow and WASD movement and all four
+  placement keys (Enter, Q, Z, P). Repeated placement on an occupied cell
+  preserves the board and turn count. F1 clears an unfinished round.
+- Complete two rounds, verifying every cell and all 25 accepted moves. A
+  checkerboard scores black 18, white 12, exercising the edge-to-edge diagonals
+  of lengths three, four and five. A second layout scores black 18, white 8,
+  adding small squares and horizontal/vertical lines of five. The expected
+  totals were independently calculated from the documented rules.
+- Both results, piece colors, tiger panels and Chinese labels were inspected
+  locally. Acknowledging each result creates an empty board with reset scores
+  and turn count. Escape exits with code zero. No emulator core changes were
+  needed; the shared fixture lookup is also rechecked by the preceding game's
+  dual-edition workflow. Captures and game data are not distributed.

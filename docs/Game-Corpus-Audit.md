@@ -15,9 +15,9 @@ do not satisfy this status.
 ## Current evidence
 
 - Input update checked on 2026-10-31: full rerun of 49 workflows, followed by a corrected Dragon Kiss intro replay and the dedicated WarCraft workflow. Those 50 workflows passed with the updated input behavior; later entries have separate incremental checks.
-- 60 dedicated release workflows passed in this audit.
-- 97 of 324 entry points were loaded by those successful workflows.
-- 227 entry points still need dedicated workflow verification.
+- 61 dedicated release workflows passed in this audit.
+- 98 of 324 entry points were loaded by those successful workflows.
+- 226 entry points still need dedicated workflow verification.
 - The historical [startup gallery](Game-Compatibility.md) is a separate check
   and must not be interpreted as this workflow audit.
 
@@ -38,59 +38,59 @@ an optional screenshot directory. Keep each test's logs and captures separate.
 
 | ID | Entry | Purpose | Workflow evidence |
 | ---: | --- | --- | --- |
-| 000 | `LAVA1 2 口水王1.2/口水王2 1.2灰度/口水王2.lav` | Game / game package | [Workflow passed: `spitting_king_versions_move_shoot_adjust_power_and_confirm_exit`](../crates/lavaxemu/tests/game_compatibility.rs#L2052) |
-| 001 | `LAVA1 2 口水王1.2/口水王2 1.2黑白/口水王2.lav` | Game / game package | [Workflow passed: `spitting_king_versions_move_shoot_adjust_power_and_confirm_exit`](../crates/lavaxemu/tests/game_compatibility.rs#L2052) |
-| 002 | `LAVA1 3D迷宫/3D迷宫.lav` | Game / game package | [Workflow passed: `maze_3d_walks_turns_and_switches_the_satellite_map`](../crates/lavaxemu/tests/game_compatibility.rs#L1907) |
-| 003 | `LAVA1 Cloud/打包的文件/bobo_cloud.pac` | Game / game package | [Workflow passed: `cloud_versions_configure_keys_jump_and_persist_the_configuration`](../crates/lavaxemu/tests/game_compatibility.rs#L1993) |
-| 004 | `LAVA1 Cloud/未打包的文件/cloud_all.lav` | Game / game package | [Workflow passed: `cloud_versions_configure_keys_jump_and_persist_the_configuration`](../crates/lavaxemu/tests/game_compatibility.rs#L1993) |
+| 000 | `LAVA1 2 口水王1.2/口水王2 1.2灰度/口水王2.lav` | Game / game package | [Workflow passed: `spitting_king_versions_move_shoot_adjust_power_and_confirm_exit`](../crates/lavaxemu/tests/game_compatibility.rs#L2075) |
+| 001 | `LAVA1 2 口水王1.2/口水王2 1.2黑白/口水王2.lav` | Game / game package | [Workflow passed: `spitting_king_versions_move_shoot_adjust_power_and_confirm_exit`](../crates/lavaxemu/tests/game_compatibility.rs#L2075) |
+| 002 | `LAVA1 3D迷宫/3D迷宫.lav` | Game / game package | [Workflow passed: `maze_3d_walks_turns_and_switches_the_satellite_map`](../crates/lavaxemu/tests/game_compatibility.rs#L1930) |
+| 003 | `LAVA1 Cloud/打包的文件/bobo_cloud.pac` | Game / game package | [Workflow passed: `cloud_versions_configure_keys_jump_and_persist_the_configuration`](../crates/lavaxemu/tests/game_compatibility.rs#L2016) |
+| 004 | `LAVA1 Cloud/未打包的文件/cloud_all.lav` | Game / game package | [Workflow passed: `cloud_versions_configure_keys_jump_and_persist_the_configuration`](../crates/lavaxemu/tests/game_compatibility.rs#L2016) |
 | 005 | `LAVA1 Crazy_ball/crazyball.lav` | Game / game package | Pending |
 | 006 | `LAVA1 Crazy_ball/mapedit.lav` | Map editor | Pending |
-| 007 | `LAVA1 CS 1.3/Cs(lav)1_3.pac` | Game / game package | [Workflow passed: `counter_strike_13_loads_resources_and_enters_a_mission`](../crates/lavaxemu/tests/game_compatibility.rs#L389) |
-| 008 | `LAVA1 CS 1.3/非pac/Cs(lav)1_3.lav` | Game / game package | [Workflow passed: `counter_strike_13_loads_resources_and_enters_a_mission`](../crates/lavaxemu/tests/game_compatibility.rs#L389) |
+| 007 | `LAVA1 CS 1.3/Cs(lav)1_3.pac` | Game / game package | [Workflow passed: `counter_strike_13_loads_resources_and_enters_a_mission`](../crates/lavaxemu/tests/game_compatibility.rs#L412) |
+| 008 | `LAVA1 CS 1.3/非pac/Cs(lav)1_3.lav` | Game / game package | [Workflow passed: `counter_strike_13_loads_resources_and_enters_a_mission`](../crates/lavaxemu/tests/game_compatibility.rs#L412) |
 | 009 | `LAVA1 CS蓝色行动/CS蓝色行动.lav` | Game / game package | Pending |
-| 010 | `LAVA1 Dance_all/打包的文件/BoBo_dance.pac` | Game / game package | [Workflow passed: `bobo_dance_versions_score_the_direction_sequence_and_open_the_help`](../crates/lavaxemu/tests/game_compatibility.rs#L2120) |
-| 011 | `LAVA1 Dance_all/未打包的文件/Bobo_Dance.lav` | Game / game package | [Workflow passed: `bobo_dance_versions_score_the_direction_sequence_and_open_the_help`](../crates/lavaxemu/tests/game_compatibility.rs#L2120) |
-| 012 | `LAVA1 EM星纪传说—格斗/EM星纪传说—格斗.lav` | Game / game package | [Workflow passed: `em_fighter_moves_attacks_and_finishes_the_bout`](../crates/lavaxemu/tests/game_compatibility.rs#L2269) |
-| 013 | `LAVA1 IQ大作战/IQ大作战.lav` | Game / game package | [Workflow passed: `iq_battle_moves_removes_groups_uses_a_bomb_and_returns_to_the_menu`](../crates/lavaxemu/tests/game_compatibility.rs#L2313) |
-| 014 | `LAVA1 Just_Fly/Just_Fly.pac` | Game / game package | [Workflow passed: `just_fly_versions_respond_in_both_modes_and_replay_a_saved_record`](../crates/lavaxemu/tests/game_compatibility.rs#L2187) |
-| 015 | `LAVA1 Just_Fly/非pac/Just_Fly.lav` | Game / game package | [Workflow passed: `just_fly_versions_respond_in_both_modes_and_replay_a_saved_record`](../crates/lavaxemu/tests/game_compatibility.rs#L2187) |
+| 010 | `LAVA1 Dance_all/打包的文件/BoBo_dance.pac` | Game / game package | [Workflow passed: `bobo_dance_versions_score_the_direction_sequence_and_open_the_help`](../crates/lavaxemu/tests/game_compatibility.rs#L2143) |
+| 011 | `LAVA1 Dance_all/未打包的文件/Bobo_Dance.lav` | Game / game package | [Workflow passed: `bobo_dance_versions_score_the_direction_sequence_and_open_the_help`](../crates/lavaxemu/tests/game_compatibility.rs#L2143) |
+| 012 | `LAVA1 EM星纪传说—格斗/EM星纪传说—格斗.lav` | Game / game package | [Workflow passed: `em_fighter_moves_attacks_and_finishes_the_bout`](../crates/lavaxemu/tests/game_compatibility.rs#L2292) |
+| 013 | `LAVA1 IQ大作战/IQ大作战.lav` | Game / game package | [Workflow passed: `iq_battle_moves_removes_groups_uses_a_bomb_and_returns_to_the_menu`](../crates/lavaxemu/tests/game_compatibility.rs#L2336) |
+| 014 | `LAVA1 Just_Fly/Just_Fly.pac` | Game / game package | [Workflow passed: `just_fly_versions_respond_in_both_modes_and_replay_a_saved_record`](../crates/lavaxemu/tests/game_compatibility.rs#L2210) |
+| 015 | `LAVA1 Just_Fly/非pac/Just_Fly.lav` | Game / game package | [Workflow passed: `just_fly_versions_respond_in_both_modes_and_replay_a_saved_record`](../crates/lavaxemu/tests/game_compatibility.rs#L2210) |
 | 016 | `LAVA1 LAVA2 江湖2_demo/world2.lav` | Game / game package | Pending |
 | 017 | `LAVA1 LAVA2 江湖2_demo/world2_16.lav` | Game / game package | Pending |
-| 018 | `LAVA1 Lazy YY牛奶大战/Ver1.2/打包的文件/LazyYY牛奶大战.pac` | Game / game package | [Workflow passed: `lazy_yy_versions_feed_pause_and_return_to_the_menu`](../crates/lavaxemu/tests/game_compatibility.rs#L1328) |
-| 019 | `LAVA1 Lazy YY牛奶大战/Ver1.2/未打包的文件/LazyYY.lav` | Game / game package | [Workflow passed: `lazy_yy_versions_feed_pause_and_return_to_the_menu`](../crates/lavaxemu/tests/game_compatibility.rs#L1328) |
-| 020 | `LAVA1 Lazy YY牛奶大战/Ver1.5 For TC800 Only/Lazy YY牛奶大战.pac` | Game / game package | [Workflow passed: `lazy_yy_versions_feed_pause_and_return_to_the_menu`](../crates/lavaxemu/tests/game_compatibility.rs#L1328) |
-| 021 | `LAVA1 lost fantasy/LF_demo(PC).lav` | Game / game package | [Workflow passed: `lost_fantasy_device_and_pc_versions_draw_and_move`](../crates/lavaxemu/tests/game_compatibility.rs#L494) |
-| 022 | `LAVA1 lost fantasy/LF_demo.lav` | Game / game package | [Workflow passed: `lost_fantasy_device_and_pc_versions_draw_and_move`](../crates/lavaxemu/tests/game_compatibility.rs#L494) |
-| 023 | `LAVA1 PACMAN/PACMAN.pac` | Game / game package | [Workflow passed: `pacman_versions_select_a_stage_move_and_finish_a_round`](../crates/lavaxemu/tests/game_compatibility.rs#L1954) |
-| 024 | `LAVA1 PACMAN/非pac/PACMAN.lav` | Game / game package | [Workflow passed: `pacman_versions_select_a_stage_move_and_finish_a_round`](../crates/lavaxemu/tests/game_compatibility.rs#L1954) |
+| 018 | `LAVA1 Lazy YY牛奶大战/Ver1.2/打包的文件/LazyYY牛奶大战.pac` | Game / game package | [Workflow passed: `lazy_yy_versions_feed_pause_and_return_to_the_menu`](../crates/lavaxemu/tests/game_compatibility.rs#L1351) |
+| 019 | `LAVA1 Lazy YY牛奶大战/Ver1.2/未打包的文件/LazyYY.lav` | Game / game package | [Workflow passed: `lazy_yy_versions_feed_pause_and_return_to_the_menu`](../crates/lavaxemu/tests/game_compatibility.rs#L1351) |
+| 020 | `LAVA1 Lazy YY牛奶大战/Ver1.5 For TC800 Only/Lazy YY牛奶大战.pac` | Game / game package | [Workflow passed: `lazy_yy_versions_feed_pause_and_return_to_the_menu`](../crates/lavaxemu/tests/game_compatibility.rs#L1351) |
+| 021 | `LAVA1 lost fantasy/LF_demo(PC).lav` | Game / game package | [Workflow passed: `lost_fantasy_device_and_pc_versions_draw_and_move`](../crates/lavaxemu/tests/game_compatibility.rs#L517) |
+| 022 | `LAVA1 lost fantasy/LF_demo.lav` | Game / game package | [Workflow passed: `lost_fantasy_device_and_pc_versions_draw_and_move`](../crates/lavaxemu/tests/game_compatibility.rs#L517) |
+| 023 | `LAVA1 PACMAN/PACMAN.pac` | Game / game package | [Workflow passed: `pacman_versions_select_a_stage_move_and_finish_a_round`](../crates/lavaxemu/tests/game_compatibility.rs#L1977) |
+| 024 | `LAVA1 PACMAN/非pac/PACMAN.lav` | Game / game package | [Workflow passed: `pacman_versions_select_a_stage_move_and_finish_a_round`](../crates/lavaxemu/tests/game_compatibility.rs#L1977) |
 | 025 | `LAVA1 puke21/扑克21.lav` | Game / game package | Pending |
-| 026 | `LAVA1 Puzzled Sheep/Psheep.lav` | Game / game package | [Workflow passed: `puzzled_sheep_loads_levels_moves_the_cursor_and_runs_the_simulation`](../crates/lavaxemu/tests/game_compatibility.rs#L319) |
-| 027 | `LAVA1 QUEERBOX/QUEERBOX.lav` | Game / game package | [Workflow passed: `queerbox_moves_a_top_block_restarts_and_returns_to_the_title`](../crates/lavaxemu/tests/game_compatibility.rs#L2375) |
-| 028 | `LAVA1 Q版Dancer/Q版Dancer.lav` | Game / game package | [Workflow passed: `q_dancer_enters_the_test_answers_a_sequence_and_scores`](../crates/lavaxemu/tests/game_compatibility.rs#L2421) |
-| 029 | `LAVA1 RC赛车/RC赛车.lav` | Game / game package | [Workflow passed: `rc_racing_accelerates_steers_pauses_and_returns_to_the_menu`](../crates/lavaxemu/tests/game_compatibility.rs#L2493) |
-| 030 | `LAVA1 Rush_Out/Rush_Out_For_Lava(8K).lav` | Game / game package | [Workflow passed: `rush_out_variants_fly_drop_bombs_pause_and_return_to_the_menu`](../crates/lavaxemu/tests/game_compatibility.rs#L2559) |
-| 031 | `LAVA1 Rush_Out/Rush_Out_For_Lava1(16k).lav` | Game / game package | [Workflow passed: `rush_out_variants_fly_drop_bombs_pause_and_return_to_the_menu`](../crates/lavaxemu/tests/game_compatibility.rs#L2559) |
-| 032 | `LAVA1 Rush_Out/Rush_Out_For_Lava2(16k).lav` | Game / game package | [Workflow passed: `rush_out_variants_fly_drop_bombs_pause_and_return_to_the_menu`](../crates/lavaxemu/tests/game_compatibility.rs#L2559) |
-| 033 | `LAVA1 SnowFight(打雪仗)/SnowFight.lav` | Game / game package | [Workflow passed: `snow_fight_opens_help_moves_throws_and_finishes_a_round`](../crates/lavaxemu/tests/game_compatibility.rs#L2699) |
-| 034 | `LAVA1 SpaceWars/SWR无延时.lav` | Game / game package | [Workflow passed: `space_wars_variants_move_fire_and_exit_the_mission`](../crates/lavaxemu/tests/game_compatibility.rs#L2782) |
-| 035 | `LAVA1 SpaceWars/SWR有延时.lav` | Game / game package | [Workflow passed: `space_wars_variants_move_fire_and_exit_the_mission`](../crates/lavaxemu/tests/game_compatibility.rs#L2782) |
-| 036 | `LAVA1 TRAVEL/travel.lav` | Game / game package | [Workflow passed: `travel_variants_explore_fight_collect_the_tools_and_finish_the_demo`](../crates/lavaxemu/tests/game_compatibility.rs#L2860) |
-| 037 | `LAVA1 TRAVEL/打包travel.pac` | Game / game package | [Workflow passed: `travel_variants_explore_fight_collect_the_tools_and_finish_the_demo`](../crates/lavaxemu/tests/game_compatibility.rs#L2860) |
-| 038 | `LAVA1 WarCraft/WarCraft.pac` | Game / game package | [Workflow passed: `warcraft_variants_produce_move_collect_income_and_exit`](../crates/lavaxemu/tests/game_compatibility.rs#L2993) |
-| 039 | `LAVA1 WarCraft/非pac/WarCraft.lav` | Game / game package | [Workflow passed: `warcraft_variants_produce_move_collect_income_and_exit`](../crates/lavaxemu/tests/game_compatibility.rs#L2993) |
-| 040 | `LAVA1 七彩泡泡/七彩泡泡.lav` | Game / game package | [Workflow passed: `rainbow_bubbles_moves_fires_pauses_and_replays_a_saved_round`](../crates/lavaxemu/tests/game_compatibility.rs#L3078) |
-| 041 | `LAVA1 七彩连珠/七彩连珠.lav` | Game / game package | [Workflow passed: `color_lines_selects_moves_cancels_and_scores_a_line`](../crates/lavaxemu/tests/game_compatibility.rs#L3160) |
-| 042 | `LAVA1 七王五二三/七王五二三.lav` | Game / game package | [Workflow passed: `seven_king_selects_plays_passes_finishes_and_restarts_a_round`](../crates/lavaxemu/tests/game_compatibility.rs#L3257) |
-| 043 | `LAVA1 三国志/三国志.pac` | Game / game package | [Workflow passed: `three_kingdoms_develops_recruits_and_reloads_a_saved_city`](../crates/lavaxemu/tests/game_compatibility.rs#L3352) |
-| 044 | `LAVA1 中国灯谜/中国灯谜.lav` | Game / game package | [Workflow passed: `chinese_riddles_browses_all_categories_reveals_answers_and_exits`](../crates/lavaxemu/tests/game_compatibility.rs#L3495) |
-| 045 | `LAVA1 中国烟火 1.1/中国烟火.lav` | Game / game package | [Workflow passed: `chinese_fireworks_rotates_connects_scores_pauses_and_confirms_exit`](../crates/lavaxemu/tests/game_compatibility.rs#L3598) |
-| 046 | `LAVA1 中国象棋/象棋90.lav` | Game / game package | [Workflow passed: `xiangqi_moves_captures_undoes_and_reloads_a_saved_game`](../crates/lavaxemu/tests/game_compatibility.rs#L3746) |
-| 047 | `LAVA1 中国麻将/中国麻将.lav` | Game / game package | [Workflow passed: `chinese_mahjong_draws_selects_discards_and_finishes_a_hand`](../crates/lavaxemu/tests/game_compatibility.rs#L3889) |
-| 048 | `LAVA1 中学传奇/打包的/SCH_RPGPACK.pac` | Game / game package | [Workflow passed: `school_legend_versions_move_use_medicine_and_reload_progress`](../crates/lavaxemu/tests/game_compatibility.rs#L3957) |
-| 049 | `LAVA1 中学传奇/未打包的/中学传奇.lav` | Game / game package | [Workflow passed: `school_legend_versions_move_use_medicine_and_reload_progress`](../crates/lavaxemu/tests/game_compatibility.rs#L3957) |
-| 050 | `LAVA1 五子连珠/WZLZ_16灰度.lav` | Game / game package | [Workflow passed: `five_in_a_row_versions_win_undo_save_reload_and_restart`](../crates/lavaxemu/tests/game_compatibility.rs#L4166) |
-| 051 | `LAVA1 五子连珠/WZLZ_黑白.lav` | Game / game package | [Workflow passed: `five_in_a_row_versions_win_undo_save_reload_and_restart`](../crates/lavaxemu/tests/game_compatibility.rs#L4166) |
-| 052 | `LAVA1 五虎/Fivet.lav` | Game / game package | Pending |
+| 026 | `LAVA1 Puzzled Sheep/Psheep.lav` | Game / game package | [Workflow passed: `puzzled_sheep_loads_levels_moves_the_cursor_and_runs_the_simulation`](../crates/lavaxemu/tests/game_compatibility.rs#L342) |
+| 027 | `LAVA1 QUEERBOX/QUEERBOX.lav` | Game / game package | [Workflow passed: `queerbox_moves_a_top_block_restarts_and_returns_to_the_title`](../crates/lavaxemu/tests/game_compatibility.rs#L2398) |
+| 028 | `LAVA1 Q版Dancer/Q版Dancer.lav` | Game / game package | [Workflow passed: `q_dancer_enters_the_test_answers_a_sequence_and_scores`](../crates/lavaxemu/tests/game_compatibility.rs#L2444) |
+| 029 | `LAVA1 RC赛车/RC赛车.lav` | Game / game package | [Workflow passed: `rc_racing_accelerates_steers_pauses_and_returns_to_the_menu`](../crates/lavaxemu/tests/game_compatibility.rs#L2516) |
+| 030 | `LAVA1 Rush_Out/Rush_Out_For_Lava(8K).lav` | Game / game package | [Workflow passed: `rush_out_variants_fly_drop_bombs_pause_and_return_to_the_menu`](../crates/lavaxemu/tests/game_compatibility.rs#L2582) |
+| 031 | `LAVA1 Rush_Out/Rush_Out_For_Lava1(16k).lav` | Game / game package | [Workflow passed: `rush_out_variants_fly_drop_bombs_pause_and_return_to_the_menu`](../crates/lavaxemu/tests/game_compatibility.rs#L2582) |
+| 032 | `LAVA1 Rush_Out/Rush_Out_For_Lava2(16k).lav` | Game / game package | [Workflow passed: `rush_out_variants_fly_drop_bombs_pause_and_return_to_the_menu`](../crates/lavaxemu/tests/game_compatibility.rs#L2582) |
+| 033 | `LAVA1 SnowFight(打雪仗)/SnowFight.lav` | Game / game package | [Workflow passed: `snow_fight_opens_help_moves_throws_and_finishes_a_round`](../crates/lavaxemu/tests/game_compatibility.rs#L2722) |
+| 034 | `LAVA1 SpaceWars/SWR无延时.lav` | Game / game package | [Workflow passed: `space_wars_variants_move_fire_and_exit_the_mission`](../crates/lavaxemu/tests/game_compatibility.rs#L2805) |
+| 035 | `LAVA1 SpaceWars/SWR有延时.lav` | Game / game package | [Workflow passed: `space_wars_variants_move_fire_and_exit_the_mission`](../crates/lavaxemu/tests/game_compatibility.rs#L2805) |
+| 036 | `LAVA1 TRAVEL/travel.lav` | Game / game package | [Workflow passed: `travel_variants_explore_fight_collect_the_tools_and_finish_the_demo`](../crates/lavaxemu/tests/game_compatibility.rs#L2883) |
+| 037 | `LAVA1 TRAVEL/打包travel.pac` | Game / game package | [Workflow passed: `travel_variants_explore_fight_collect_the_tools_and_finish_the_demo`](../crates/lavaxemu/tests/game_compatibility.rs#L2883) |
+| 038 | `LAVA1 WarCraft/WarCraft.pac` | Game / game package | [Workflow passed: `warcraft_variants_produce_move_collect_income_and_exit`](../crates/lavaxemu/tests/game_compatibility.rs#L3016) |
+| 039 | `LAVA1 WarCraft/非pac/WarCraft.lav` | Game / game package | [Workflow passed: `warcraft_variants_produce_move_collect_income_and_exit`](../crates/lavaxemu/tests/game_compatibility.rs#L3016) |
+| 040 | `LAVA1 七彩泡泡/七彩泡泡.lav` | Game / game package | [Workflow passed: `rainbow_bubbles_moves_fires_pauses_and_replays_a_saved_round`](../crates/lavaxemu/tests/game_compatibility.rs#L3101) |
+| 041 | `LAVA1 七彩连珠/七彩连珠.lav` | Game / game package | [Workflow passed: `color_lines_selects_moves_cancels_and_scores_a_line`](../crates/lavaxemu/tests/game_compatibility.rs#L3183) |
+| 042 | `LAVA1 七王五二三/七王五二三.lav` | Game / game package | [Workflow passed: `seven_king_selects_plays_passes_finishes_and_restarts_a_round`](../crates/lavaxemu/tests/game_compatibility.rs#L3280) |
+| 043 | `LAVA1 三国志/三国志.pac` | Game / game package | [Workflow passed: `three_kingdoms_develops_recruits_and_reloads_a_saved_city`](../crates/lavaxemu/tests/game_compatibility.rs#L3375) |
+| 044 | `LAVA1 中国灯谜/中国灯谜.lav` | Game / game package | [Workflow passed: `chinese_riddles_browses_all_categories_reveals_answers_and_exits`](../crates/lavaxemu/tests/game_compatibility.rs#L3518) |
+| 045 | `LAVA1 中国烟火 1.1/中国烟火.lav` | Game / game package | [Workflow passed: `chinese_fireworks_rotates_connects_scores_pauses_and_confirms_exit`](../crates/lavaxemu/tests/game_compatibility.rs#L3621) |
+| 046 | `LAVA1 中国象棋/象棋90.lav` | Game / game package | [Workflow passed: `xiangqi_moves_captures_undoes_and_reloads_a_saved_game`](../crates/lavaxemu/tests/game_compatibility.rs#L3769) |
+| 047 | `LAVA1 中国麻将/中国麻将.lav` | Game / game package | [Workflow passed: `chinese_mahjong_draws_selects_discards_and_finishes_a_hand`](../crates/lavaxemu/tests/game_compatibility.rs#L3912) |
+| 048 | `LAVA1 中学传奇/打包的/SCH_RPGPACK.pac` | Game / game package | [Workflow passed: `school_legend_versions_move_use_medicine_and_reload_progress`](../crates/lavaxemu/tests/game_compatibility.rs#L3980) |
+| 049 | `LAVA1 中学传奇/未打包的/中学传奇.lav` | Game / game package | [Workflow passed: `school_legend_versions_move_use_medicine_and_reload_progress`](../crates/lavaxemu/tests/game_compatibility.rs#L3980) |
+| 050 | `LAVA1 五子连珠/WZLZ_16灰度.lav` | Game / game package | [Workflow passed: `five_in_a_row_versions_win_undo_save_reload_and_restart`](../crates/lavaxemu/tests/game_compatibility.rs#L4189) |
+| 051 | `LAVA1 五子连珠/WZLZ_黑白.lav` | Game / game package | [Workflow passed: `five_in_a_row_versions_win_undo_save_reload_and_restart`](../crates/lavaxemu/tests/game_compatibility.rs#L4189) |
+| 052 | `LAVA1 五虎/Fivet.lav` | Game / game package | [Workflow passed: `five_tigers_scores_complete_boards_and_restarts`](../crates/lavaxemu/tests/game_compatibility.rs#L4334) |
 | 053 | `LAVA1 五骰Yahtzee/Yahtzee.lav` | Game / game package | Pending |
 | 054 | `LAVA1 仙剑后传/Pala.lav` | Game / game package | Pending |
 | 055 | `LAVA1 仙剑后传/Pala_.lav` | Game / game package | Pending |
@@ -101,11 +101,11 @@ an optional screenshot directory. Keep each test's logs and captures separate.
 | 060 | `LAVA1 俄罗斯扑克/俄罗斯扑克.lav` | Game / game package | Pending |
 | 061 | `LAVA1 俄罗斯方块1.3/俄罗斯方块灰.lav` | Game / game package | Pending |
 | 062 | `LAVA1 俄罗斯方块1.3/俄罗斯方块黑.lav` | Game / game package | Pending |
-| 063 | `LAVA1 假日神秘岛/假日神秘岛 abcdef.lav` | Game / game package | [Workflow passed: `holiday_island_finishes_the_intro_talks_and_moves_on_the_map`](../crates/lavaxemu/tests/game_compatibility.rs#L1035) |
-| 064 | `LAVA1 先赌为快/先赌★为快.lav` | Game / game package | [Workflow passed: `gamble_creates_a_local_account_and_accepts_bets`](../crates/lavaxemu/tests/game_compatibility.rs#L868) |
+| 063 | `LAVA1 假日神秘岛/假日神秘岛 abcdef.lav` | Game / game package | [Workflow passed: `holiday_island_finishes_the_intro_talks_and_moves_on_the_map`](../crates/lavaxemu/tests/game_compatibility.rs#L1058) |
+| 064 | `LAVA1 先赌为快/先赌★为快.lav` | Game / game package | [Workflow passed: `gamble_creates_a_local_account_and_accepts_bets`](../crates/lavaxemu/tests/game_compatibility.rs#L891) |
 | 065 | `LAVA1 冒险岛IV/黑白版/打包的文件/冒险岛IV.pac` | Game / game package | Pending |
 | 066 | `LAVA1 冒险岛IV/黑白版/未打包的文件/冒险岛IV.lav` | Game / game package | Pending |
-| 067 | `LAVA1 冠军足球经理05-06赛季0.7/CFM.lav` | Game / game package | [Workflow passed: `champion_football_manager_creates_a_coach_and_finishes_a_match`](../crates/lavaxemu/tests/game_compatibility.rs#L1487) |
+| 067 | `LAVA1 冠军足球经理05-06赛季0.7/CFM.lav` | Game / game package | [Workflow passed: `champion_football_manager_creates_a_coach_and_finishes_a_match`](../crates/lavaxemu/tests/game_compatibility.rs#L1510) |
 | 068 | `LAVA1 决战娜美克/决战娜美克.lav` | Game / game package | Pending |
 | 069 | `LAVA1 凌空抽射1.5/凌空抽射v1.5.lav` | Game / game package | Pending |
 | 070 | `LAVA1 凤凰战斗机/Fighter.lav` | Game / game package | Pending |
@@ -143,18 +143,18 @@ an optional screenshot directory. Keep each test's logs and captures separate.
 | 102 | `LAVA1 太空战舰/太空战舰.lav` | Game / game package | Pending |
 | 103 | `LAVA1 奇门九星诀房屋风水勘测/9stars.lav` | Utility / education | Pending |
 | 104 | `LAVA1 宇宙大战/宇宙大战.lav` | Game / game package | Pending |
-| 105 | `LAVA1 宠物世界/GVmaker/NC2600/宠世L_2K6.lav` | Game / game package | [Workflow passed: `pet_world_legacy_versions_reopen_the_main_game_save`](../crates/lavaxemu/tests/game_compatibility.rs#L655) |
-| 106 | `LAVA1 宠物世界/GVmaker/NC2600/宠物世界26.lav` | Game / game package | [Workflow passed: `pet_world_legacy_versions_reopen_the_main_game_save`](../crates/lavaxemu/tests/game_compatibility.rs#L655) |
-| 107 | `LAVA1 宠物世界/GVmaker/NC3000/宠世L_3K.lav` | Game / game package | [Workflow passed: `pet_world_legacy_versions_reopen_the_main_game_save`](../crates/lavaxemu/tests/game_compatibility.rs#L655) |
-| 108 | `LAVA1 宠物世界/GVmaker/NC3000/宠物世界3H.lav` | Game / game package | [Workflow passed: `pet_world_3h_loads_nested_assets_and_opens_pet_management`](../crates/lavaxemu/tests/game_compatibility.rs#L261) |
-| 109 | `LAVA1 宠物世界/GVmaker/NC3000/宠物世界3K.lav` | Game / game package | [Workflow passed: `pet_world_legacy_versions_reopen_the_main_game_save`](../crates/lavaxemu/tests/game_compatibility.rs#L655) |
-| 110 | `LAVA1 宠物世界/GVmaker/TC1000/宠世L_1K.lav` | Game / game package | [Workflow passed: `pet_world_legacy_versions_reopen_the_main_game_save`](../crates/lavaxemu/tests/game_compatibility.rs#L655) |
-| 111 | `LAVA1 宠物世界/GVmaker/TC1000/宠物世界1K.lav` | Game / game package | [Workflow passed: `pet_world_legacy_versions_reopen_the_main_game_save`](../crates/lavaxemu/tests/game_compatibility.rs#L655) |
-| 112 | `LAVA1 宠物世界/GVmaker/TC1000S/宠世L_1KS.lav` | Game / game package | [Workflow passed: `pet_world_legacy_versions_reopen_the_main_game_save`](../crates/lavaxemu/tests/game_compatibility.rs#L655) |
-| 113 | `LAVA1 宠物世界/GVmaker/TC1000S/宠物世界1S.lav` | Game / game package | [Workflow passed: `pet_world_legacy_versions_reopen_the_main_game_save`](../crates/lavaxemu/tests/game_compatibility.rs#L655) |
+| 105 | `LAVA1 宠物世界/GVmaker/NC2600/宠世L_2K6.lav` | Game / game package | [Workflow passed: `pet_world_legacy_versions_reopen_the_main_game_save`](../crates/lavaxemu/tests/game_compatibility.rs#L678) |
+| 106 | `LAVA1 宠物世界/GVmaker/NC2600/宠物世界26.lav` | Game / game package | [Workflow passed: `pet_world_legacy_versions_reopen_the_main_game_save`](../crates/lavaxemu/tests/game_compatibility.rs#L678) |
+| 107 | `LAVA1 宠物世界/GVmaker/NC3000/宠世L_3K.lav` | Game / game package | [Workflow passed: `pet_world_legacy_versions_reopen_the_main_game_save`](../crates/lavaxemu/tests/game_compatibility.rs#L678) |
+| 108 | `LAVA1 宠物世界/GVmaker/NC3000/宠物世界3H.lav` | Game / game package | [Workflow passed: `pet_world_3h_loads_nested_assets_and_opens_pet_management`](../crates/lavaxemu/tests/game_compatibility.rs#L284) |
+| 109 | `LAVA1 宠物世界/GVmaker/NC3000/宠物世界3K.lav` | Game / game package | [Workflow passed: `pet_world_legacy_versions_reopen_the_main_game_save`](../crates/lavaxemu/tests/game_compatibility.rs#L678) |
+| 110 | `LAVA1 宠物世界/GVmaker/TC1000/宠世L_1K.lav` | Game / game package | [Workflow passed: `pet_world_legacy_versions_reopen_the_main_game_save`](../crates/lavaxemu/tests/game_compatibility.rs#L678) |
+| 111 | `LAVA1 宠物世界/GVmaker/TC1000/宠物世界1K.lav` | Game / game package | [Workflow passed: `pet_world_legacy_versions_reopen_the_main_game_save`](../crates/lavaxemu/tests/game_compatibility.rs#L678) |
+| 112 | `LAVA1 宠物世界/GVmaker/TC1000S/宠世L_1KS.lav` | Game / game package | [Workflow passed: `pet_world_legacy_versions_reopen_the_main_game_save`](../crates/lavaxemu/tests/game_compatibility.rs#L678) |
+| 113 | `LAVA1 宠物世界/GVmaker/TC1000S/宠物世界1S.lav` | Game / game package | [Workflow passed: `pet_world_legacy_versions_reopen_the_main_game_save`](../crates/lavaxemu/tests/game_compatibility.rs#L678) |
 | 114 | `LAVA1 宠物世界/GVmaker/TC800/宠物世界80.lav` | Game / game package | Pending |
-| 115 | `LAVA1 宠物世界/GVmaker/TC808/宠世L_808.lav` | Game / game package | [Workflow passed: `pet_world_legacy_versions_reopen_the_main_game_save`](../crates/lavaxemu/tests/game_compatibility.rs#L655) |
-| 116 | `LAVA1 宠物世界/GVmaker/TC808/宠物世界88.lav` | Game / game package | [Workflow passed: `pet_world_legacy_versions_reopen_the_main_game_save`](../crates/lavaxemu/tests/game_compatibility.rs#L655) |
+| 115 | `LAVA1 宠物世界/GVmaker/TC808/宠世L_808.lav` | Game / game package | [Workflow passed: `pet_world_legacy_versions_reopen_the_main_game_save`](../crates/lavaxemu/tests/game_compatibility.rs#L678) |
+| 116 | `LAVA1 宠物世界/GVmaker/TC808/宠物世界88.lav` | Game / game package | [Workflow passed: `pet_world_legacy_versions_reopen_the_main_game_save`](../crates/lavaxemu/tests/game_compatibility.rs#L678) |
 | 117 | `LAVA1 宠物世界/自己绘制宠物(文曲星端)/宠世导出入.lav` | Pet import/export | Pending |
 | 118 | `LAVA1 宠物世界/自己绘制宠物(文曲星端)/象素画册.lav` | Pixel editor | Pending |
 | 119 | `LAVA1 密室杀机/密室杀机.lav` | Game / game package | Pending |
@@ -172,11 +172,11 @@ an optional screenshot directory. Keep each test's logs and captures separate.
 | 131 | `LAVA1 帝国传4.1/帝国传灰/帝国传.lav` | Game / game package | Pending |
 | 132 | `LAVA1 帝国传4.1/帝国传黑白/帝国传.lav` | Game / game package | Pending |
 | 133 | `LAVA1 幕天席地1.1/幕天助手.lav` | Game helper | Pending |
-| 134 | `LAVA1 幕天席地1.1/幕天席地.lav` | Game / game package | [Workflow passed: `sky_and_land_creates_a_local_save_and_moves_on_the_map`](../crates/lavaxemu/tests/game_compatibility.rs#L1117) |
+| 134 | `LAVA1 幕天席地1.1/幕天席地.lav` | Game / game package | [Workflow passed: `sky_and_land_creates_a_local_save_and_moves_on_the_map`](../crates/lavaxemu/tests/game_compatibility.rs#L1140) |
 | 135 | `LAVA1 幕天席地2封印之石1.3/幕天席地2.lav` | Game / game package | Pending |
 | 136 | `LAVA1 幕天席地3v0.7DEMO/幕天席地3_plus.lav` | Game / game package | Pending |
-| 137 | `LAVA1 平面魔方/平面魔方.pac` | Game / game package | [Workflow passed: `flat_cube_selects_shifts_swaps_and_returns_to_the_menu`](../crates/lavaxemu/tests/game_compatibility.rs#L1241) |
-| 138 | `LAVA1 平面魔方/非pac/平面魔方.lav` | Game / game package | [Workflow passed: `flat_cube_selects_shifts_swaps_and_returns_to_the_menu`](../crates/lavaxemu/tests/game_compatibility.rs#L1241) |
+| 137 | `LAVA1 平面魔方/平面魔方.pac` | Game / game package | [Workflow passed: `flat_cube_selects_shifts_swaps_and_returns_to_the_menu`](../crates/lavaxemu/tests/game_compatibility.rs#L1264) |
+| 138 | `LAVA1 平面魔方/非pac/平面魔方.lav` | Game / game package | [Workflow passed: `flat_cube_selects_shifts_swaps_and_returns_to_the_menu`](../crates/lavaxemu/tests/game_compatibility.rs#L1264) |
 | 139 | `LAVA1 幻影战机/幻影战机.lav` | Game / game package | Pending |
 | 140 | `LAVA1 幽灵屋/105(打包后的).pac` | Game / game package | Pending |
 | 141 | `LAVA1 幽灵屋/105.lav` | Game / game package | Pending |
@@ -189,7 +189,7 @@ an optional screenshot directory. Keep each test's logs and captures separate.
 | 148 | `LAVA1 忍う者/没打包的/忍う者.lav` | Game / game package | Pending |
 | 149 | `LAVA1 情怨/pac/Love.pac` | Game / game package | Pending |
 | 150 | `LAVA1 情怨/非pac/Love_I.lav` | Game / game package | Pending |
-| 151 | `LAVA1 我的世界~霸王屎/我的世界.lav` | Game / game package | [Workflow passed: `my_world_creates_a_character_and_moves_on_the_map`](../crates/lavaxemu/tests/game_compatibility.rs#L1008) |
+| 151 | `LAVA1 我的世界~霸王屎/我的世界.lav` | Game / game package | [Workflow passed: `my_world_creates_a_character_and_moves_on_the_map`](../crates/lavaxemu/tests/game_compatibility.rs#L1031) |
 | 152 | `LAVA1 我的世界异界版/我的世界.lav` | Game / game package | Pending |
 | 153 | `LAVA1 战略1号1.0/战略1号.pac` | Game / game package | Pending |
 | 154 | `LAVA1 战略1号1.0/非pac/战略1号.lav` | Game / game package | Pending |
@@ -212,26 +212,26 @@ an optional screenshot directory. Keep each test's logs and captures separate.
 | 171 | `LAVA1 数电模拟器/已打包的文件/数电模拟器.pac` | Circuit simulator | Pending |
 | 172 | `LAVA1 数电模拟器/未打包的文件/数电模拟器.lav` | Circuit simulator | Pending |
 | 173 | `LAVA1 新英雄坛说/新英雄传说.pac` | Game / game package | Pending |
-| 174 | `LAVA1 新英雄坛说/非pac/Hero.lav` | Game / game package | [Workflow passed: `new_hero_reaches_the_village_and_scrolls_the_map`](../crates/lavaxemu/tests/game_compatibility.rs#L803) |
+| 174 | `LAVA1 新英雄坛说/非pac/Hero.lav` | Game / game package | [Workflow passed: `new_hero_reaches_the_village_and_scrolls_the_map`](../crates/lavaxemu/tests/game_compatibility.rs#L826) |
 | 175 | `LAVA1 旋转老虎机/旋转老虎机.lav` | Game / game package | Pending |
 | 176 | `LAVA1 无底洞/无底洞.lav` | Game / game package | Pending |
 | 177 | `LAVA1 星剑传奇/打包的[星剑传奇]/星剑传奇.pac` | Game / game package | Pending |
-| 178 | `LAVA1 星剑传奇/未打包的[星剑传奇]/星剑传奇.lav` | Game / game package | [Workflow passed: `star_legend_registers_a_character_and_loads_the_map`](../crates/lavaxemu/tests/game_compatibility.rs#L1185) |
-| 179 | `LAVA1 星剑传奇/未打包的[星剑传奇]/星剑注册.lav` | Account registration | [Workflow passed: `star_legend_registers_a_character_and_loads_the_map`](../crates/lavaxemu/tests/game_compatibility.rs#L1185) |
+| 178 | `LAVA1 星剑传奇/未打包的[星剑传奇]/星剑传奇.lav` | Game / game package | [Workflow passed: `star_legend_registers_a_character_and_loads_the_map`](../crates/lavaxemu/tests/game_compatibility.rs#L1208) |
+| 179 | `LAVA1 星剑传奇/未打包的[星剑传奇]/星剑注册.lav` | Account registration | [Workflow passed: `star_legend_registers_a_character_and_loads_the_map`](../crates/lavaxemu/tests/game_compatibility.rs#L1208) |
 | 180 | `LAVA1 是男人就下100层（模拟器可能不能运行）/是男人就下100层.lav` | Game / game package | Pending |
 | 181 | `LAVA1 是男人就撑20秒正式版/是男人就撑20秒正式版.lav` | Game / game package | Pending |
 | 182 | `LAVA1 是男人就飞10000米/是男人就飞10000米.lav` | Game / game package | Pending |
-| 183 | `LAVA1 暗子象棋/暗子象棋.pac` | Game / game package | [Workflow passed: `dark_chess_loads_the_board_and_responds_to_moves`](../crates/lavaxemu/tests/game_compatibility.rs#L101) |
-| 184 | `LAVA1 暗子象棋/未打包/暗子象棋.lav` | Game / game package | [Workflow passed: `dark_chess_loads_the_board_and_responds_to_moves`](../crates/lavaxemu/tests/game_compatibility.rs#L101) |
+| 183 | `LAVA1 暗子象棋/暗子象棋.pac` | Game / game package | [Workflow passed: `dark_chess_loads_the_board_and_responds_to_moves`](../crates/lavaxemu/tests/game_compatibility.rs#L124) |
+| 184 | `LAVA1 暗子象棋/未打包/暗子象棋.lav` | Game / game package | [Workflow passed: `dark_chess_loads_the_board_and_responds_to_moves`](../crates/lavaxemu/tests/game_compatibility.rs#L124) |
 | 185 | `LAVA1 月光城/Moon.pac` | Game / game package | Pending |
 | 186 | `LAVA1 月光城/非pac/Moon.lav` | Game / game package | Pending |
 | 187 | `LAVA1 未知/game.lav` | Game / game package | Pending |
-| 188 | `LAVA1 极速狂飙/极速狂飙.lav` | Game / game package | [Workflow passed: `speed_racing_loads_the_track_and_responds_to_steering`](../crates/lavaxemu/tests/game_compatibility.rs#L524) |
-| 189 | `LAVA1 极限斗地主/极限斗地主.lav` | Game / game package | [Workflow passed: `extreme_landlord_versions_deal_select_play_and_save`](../crates/lavaxemu/tests/game_compatibility.rs#L1395) |
-| 190 | `LAVA1 极限斗地主3.2/极限斗地主.lav` | Game / game package | [Workflow passed: `extreme_landlord_versions_deal_select_play_and_save`](../crates/lavaxemu/tests/game_compatibility.rs#L1395) |
-| 191 | `LAVA1 极限斗地主3.2/极限斗地主NC1020版.lav` | Game / game package | [Workflow passed: `extreme_landlord_versions_deal_select_play_and_save`](../crates/lavaxemu/tests/game_compatibility.rs#L1395) |
-| 192 | `LAVA1 极限斗地主3.2/极限斗地主tc800版.lav` | Game / game package | [Workflow passed: `extreme_landlord_versions_deal_select_play_and_save`](../crates/lavaxemu/tests/game_compatibility.rs#L1395) |
-| 193 | `LAVA1 梦中世界（更新6）/梦中世界.lav` | Game / game package | [Workflow passed: `dream_world_creates_an_account_loads_the_map_and_moves`](../crates/lavaxemu/tests/game_compatibility.rs#L1647) |
+| 188 | `LAVA1 极速狂飙/极速狂飙.lav` | Game / game package | [Workflow passed: `speed_racing_loads_the_track_and_responds_to_steering`](../crates/lavaxemu/tests/game_compatibility.rs#L547) |
+| 189 | `LAVA1 极限斗地主/极限斗地主.lav` | Game / game package | [Workflow passed: `extreme_landlord_versions_deal_select_play_and_save`](../crates/lavaxemu/tests/game_compatibility.rs#L1418) |
+| 190 | `LAVA1 极限斗地主3.2/极限斗地主.lav` | Game / game package | [Workflow passed: `extreme_landlord_versions_deal_select_play_and_save`](../crates/lavaxemu/tests/game_compatibility.rs#L1418) |
+| 191 | `LAVA1 极限斗地主3.2/极限斗地主NC1020版.lav` | Game / game package | [Workflow passed: `extreme_landlord_versions_deal_select_play_and_save`](../crates/lavaxemu/tests/game_compatibility.rs#L1418) |
+| 192 | `LAVA1 极限斗地主3.2/极限斗地主tc800版.lav` | Game / game package | [Workflow passed: `extreme_landlord_versions_deal_select_play_and_save`](../crates/lavaxemu/tests/game_compatibility.rs#L1418) |
+| 193 | `LAVA1 梦中世界（更新6）/梦中世界.lav` | Game / game package | [Workflow passed: `dream_world_creates_an_account_loads_the_map_and_moves`](../crates/lavaxemu/tests/game_compatibility.rs#L1670) |
 | 194 | `LAVA1 梦幻21点/梦幻21点.lav` | Game / game package | Pending |
 | 195 | `LAVA1 梦幻mario/梦幻mario.lav` | Game / game package | Pending |
 | 196 | `LAVA1 橡皮屋/橡皮屋.lav` | Game / game package | Pending |
@@ -246,7 +246,7 @@ an optional screenshot directory. Keep each test's logs and captures separate.
 | 205 | `LAVA1 海淀浮生记/海淀浮生记.lav` | Game / game package | Pending |
 | 206 | `LAVA1 海盗船/打包/海盗船.pac` | Game / game package | Pending |
 | 207 | `LAVA1 海盗船/未打包/海盗船.lav` | Game / game package | Pending |
-| 208 | `LAVA1 火箭车/火箭车.lav` | Game / game package | [Workflow passed: `rocket_car_keeps_the_track_visible_and_responds_to_controls`](../crates/lavaxemu/tests/game_compatibility.rs#L1287) |
+| 208 | `LAVA1 火箭车/火箭车.lav` | Game / game package | [Workflow passed: `rocket_car_keeps_the_track_visible_and_responds_to_controls`](../crates/lavaxemu/tests/game_compatibility.rs#L1310) |
 | 209 | `LAVA1 灵剑射击/灵剑射击.lav` | Game / game package | Pending |
 | 210 | `LAVA1 炸潜艇/炸潜艇v1.1 2007.7.6.lav` | Game / game package | Pending |
 | 211 | `LAVA1 煞魔剑/mywar1.lav` | Game / game package | Pending |
@@ -255,27 +255,27 @@ an optional screenshot directory. Keep each test's logs and captures separate.
 | 214 | `LAVA1 爬虫大陆编年史/爬虫大陆.lav` | Game / game package | Pending |
 | 215 | `LAVA1 版炸弹人/BomB.lav` | Game / game package | Pending |
 | 216 | `LAVA1 猫狗大战2/猫狗大战Ⅱ.lav` | Game / game package | Pending |
-| 217 | `LAVA1 生死时速II/生死时速Ⅱ（修改版）.lav` | Game / game package | [Workflow passed: `modified_speed_racing_steers_and_returns_from_the_score_screen`](../crates/lavaxemu/tests/game_compatibility.rs#L572) |
+| 217 | `LAVA1 生死时速II/生死时速Ⅱ（修改版）.lav` | Game / game package | [Workflow passed: `modified_speed_racing_steers_and_returns_from_the_score_screen`](../crates/lavaxemu/tests/game_compatibility.rs#L595) |
 | 218 | `LAVA1 生物钟/生物钟.lav` | Utility / education | Pending |
-| 219 | `LAVA1 疯狂F2/F2.lav` | Game / game package | [Workflow passed: `crazy_f2_counts_presses_and_finishes_the_timed_round`](../crates/lavaxemu/tests/game_compatibility.rs#L470) |
-| 220 | `LAVA1 疯狂弹球/疯狂弹球.pac` | Game / game package | [Workflow passed: `crazy_ball_packaged_and_loose_versions_load_the_stage_and_move_the_paddle`](../crates/lavaxemu/tests/game_compatibility.rs#L1067) |
-| 221 | `LAVA1 疯狂弹球/非pac/crazyball.lav` | Game / game package | [Workflow passed: `crazy_ball_packaged_and_loose_versions_load_the_stage_and_move_the_paddle`](../crates/lavaxemu/tests/game_compatibility.rs#L1067) |
+| 219 | `LAVA1 疯狂F2/F2.lav` | Game / game package | [Workflow passed: `crazy_f2_counts_presses_and_finishes_the_timed_round`](../crates/lavaxemu/tests/game_compatibility.rs#L493) |
+| 220 | `LAVA1 疯狂弹球/疯狂弹球.pac` | Game / game package | [Workflow passed: `crazy_ball_packaged_and_loose_versions_load_the_stage_and_move_the_paddle`](../crates/lavaxemu/tests/game_compatibility.rs#L1090) |
+| 221 | `LAVA1 疯狂弹球/非pac/crazyball.lav` | Game / game package | [Workflow passed: `crazy_ball_packaged_and_loose_versions_load_the_stage_and_move_the_paddle`](../crates/lavaxemu/tests/game_compatibility.rs#L1090) |
 | 222 | `LAVA1 疯狂弹球/非pac/mapedit.lav` | Map editor | Pending |
 | 223 | `LAVA1 疯狂跳棋/打包的文件/fktq.pac` | Game / game package | Pending |
 | 224 | `LAVA1 疯狂跳棋/疯狂跳棋.lav` | Game / game package | Pending |
-| 225 | `LAVA1 疾龙云飞/打包的文件/bobo_cloud.pac` | Game / game package | [Workflow passed: `cloud_versions_configure_keys_jump_and_persist_the_configuration`](../crates/lavaxemu/tests/game_compatibility.rs#L1993) |
-| 226 | `LAVA1 疾龙云飞/未打包的文件/cloud_all.lav` | Game / game package | [Workflow passed: `cloud_versions_configure_keys_jump_and_persist_the_configuration`](../crates/lavaxemu/tests/game_compatibility.rs#L1993) |
+| 225 | `LAVA1 疾龙云飞/打包的文件/bobo_cloud.pac` | Game / game package | [Workflow passed: `cloud_versions_configure_keys_jump_and_persist_the_configuration`](../crates/lavaxemu/tests/game_compatibility.rs#L2016) |
+| 226 | `LAVA1 疾龙云飞/未打包的文件/cloud_all.lav` | Game / game package | [Workflow passed: `cloud_versions_configure_keys_jump_and_persist_the_configuration`](../crates/lavaxemu/tests/game_compatibility.rs#L2016) |
 | 227 | `LAVA1 白白快跑/已打包的/白白快跑.pac` | Game / game package | Pending |
 | 228 | `LAVA1 白白快跑/未打包的/LAVA/白白快跑.lav` | Game / game package | Pending |
 | 229 | `LAVA1 白金贪吃蛇/白金贪吃蛇.lav` | Game / game package | Pending |
 | 230 | `LAVA1 百战天虫即时版/VS版/GVmaker/天虫即时vs.lav` | Game / game package | Pending |
 | 231 | `LAVA1 百战天虫即时版/天虫即时.lav` | Game / game package | Pending |
-| 232 | `LAVA1 百战天虫即时版/资源管理器.lav` | Utility / education | [Workflow passed: `resource_manager_selects_files_and_cancels_the_dialog`](../crates/lavaxemu/tests/game_compatibility.rs#L623) |
+| 232 | `LAVA1 百战天虫即时版/资源管理器.lav` | Utility / education | [Workflow passed: `resource_manager_selects_files_and_cancels_the_dialog`](../crates/lavaxemu/tests/game_compatibility.rs#L646) |
 | 233 | `LAVA1 礼物大作战/YoGamesPC.lav` | Game / game package | Pending |
 | 234 | `LAVA1 礼物大作战/YoGamesWQX.lav` | Game / game package | Pending |
-| 235 | `LAVA1 神州/神州.pac` | Game / game package | [Workflow passed: `magic_packaged_and_loose_versions_load_resources_and_move_on_the_map`](../crates/lavaxemu/tests/game_compatibility.rs#L691) |
-| 236 | `LAVA1 神州/非pac/Magic.lav` | Game / game package | [Workflow passed: `magic_packaged_and_loose_versions_load_resources_and_move_on_the_map`](../crates/lavaxemu/tests/game_compatibility.rs#L691) |
-| 237 | `LAVA1 种金币/种金币.lav` | Game / game package | [Workflow passed: `planting_gold_moves_a_coin_and_restarts_the_level`](../crates/lavaxemu/tests/game_compatibility.rs#L1092) |
+| 235 | `LAVA1 神州/神州.pac` | Game / game package | [Workflow passed: `magic_packaged_and_loose_versions_load_resources_and_move_on_the_map`](../crates/lavaxemu/tests/game_compatibility.rs#L714) |
+| 236 | `LAVA1 神州/非pac/Magic.lav` | Game / game package | [Workflow passed: `magic_packaged_and_loose_versions_load_resources_and_move_on_the_map`](../crates/lavaxemu/tests/game_compatibility.rs#L714) |
+| 237 | `LAVA1 种金币/种金币.lav` | Game / game package | [Workflow passed: `planting_gold_moves_a_coin_and_restarts_the_level`](../crates/lavaxemu/tests/game_compatibility.rs#L1115) |
 | 238 | `LAVA1 秘境还生/秘境还生.lav` | Game / game package | Pending |
 | 239 | `LAVA1 空当接龙/空当接龙.lav` | Game / game package | Pending |
 | 240 | `LAVA1 空间战争/SpaceWar.lav` | Game / game package | Pending |
@@ -283,7 +283,7 @@ an optional screenshot directory. Keep each test's logs and captures separate.
 | 242 | `LAVA1 精灵岛5-勇者之旅/精灵岛5.lav` | Game / game package | Pending |
 | 243 | `LAVA1 精灵岛5-勇者之旅/精灵岛5.pac` | Game / game package | Pending |
 | 244 | `LAVA1 绝对下落/分步安装/绝对下落.lav` | Game / game package | Pending |
-| 245 | `LAVA1 美少女梦工厂2黑白版/PM2.lav` | Game / game package | [Workflow passed: `princess_maker_2_shows_stats_executes_a_plan_and_reloads_its_save`](../crates/lavaxemu/tests/game_compatibility.rs#L1587) |
+| 245 | `LAVA1 美少女梦工厂2黑白版/PM2.lav` | Game / game package | [Workflow passed: `princess_maker_2_shows_stats_executes_a_plan_and_reloads_its_save`](../crates/lavaxemu/tests/game_compatibility.rs#L1610) |
 | 246 | `LAVA1 翼剑天殇/翼剑天殇.pac` | Game / game package | Pending |
 | 247 | `LAVA1 翼剑天殇/非pac/Wing.lav` | Game / game package | Pending |
 | 248 | `LAVA1 花之精灵2.0/flower2.0.pac` | Game / game package | Pending |
@@ -296,8 +296,8 @@ an optional screenshot directory. Keep each test's logs and captures separate.
 | 255 | `LAVA1 蛙蛙大富翁/蛙蛙大富翁打包.pac` | Game / game package | Pending |
 | 256 | `LAVA1 蛙蛙大富翁/非pac/蛙蛙大富翁.lav` | Game / game package | Pending |
 | 257 | `LAVA1 蛙蛙马戏团 1.2/蛙蛙马戏团.lav` | Game / game package | Pending |
-| 258 | `LAVA1 蜀山群侠传/蜀山注册.lav` | Account registration | [Workflow passed: `shushan_registers_a_character_and_enters_the_game`](../crates/lavaxemu/tests/game_compatibility.rs#L947) |
-| 259 | `LAVA1 蜀山群侠传/蜀山群侠传.lav` | Game / game package | [Workflow passed: `shushan_registers_a_character_and_enters_the_game`](../crates/lavaxemu/tests/game_compatibility.rs#L947) |
+| 258 | `LAVA1 蜀山群侠传/蜀山注册.lav` | Account registration | [Workflow passed: `shushan_registers_a_character_and_enters_the_game`](../crates/lavaxemu/tests/game_compatibility.rs#L970) |
+| 259 | `LAVA1 蜀山群侠传/蜀山群侠传.lav` | Game / game package | [Workflow passed: `shushan_registers_a_character_and_enters_the_game`](../crates/lavaxemu/tests/game_compatibility.rs#L970) |
 | 260 | `LAVA1 蟑螂历险记/测试版/蟑螂历险记 V1.0.lav` | Game / game package | Pending |
 | 261 | `LAVA1 蟑螂历险记/白金版/蟑螂历险记V3.0.lav` | Game / game package | Pending |
 | 262 | `LAVA1 蟑螂历险记/精简版/蟑螂历险记V2.0.lav` | Game / game package | Pending |
@@ -311,8 +311,8 @@ an optional screenshot directory. Keep each test's logs and captures separate.
 | 270 | `LAVA1 赤色要塞/非pac/Jackal.lav` | Game / game package | Pending |
 | 271 | `LAVA1 超级机器人大战/Download/SRW.pac` | Game / game package | Pending |
 | 272 | `LAVA1 超级机器人大战/file/SRW.lav` | Game / game package | Pending |
-| 273 | `LAVA1 超级机器人大战/Setup/SRW.lav` | Installer | [Workflow passed: `super_robot_wars_installs_resources_and_accepts_map_input`](../crates/lavaxemu/tests/game_compatibility.rs#L722) |
-| 274 | `LAVA1 超级机器人大战/Setup/SRWDate.lav` | Installer | [Workflow passed: `super_robot_wars_installs_resources_and_accepts_map_input`](../crates/lavaxemu/tests/game_compatibility.rs#L722) |
+| 273 | `LAVA1 超级机器人大战/Setup/SRW.lav` | Installer | [Workflow passed: `super_robot_wars_installs_resources_and_accepts_map_input`](../crates/lavaxemu/tests/game_compatibility.rs#L745) |
+| 274 | `LAVA1 超级机器人大战/Setup/SRWDate.lav` | Installer | [Workflow passed: `super_robot_wars_installs_resources_and_accepts_map_input`](../crates/lavaxemu/tests/game_compatibility.rs#L745) |
 | 275 | `LAVA1 超级舞者/超级舞者.lav` | Game / game package | Pending |
 | 276 | `LAVA1 连连看/专供LAVA2机/连连看.lav` | Game / game package | Pending |
 | 277 | `LAVA1 连连看/打包的文件/连连看.pac` | Game / game package | Pending |
@@ -343,8 +343,8 @@ an optional screenshot directory. Keep each test's logs and captures separate.
 | 302 | `LAVA1 黑白五子连珠/已打包文件/五子联珠黑.pac` | Game / game package | Pending |
 | 303 | `LAVA1 黑白五子连珠/未打包文件/五子连珠.lav` | Game / game package | Pending |
 | 304 | `LAVA1 黑白牛牛/黑白牛牛.lav` | Game / game package | Pending |
-| 305 | `LAVA1 龙之传说/非pac/longX.lav` | Game / game package | [Workflow passed: `dragon_legend_selects_classes_moves_and_reloads_a_local_save`](../crates/lavaxemu/tests/game_compatibility.rs#L1732) |
-| 306 | `LAVA1 龙之吻体验版/l2体验版.lav` | Game / game package | [Workflow passed: `dragon_kiss_creates_a_chinese_name_moves_and_loads_party_progress`](../crates/lavaxemu/tests/game_compatibility.rs#L1837) |
+| 305 | `LAVA1 龙之传说/非pac/longX.lav` | Game / game package | [Workflow passed: `dragon_legend_selects_classes_moves_and_reloads_a_local_save`](../crates/lavaxemu/tests/game_compatibility.rs#L1755) |
+| 306 | `LAVA1 龙之吻体验版/l2体验版.lav` | Game / game package | [Workflow passed: `dragon_kiss_creates_a_chinese_name_moves_and_loads_party_progress`](../crates/lavaxemu/tests/game_compatibility.rs#L1860) |
 | 307 | `LAVA1 龙之崛起[十一特别版]/LAVA/G.龙之崛起.lav` | Game / game package | Pending |
 | 308 | `LAVA1 龙之崛起[十一特别版]/LAVA/L.龙之崛起.lav` | Game / game package | Pending |
 | 309 | `LAVA1 龙之崛起[十一特别版]/Package/龙之崛起.pac` | Game / game package | Pending |
@@ -352,13 +352,13 @@ an optional screenshot directory. Keep each test's logs and captures separate.
 | 311 | `LAVA2 仙境传说/非pac/仙境.lav` | Game / game package | Pending |
 | 312 | `LAVA2 冒险岛IV/灰度版/打包的文件/冒险岛IV.pac` | Game / game package | Pending |
 | 313 | `LAVA2 冒险岛IV/灰度版/未打包的文件/冒险岛IV.lav` | Game / game package | Pending |
-| 314 | `LAVA2 心跳回忆/心跳回忆.lav` | Game / game package | [Workflow passed: `tokimeki_reaches_the_room_and_selects_an_activity`](../crates/lavaxemu/tests/game_compatibility.rs#L825) |
-| 315 | `LAVA2 打地鼠/LAVA2/Hit.lav` | Game / game package | [Workflow passed: `hit_loads_the_logo_runs_and_pauses_with_the_keyboard`](../crates/lavaxemu/tests/game_compatibility.rs#L349) |
+| 314 | `LAVA2 心跳回忆/心跳回忆.lav` | Game / game package | [Workflow passed: `tokimeki_reaches_the_room_and_selects_an_activity`](../crates/lavaxemu/tests/game_compatibility.rs#L848) |
+| 315 | `LAVA2 打地鼠/LAVA2/Hit.lav` | Game / game package | [Workflow passed: `hit_loads_the_logo_runs_and_pauses_with_the_keyboard`](../crates/lavaxemu/tests/game_compatibility.rs#L372) |
 | 316 | `LAVA2 打地鼠/Package/HitV1.0.pac` | Game / game package | Pending |
 | 317 | `LAVA2 挑战推箱子1.31/挑战推箱子.lav` | Game / game package | Pending |
 | 318 | `LAVA2 搬运工/搬运工.lav` | Game / game package | Pending |
 | 319 | `LAVA2 易码事件簿-寻找CEO/非pac/EMStory.lav` | Game / game package | Pending |
 | 320 | `LAVA2 玩转变色龙/玩转变色龙.lav` | Game / game package | Pending |
-| 321 | `LAVA2 美少女梦工场/非pac/PM4.lav` | Game / game package | [Workflow passed: `princess_maker_4_reaches_gameplay_and_opens_the_status_menu`](../crates/lavaxemu/tests/game_compatibility.rs#L288) |
-| 322 | `LAVA2 魔法纪元/魔法纪元.lav` | Game / game package | [Workflow passed: `magic_era_accepts_the_device_identifier_and_enters_gameplay`](../crates/lavaxemu/tests/game_compatibility.rs#L769) |
+| 321 | `LAVA2 美少女梦工场/非pac/PM4.lav` | Game / game package | [Workflow passed: `princess_maker_4_reaches_gameplay_and_opens_the_status_menu`](../crates/lavaxemu/tests/game_compatibility.rs#L311) |
+| 322 | `LAVA2 魔法纪元/魔法纪元.lav` | Game / game package | [Workflow passed: `magic_era_accepts_the_device_identifier_and_enters_gameplay`](../crates/lavaxemu/tests/game_compatibility.rs#L792) |
 | 323 | `LAVA2 麻将智多星/BoBo_MJ.lav` | Game / game package | Pending |

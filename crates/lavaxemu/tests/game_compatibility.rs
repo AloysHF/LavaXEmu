@@ -26,6 +26,29 @@ fn load(relative: &str) -> Emulator {
     emulator
 }
 
+fn fixture_path(filename: &str) -> String {
+    let root = PathBuf::from(std::env::var_os("LAVAX_GAME_ROOT").expect("set LAVAX_GAME_ROOT"));
+    let mut directories = vec![root.clone()];
+    let mut matches = Vec::new();
+    while let Some(directory) = directories.pop() {
+        for entry in std::fs::read_dir(directory).unwrap() {
+            let path = entry.unwrap().path();
+            if path.is_dir() {
+                directories.push(path);
+            } else if path.file_name().is_some_and(|name| name == filename) {
+                matches.push(path);
+            }
+        }
+    }
+    assert_eq!(matches.len(), 1, "the requested fixture must be unique");
+    matches[0]
+        .strip_prefix(root)
+        .unwrap()
+        .to_str()
+        .unwrap()
+        .to_owned()
+}
+
 fn advance(emulator: &mut Emulator, frames: usize) {
     for _ in 0..frames {
         let result = emulator
@@ -4164,28 +4187,6 @@ fn school_legend_versions_move_use_medicine_and_reload_progress() {
 #[test]
 #[ignore = "requires the local game corpus via LAVAX_GAME_ROOT"]
 fn five_in_a_row_versions_win_undo_save_reload_and_restart() {
-    fn fixture(filename: &str) -> String {
-        let root = PathBuf::from(std::env::var_os("LAVAX_GAME_ROOT").expect("set LAVAX_GAME_ROOT"));
-        let mut directories = vec![root.clone()];
-        let mut matches = Vec::new();
-        while let Some(directory) = directories.pop() {
-            for entry in std::fs::read_dir(directory).unwrap() {
-                let path = entry.unwrap().path();
-                if path.is_dir() {
-                    directories.push(path);
-                } else if path.file_name().is_some_and(|name| name == filename) {
-                    matches.push(path);
-                }
-            }
-        }
-        assert_eq!(matches.len(), 1, "the requested fixture must be unique");
-        matches[0]
-            .strip_prefix(root)
-            .unwrap()
-            .to_str()
-            .unwrap()
-            .to_owned()
-    }
     fn tap(e: &mut Emulator, key: u8) {
         press(e, key);
         advance(e, 27);
@@ -4229,7 +4230,7 @@ fn five_in_a_row_versions_win_undo_save_reload_and_restart() {
         ("mono", "WZLZ_黑白.lav", 0x209a),
         ("gray", "WZLZ_16灰度.lav", 0x21ca),
     ] {
-        let path = fixture(path);
+        let path = fixture_path(path);
         let mut e = load(&path);
         start(&mut e);
         assert_eq!(board(&e, cursor)[7 * 15 + 7], 2);
@@ -4326,4 +4327,104 @@ fn five_in_a_row_versions_win_undo_save_reload_and_restart() {
             "confirmed exit must reach the closing page and terminate"
         );
     }
+}
+
+#[test]
+#[ignore = "requires the local game corpus via LAVAX_GAME_ROOT"]
+fn five_tigers_scores_complete_boards_and_restarts() {
+    fn word(e: &Emulator, at: usize) -> u16 {
+        u16::from_le_bytes(e.vm().memory()[at..at + 2].try_into().unwrap())
+    }
+    fn point(e: &mut Emulator, x: u16, y: u16, letters: bool) {
+        for (at, target, neg, pos) in [
+            (
+                0x2004,
+                x,
+                if letters { b'a' } else { 23 },
+                if letters { b'd' } else { 22 },
+            ),
+            (
+                0x2006,
+                y,
+                if letters { b'w' } else { 20 },
+                if letters { b's' } else { 21 },
+            ),
+        ] {
+            for _ in 0..12 {
+                let value = word(e, at);
+                if value == target {
+                    break;
+                }
+                press(e, if value < target { pos } else { neg });
+            }
+            assert_eq!(word(e, at), target);
+        }
+    }
+    let mut e = load(&fixture_path("Fivet.lav"));
+    advance(&mut e, 300);
+    press(&mut e, 13);
+    capture(&e, "five-tigers-empty");
+    press(&mut e, b'q');
+    let first = e.vm().memory()[0x2008..0x2021].to_vec();
+    assert_eq!(e.vm().memory()[0x2025], 1);
+    for key in [13, b'p', b'z'] {
+        press(&mut e, key);
+    }
+    assert_eq!(&e.vm().memory()[0x2008..0x2021], first);
+    assert_eq!(e.vm().memory()[0x2025], 1);
+    press(&mut e, 28);
+    assert!(e.vm().memory()[0x2008..0x2021].iter().all(|&v| v == 0));
+    for scenario in 0..2 {
+        let mut black = Vec::new();
+        let mut white = Vec::new();
+        let mut expected = [0u8; 25];
+        for x in 0..5u16 {
+            for y in 0..5u16 {
+                let is_black = if scenario == 0 {
+                    (x + y) % 2 == 0
+                } else {
+                    y == 0 || x < 2
+                };
+                expected[usize::from(x * 5 + y)] = if is_black { 1 } else { 2 };
+                if is_black {
+                    black.push((x, y));
+                } else {
+                    white.push((x, y));
+                }
+            }
+        }
+        assert_eq!((black.len(), white.len()), (13, 12));
+        for turn in 0..25 {
+            let (x, y) = if turn % 2 == 0 {
+                black[turn / 2]
+            } else {
+                white[turn / 2]
+            };
+            point(&mut e, x, y, turn % 2 == 0);
+            press(&mut e, [13, b'q', b'z', b'p'][turn % 4]);
+            assert_eq!(e.vm().memory()[0x2025], (turn + 1) as u8);
+            assert_eq!(
+                e.vm().memory()[0x2008 + usize::from(x * 5 + y)],
+                expected[usize::from(x * 5 + y)]
+            );
+        }
+        assert_eq!(&e.vm().memory()[0x2008..0x2021], expected);
+        assert_eq!(e.vm().memory()[0x2022], 18);
+        assert_eq!(e.vm().memory()[0x2023], if scenario == 0 { 12 } else { 8 });
+        capture(&e, &format!("five-tigers-result-{scenario}"));
+        press(&mut e, 13);
+        assert!(e.vm().memory()[0x2008..0x2021].iter().all(|&v| v == 0));
+        assert_eq!(&e.vm().memory()[0x2022..0x2026], &[0, 0, 1, 0]);
+    }
+    capture(&e, "five-tigers-restarted");
+    e.input_mut().set_keys([27]);
+    let mut exited = false;
+    for _ in 0..120 {
+        if let FrameStatus::Halted(code) = e.run_frame().unwrap().status {
+            assert_eq!(code, 0);
+            exited = true;
+            break;
+        }
+    }
+    assert!(exited, "Escape must exit the game");
 }
