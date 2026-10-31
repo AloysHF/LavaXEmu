@@ -3951,3 +3951,212 @@ fn chinese_mahjong_draws_selects_discards_and_finishes_a_hand() {
     );
     capture(&e, "chinese-mahjong-next-hand");
 }
+
+#[test]
+#[ignore = "requires the local game corpus via LAVAX_GAME_ROOT"]
+fn school_legend_versions_move_use_medicine_and_reload_progress() {
+    fn tap(e: &mut Emulator, key: u8) {
+        hold(e, key, 1);
+        advance(e, 29);
+    }
+    fn menu(e: &mut Emulator) {
+        hold(e, 25, 18);
+        advance(e, 12);
+    }
+    fn replay(e: &mut Emulator, keys: &[u8], held: usize, frames: usize) {
+        for frame in 0..frames {
+            e.input_mut().set_keys(
+                (frame / 60 < keys.len() && frame % 60 < held)
+                    .then_some(keys[(frame / 60) % keys.len()]),
+            );
+            advance(e, 1);
+        }
+    }
+    fn word(e: &Emulator, address: usize) -> u16 {
+        u16::from_le_bytes(e.vm().memory()[address..address + 2].try_into().unwrap())
+    }
+    fn on_map(e: &Emulator) -> bool {
+        let bp = e.vm().local_bp() as usize;
+        if bp == 0x614f {
+            return true;
+        }
+        let m = e.vm().memory();
+        let parent = u16::from_le_bytes(m[bp + 3..bp + 5].try_into().unwrap());
+        let return_pc =
+            u32::from(m[bp]) | (u32::from(m[bp + 1]) << 8) | (u32::from(m[bp + 2]) << 16);
+        parent == 0x614f && return_pc == 0x8798
+    }
+    for (version, path) in [
+        ("loose", "LAVA1 中学传奇/未打包的/中学传奇.lav"),
+        ("pac", "LAVA1 中学传奇/打包的/SCH_RPGPACK.pac"),
+    ] {
+        let mut e = load(path);
+        for frame in 0..2400 {
+            e.input_mut()
+                .set_keys(((300..1020).contains(&frame) && (frame - 300) % 60 < 3).then_some(13));
+            advance(&mut e, 1);
+        }
+        capture(&e, &format!("school-{version}-town"));
+        let mut battle = e.clone();
+        let mut idle = e.clone();
+        advance(&mut idle, 60);
+        hold(&mut e, 21, 18);
+        advance(&mut e, 12);
+        assert_ne!(e.display().indexed_frame(), idle.display().indexed_frame());
+        capture(&e, &format!("school-{version}-moved"));
+        advance(&mut e, 600);
+        menu(&mut e);
+        capture(&e, &format!("school-{version}-original-stats"));
+        let original_stats = e.display().indexed_frame().to_vec();
+        hold(&mut e, 22, 18);
+        advance(&mut e, 12);
+        hold(&mut e, 13, 18);
+        advance(&mut e, 12);
+        for key in [22, 22, 22, 22, 13] {
+            tap(&mut e, key);
+        }
+        capture(&e, &format!("school-{version}-medicine"));
+        tap(&mut e, b'y');
+        capture(&e, &format!("school-{version}-medicine-used"));
+        assert_eq!(
+            u16::from_le_bytes(e.vm().memory()[0x4322..0x4324].try_into().unwrap()),
+            300
+        );
+        for _ in 0..3 {
+            tap(&mut e, 27);
+        }
+        menu(&mut e);
+        let upgraded_stats = e.display().indexed_frame().to_vec();
+        assert!(
+            upgraded_stats != original_stats,
+            "medicine must change the displayed character statistics"
+        );
+        capture(&e, &format!("school-{version}-upgraded"));
+        for key in [22, 22, 22, 22, 13] {
+            hold(&mut e, key, 18);
+            advance(&mut e, 12);
+        }
+        tap(&mut e, 13);
+        tap(&mut e, 13);
+        let files = e.files_mut().take_dirty_files();
+        assert!(
+            files
+                .iter()
+                .any(|(name, bytes)| name.ends_with("sch_save.dat") && !bytes.is_empty())
+        );
+        capture(&e, &format!("school-{version}-saved"));
+        let mut restored = load(path);
+        for (name, bytes) in files {
+            restored.files_mut().import_file(&name, bytes);
+        }
+        advance(&mut restored, 300);
+        tap(&mut restored, 21);
+        tap(&mut restored, 13);
+        advance(&mut restored, 1800);
+        tap(&mut restored, 13);
+        advance(&mut restored, 600);
+        tap(&mut restored, 13);
+        for _ in 0..3 {
+            tap(&mut restored, 27);
+        }
+        advance(&mut restored, 120);
+        capture(&restored, &format!("school-{version}-restored-map"));
+        menu(&mut restored);
+        capture(&restored, &format!("school-{version}-restored-stats"));
+        assert_eq!(
+            u16::from_le_bytes(restored.vm().memory()[0x4322..0x4324].try_into().unwrap()),
+            300
+        );
+        assert!(
+            restored.display().indexed_frame()[160 * 13..] == upgraded_stats[160 * 13..],
+            "loading must preserve the upgraded statistics"
+        );
+
+        battle.input_mut().set_keys([]);
+        advance(&mut battle, 1);
+        let mut route = vec![21; 2];
+        route.extend([23; 4]);
+        route.extend([21; 4]);
+        route.extend([22; 14]);
+        route.push(20);
+        replay(&mut battle, &route, 8, route.len() * 60);
+        replay(&mut battle, &[20], 8, 1800);
+        replay(&mut battle, &[20, 20, 20, 13, 13, 13, 13, 13], 8, 1800);
+        assert_eq!(battle.vm().memory()[0x43bc], 2);
+        capture(&battle, &format!("school-{version}-training-area"));
+        let mut walk = vec![21; 8];
+        walk.extend([23; 6]);
+        walk.extend([13; 4]);
+        replay(&mut battle, &walk, 8, 3000);
+        let search = [22, 22, 23, 23, 20, 20, 21, 21].repeat(10);
+        replay(&mut battle, &search, 8, 5400);
+        let enemy_hp = word(&battle, 0x4398);
+        assert!(enemy_hp > 0);
+        assert_eq!(word(&battle, 0x4312), 200);
+        capture(&battle, &format!("school-{version}-battle"));
+        replay(&mut battle, &[23; 5], 18, 300);
+        for _ in 0..12 {
+            replay(&mut battle, &[13], 18, 60);
+            if word(&battle, 0x4398) < enemy_hp {
+                break;
+            }
+        }
+        assert!(
+            word(&battle, 0x4398) < enemy_hp,
+            "normal attack must damage the enemy"
+        );
+        advance(&mut battle, 60);
+        capture(&battle, &format!("school-{version}-attack"));
+        for _ in 0..12 {
+            replay(&mut battle, &[13], 18, 60);
+            if word(&battle, 0x4312) < 200 {
+                break;
+            }
+        }
+        assert!(word(&battle, 0x4312) < 200, "the enemy must counterattack");
+        advance(&mut battle, 60);
+        capture(&battle, &format!("school-{version}-counterattack"));
+        for _ in 0..60 {
+            replay(&mut battle, &[13], 18, 60);
+            if word(&battle, 0x4328) > 0 {
+                break;
+            }
+        }
+        assert!(word(&battle, 0x4312) > 0);
+        assert!(word(&battle, 0x4316) > 0, "victory must award experience");
+        assert!(word(&battle, 0x4328) > 0, "victory must award money");
+        for _ in 0..12 {
+            if on_map(&battle) {
+                break;
+            }
+            tap(&mut battle, 13);
+        }
+        assert!(
+            on_map(&battle),
+            "acknowledging victory must return to the map"
+        );
+        capture(&battle, &format!("school-{version}-victory-map"));
+        let position = |e: &Emulator| {
+            (
+                u16::from(e.vm().memory()[0x43b8]) + u16::from(e.vm().memory()[0x43b6]),
+                u16::from(e.vm().memory()[0x43b9]) + u16::from(e.vm().memory()[0x43b7]),
+            )
+        };
+        let before_move = position(&battle);
+        let mut moved = false;
+        for key in [22, 23, 20, 21] {
+            let mut candidate = battle.clone();
+            replay(&mut candidate, &[key, key], 8, 120);
+            if position(&candidate) != before_move {
+                battle = candidate;
+                moved = true;
+                break;
+            }
+        }
+        assert!(
+            moved,
+            "the victorious character must resume walking on the map"
+        );
+        capture(&battle, &format!("school-{version}-after-victory"));
+    }
+}

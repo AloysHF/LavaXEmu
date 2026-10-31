@@ -1171,3 +1171,37 @@ without an execution error alone does not establish playability.
 | Selected tile | Discard and computer response | Hand result | Next hand |
 | --- | --- | --- | --- |
 | ![Selection](images/fixes/chinese-mahjong-selected.png) | ![Discard](images/fixes/chinese-mahjong-discarded.png) | ![Result](images/fixes/chinese-mahjong-hand-result.png) | ![Next](images/fixes/chinese-mahjong-next-hand.png) |
+
+## School Legend (中学传奇, first episode)
+
+- Content: `LAVA1 中学传奇/未打包的/中学传奇.lav`, `sch_SC.dat`,
+  and `LAVA1 中学传奇/打包的/SCH_RPGPACK.pac`. Both distributions run
+  the same workflow with their real companion/package resources.
+- Validation gap: the startup gallery did not establish map navigation,
+  medicine effects, slot selection during saving/loading, or a working battle.
+- Validation: enter town and walk south. Open the inventory, inspect the
+  medicine, and press the documented Y in its detail window to use it.
+  Quantity decreases from five to four and maximum HP increases from 200 to
+  300. Save to `sch_save.dat`, import the actual written file into a fresh
+  emulator, choose the load slot, acknowledge success and return to the map.
+  Read-only HP checks and the complete status panel below the tab bar verify
+  that the upgrade survives loading.
+- Battle validation: an independent branch from the new-game state follows
+  real directions through town into the training area, walks until an
+  encounter, and chooses normal attacks. Enemy HP decreases, the enemy
+  counterattacks, and further attacks win the encounter. The character remains
+  alive, earns experience and money, acknowledges victory, returns to the map
+  and walks again. The driver stops at the actual return rather than holding
+  confirmation into another encounter. Map tiles, characters, item details,
+  battle sprites, weapons and status panels render correctly in both versions.
+  No additional emulator changes were required.
+- Scope: the four-flower main quest, later bosses, spell selection and item
+  use during combat are not covered by this workflow.
+
+| Item after use | Restored attributes | First battle | Attack |
+| --- | --- | --- | --- |
+| ![Item](images/fixes/school-loose-medicine-used.png) | ![Restored](images/fixes/school-loose-restored-stats.png) | ![Battle](images/fixes/school-loose-battle.png) | ![Attack](images/fixes/school-loose-attack.png) |
+
+| Loose version after victory | PAC version after victory |
+| --- | --- |
+| ![Loose](images/fixes/school-loose-after-victory.png) | ![PAC](images/fixes/school-pac-after-victory.png) |
