@@ -1348,3 +1348,27 @@ without an execution error alone does not establish playability.
   extended piece modes, custom key settings and dictionary-based name entry
   remain unverified. Captures, ranking files and game resources are not
   distributed.
+
+## Adventure Island IV (冒险岛 IV)
+
+- Validation gap: the first scene did not establish whether jumping, scrolling,
+  collection, damage recovery, stage exits or saved controls worked. Verify
+  the monochrome and grayscale releases in both LAV and PAC form. The fixture
+  lookup uses filename and size to distinguish editions with identical names.
+- Default controls are A/D to move, U to jump and P to pause. Check that pause
+  preserves the position and framebuffer for 180 frames, resume and verify
+  movement. Leave through the pause menu, configure H/L/K/Q, confirm the change
+  and exit normally. Inspect the actual 36-byte settings file and import it
+  into a fresh emulator. Old controls no longer move, jump or pause; all four
+  new controls perform their assigned actions.
+- Replay a deterministic 1,350-frame route using single-key inputs. Check all
+  four collection milestones, horizontal and vertical scrolling, damage and
+  respawn with retained keys. Return through the exit with four keys, verify
+  that the stage index advances and the new stage resets the key count, and
+  inspect the second stage with two lives remaining. The same route and state
+  assertions pass for all four entry points, and their captured scenes, HUDs,
+  pause menus and restored controls were inspected locally.
+- No additional core changes were needed. The shared fixture lookup's default
+  behavior was also rechecked with the complete picture-puzzle workflow.
+  Later stages, advanced devices and leaderboard scoring remain unverified.
+  Captures, settings files and game resources are not distributed.

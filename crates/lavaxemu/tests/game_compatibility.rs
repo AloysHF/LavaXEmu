@@ -27,6 +27,10 @@ fn load(relative: &str) -> Emulator {
 }
 
 fn fixture_path(filename: &str) -> String {
+    fixture_path_with_size(filename, None)
+}
+
+fn fixture_path_with_size(filename: &str, size: Option<u64>) -> String {
     let root = PathBuf::from(std::env::var_os("LAVAX_GAME_ROOT").expect("set LAVAX_GAME_ROOT"));
     let mut directories = vec![root.clone()];
     let mut matches = Vec::new();
@@ -35,7 +39,9 @@ fn fixture_path(filename: &str) -> String {
             let path = entry.unwrap().path();
             if path.is_dir() {
                 directories.push(path);
-            } else if path.file_name().is_some_and(|name| name == filename) {
+            } else if path.file_name().is_some_and(|name| name == filename)
+                && size.is_none_or(|size| path.metadata().unwrap().len() == size)
+            {
                 matches.push(path);
             }
         }
@@ -5094,5 +5100,247 @@ fn tetris_13_versions_rotate_clear_lines_and_preserve_ranking_names() {
             }
         }
         assert!(exited, "confirmed exit must terminate normally");
+    }
+}
+
+#[test]
+#[ignore = "requires the local game corpus via LAVAX_GAME_ROOT"]
+fn adventure_island_iv_versions_clear_a_stage_and_restore_custom_controls() {
+    fn word(e: &Emulator, address: usize) -> u16 {
+        u16::from_le_bytes(e.vm().memory()[address..address + 2].try_into().unwrap())
+    }
+    fn tap(e: &mut Emulator, key: u8) {
+        for frame in 0..60 {
+            e.input_mut().set_keys((frame < 3).then_some(key));
+            advance(e, 1);
+        }
+    }
+    fn start(e: &mut Emulator) {
+        for frame in 0..1800 {
+            e.input_mut()
+                .set_keys(((300..900).contains(&frame) && (frame - 300) % 60 < 3).then_some(13));
+            advance(e, 1);
+        }
+        assert_eq!((word(e, 0x24f6), word(e, 0x24f8)), (32, 56));
+        assert_eq!(word(e, 0x24dc), 0);
+        assert_eq!(word(e, 0x25ea), 0);
+    }
+    let route = [
+        (b'd', 16),
+        (b'u', 4),
+        (b'd', 48),
+        (b'a', 8),
+        (b'u', 4),
+        (b'a', 16),
+        (b'd', 16),
+        (b'u', 4),
+        (b'd', 40),
+        (b'u', 4),
+        (b'd', 64),
+        (b'u', 4),
+        (b'd', 16),
+        (b'u', 12),
+        (b'd', 8),
+        (b'u', 4),
+        (b'd', 8),
+        (b'u', 4),
+        (b'd', 24),
+        (b'u', 4),
+        (b'd', 40),
+        (b'u', 4),
+        (b'd', 72),
+        (b'u', 8),
+        (b'd', 8),
+        (b'u', 4),
+        (b'd', 8),
+        (b'u', 4),
+        (b'd', 8),
+        (b'u', 8),
+        (b'd', 8),
+        (b'u', 4),
+        (b'd', 8),
+        (b'u', 4),
+        (b'd', 8),
+        (b'u', 8),
+        (b'd', 80),
+        (b'u', 4),
+        (b'd', 24),
+        (b'a', 8),
+        (b'u', 4),
+        (b'a', 16),
+        (b'u', 4),
+        (b'd', 16),
+        (b'u', 12),
+        (b'a', 8),
+        (b'u', 4),
+        (b'd', 16),
+        (b'u', 12),
+        (b'a', 8),
+        (b'u', 4),
+        (b'd', 16),
+        (b'u', 4),
+        (b'd', 8),
+        (b'a', 272),
+        (b'u', 4),
+        (b'a', 32),
+        (0, 12),
+        (b'u', 4),
+        (b'a', 24),
+        (0, 12),
+        (b'a', 32),
+        (0, 12),
+        (b'u', 4),
+        (b'a', 24),
+        (0, 32),
+        (b'u', 6),
+        (b'd', 59),
+        (0, 1),
+        (b'd', 59),
+        (0, 1),
+    ];
+    for (version, filename, size) in [
+        ("mono-loose", "冒险岛IV.lav", 26_437),
+        ("mono-package", "冒险岛IV.pac", 90_121),
+        ("gray-loose", "冒险岛IV.lav", 25_852),
+        ("gray-package", "冒险岛IV.pac", 203_106),
+    ] {
+        let path = fixture_path_with_size(filename, Some(size));
+        let mut e = load(&path);
+        start(&mut e);
+        let initial_scene = e.display().indexed_frame().to_vec();
+        let mut config = e.clone();
+        tap(&mut config, b'p');
+        let paused = config.display().indexed_frame().to_vec();
+        let position = (word(&config, 0x24f6), word(&config, 0x24f8));
+        advance(&mut config, 180);
+        assert_eq!((word(&config, 0x24f6), word(&config, 0x24f8)), position);
+        assert_eq!(config.display().indexed_frame(), paused);
+        capture(&config, &format!("adventure4-{version}-paused"));
+        tap(&mut config, 13);
+        for _ in 0..12 {
+            config.input_mut().set_keys(*b"d");
+            advance(&mut config, 1);
+        }
+        assert!(
+            word(&config, 0x24f6) > position.0,
+            "resuming must restore movement"
+        );
+        config.input_mut().release_all();
+        for key in [
+            b'p', 21, 13, 22, 22, 13, 21, 13, b'h', b'l', b'k', b'q', b'y',
+        ] {
+            tap(&mut config, key);
+        }
+        capture(&config, &format!("adventure4-{version}-controls-set"));
+        for key in [27, 22, 22] {
+            tap(&mut config, key);
+        }
+        let mut exited = false;
+        for frame in 0..180 {
+            config.input_mut().set_keys((frame < 3).then_some(13));
+            if let FrameStatus::Halted(code) = config.run_frame().unwrap().status {
+                assert_eq!(code, 0);
+                exited = true;
+                break;
+            }
+        }
+        assert!(exited, "exiting must save the selected controls");
+        let files = config.files_mut().take_dirty_files();
+        let (_, saved) = files
+            .iter()
+            .find(|(name, _)| name.ends_with("mxdsav.dat"))
+            .expect("configuration must be written");
+        assert_eq!(saved.len(), 36);
+        assert_eq!(&saved[28..], &[104, 0, 108, 0, 107, 0, 113, 0]);
+        let mut restored = load(&path);
+        for (name, bytes) in files {
+            restored.files_mut().import_file(&name, bytes);
+        }
+        start(&mut restored);
+        for old in *b"adup" {
+            let mut branch = restored.clone();
+            for _ in 0..12 {
+                branch.input_mut().set_keys([old]);
+                advance(&mut branch, 1);
+            }
+            assert_eq!((word(&branch, 0x24f6), word(&branch, 0x24f8)), (32, 56));
+            assert_ne!(
+                branch.run_frame().unwrap().status,
+                FrameStatus::WaitingForInput
+            );
+        }
+        for key in *b"hlkq" {
+            let mut branch = restored.clone();
+            for _ in 0..12 {
+                branch.input_mut().set_keys([key]);
+                advance(&mut branch, 1);
+            }
+            match key {
+                b'h' => assert!(word(&branch, 0x24f6) < 32),
+                b'l' => assert!(word(&branch, 0x24f6) > 32),
+                b'k' => assert!(word(&branch, 0x24f8) < 56),
+                b'q' => assert_eq!(
+                    branch.run_frame().unwrap().status,
+                    FrameStatus::WaitingForInput
+                ),
+                _ => unreachable!(),
+            }
+            capture(&branch, &format!("adventure4-{version}-restored-key-{key}"));
+        }
+
+        let mut frame = 0;
+        let mut previous_life = word(&e, 0x25ec);
+        let mut previous_keys = 0;
+        let mut damaged = false;
+        let mut respawned = false;
+        let mut horizontal_scroll = false;
+        let mut vertical_scroll = false;
+        for (key, count) in route {
+            for _ in 0..count {
+                e.input_mut().set_keys((key != 0).then_some(key));
+                advance(&mut e, 1);
+                frame += 1;
+                let life = word(&e, 0x25ec);
+                let keys = word(&e, 0x25ea);
+                assert!(life > 0);
+                if life < previous_life {
+                    assert!(keys >= previous_keys, "damage must preserve collected keys");
+                    if !damaged {
+                        capture(&e, &format!("adventure4-{version}-hurt"));
+                    }
+                    damaged = true;
+                }
+                if damaged
+                    && keys > 0
+                    && word(&e, 0x25c2) == 0
+                    && (30..49).contains(&word(&e, 0x24f6))
+                    && word(&e, 0x24f8) == 56
+                {
+                    respawned = true;
+                }
+                horizontal_scroll |= word(&e, 0x25c2) > 0;
+                vertical_scroll |= word(&e, 0x25c4) == 1;
+                previous_life = life;
+                previous_keys = keys;
+                if let Some(expected) = [(96, 1), (244, 2), (760, 3), (1204, 4)]
+                    .into_iter()
+                    .find_map(|(f, k)| (f == frame).then_some(k))
+                {
+                    assert_eq!(keys, expected);
+                    capture(&e, &format!("adventure4-{version}-keys-{expected}"));
+                }
+            }
+        }
+        assert_eq!(frame, 1350);
+        assert!(damaged && respawned && horizontal_scroll && vertical_scroll);
+        assert_eq!(word(&e, 0x24dc), 1, "the exit must advance to stage two");
+        assert_eq!(
+            word(&e, 0x25ea),
+            0,
+            "the next stage starts with no collected keys"
+        );
+        assert_eq!(word(&e, 0x25ec), 2);
+        assert_ne!(e.display().indexed_frame(), initial_scene);
+        capture(&e, &format!("adventure4-{version}-stage-two"));
     }
 }

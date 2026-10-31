@@ -62,6 +62,8 @@ card locking, sampled scoring, stack overflow and Escape termination.
 Tetris v1.3 has monochrome and grayscale workflows for rotation, pause/resume,
 line clearing, scoring and ranking persistence. A fingerprinted compatibility
 repair prevents corrupted ranking names in the monochrome release.
+Adventure Island IV has monochrome and grayscale LAV/PAC workflows completing
+the first stage, exercising damage and respawn, and restoring custom controls.
 
 ## Usage
 
