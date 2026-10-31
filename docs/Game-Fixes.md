@@ -1076,3 +1076,27 @@ without an execution error alone does not establish playability.
 | Tactical map | Retreat |
 | --- | --- |
 | ![Battle](images/fixes/three-kingdoms-battle.png) | ![Retreat](images/fixes/three-kingdoms-retreat.png) |
+
+## Chinese Riddles (中国灯谜)
+
+- Content: `LAVA1 中国灯谜/中国灯谜.lav` and `ZGDM.dat`. The supplied usage
+  notes describe a riddle browser: arrows browse records, Enter or another
+  non-directional key reveals the answer. There is no answer-entry or scoring
+  interface to test.
+- Validation gap: a startup screenshot does not verify the six category ranges,
+  the external question/answer records or the answer-reveal interaction.
+- Validation: open each of the six categories and verify that the displayed
+  record belongs to that category. Compare the question and answer buffers
+  against the corresponding 34-byte record in the original data file. Enter
+  reveals the answer without changing the record; Down advances, resets the
+  hidden-answer label, and Up restores the previous record. A letter also
+  reveals the answer. Random browsing selects another valid record, Escape
+  returns to the title, and the browser exits normally. Chinese prompts,
+  question text, category labels, answer text and decorative panels render
+  correctly. No additional emulator changes were required.
+- Scope: the fixture contains 7,807 riddles; the workflow samples all six
+  categories rather than claiming to have reviewed every record visually.
+
+| Question | Answer revealed | Character riddle | Random browsing |
+| --- | --- | --- | --- |
+| ![Question](images/fixes/chinese-riddles-0-question.png) | ![Answer](images/fixes/chinese-riddles-0-answer.png) | ![Character](images/fixes/chinese-riddles-4-answer.png) | ![Random](images/fixes/chinese-riddles-random.png) |

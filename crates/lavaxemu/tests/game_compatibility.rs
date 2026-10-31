@@ -3489,3 +3489,106 @@ fn three_kingdoms_develops_recruits_and_reloads_a_saved_city() {
     }
     panic!("the system Exit choice must terminate the game");
 }
+
+#[test]
+#[ignore = "requires the local game corpus via LAVAX_GAME_ROOT"]
+fn chinese_riddles_browses_all_categories_reveals_answers_and_exits() {
+    fn tap(e: &mut Emulator, key: u8) {
+        e.input_mut().set_keys([key]);
+        advance(e, 1);
+        e.input_mut().set_keys([]);
+        advance(e, 300);
+    }
+    fn record(e: &Emulator) -> (usize, usize) {
+        let memory = e.vm().memory();
+        let key_bp = e.vm().local_bp() as usize;
+        let viewer = usize::from(u16::from_le_bytes(
+            memory[key_bp + 3..key_bp + 5].try_into().unwrap(),
+        ));
+        let int = |p| i32::from_le_bytes(memory[p..p + 4].try_into().unwrap());
+        let index = usize::try_from(int(viewer + 5) + int(viewer + 17)).unwrap();
+        let data = e.files().file("/LavaData/ZGDM.dat").unwrap();
+        let base = 0x660 + 796 * 16;
+        assert!(index < 7807);
+        let expected = &data[base + index * 34..base + (index + 1) * 34];
+        assert_eq!(
+            &memory[viewer + 27..viewer + 43],
+            &expected[2..18],
+            "the viewer must read the selected question"
+        );
+        assert_eq!(
+            &memory[viewer + 61..viewer + 77],
+            &expected[18..34],
+            "the viewer must read its matching answer"
+        );
+        (index, viewer)
+    }
+    let path = "LAVA1 中国灯谜/中国灯谜.lav";
+    let boundaries = [0, 2972, 4620, 5389, 6106, 6764, 7807];
+    for category in 0..6 {
+        let mut e = load(path);
+        advance(&mut e, 300);
+        tap(&mut e, 13);
+        for _ in 0..category {
+            tap(&mut e, 21);
+        }
+        tap(&mut e, 13);
+        let (first, viewer) = record(&e);
+        assert!((boundaries[category]..boundaries[category + 1]).contains(&first));
+        let question = e.display().indexed_frame().to_vec();
+        capture(&e, &format!("chinese-riddles-{category}-question"));
+        tap(&mut e, 13);
+        assert_eq!(record(&e).0, first);
+        assert!(
+            question != e.display().indexed_frame(),
+            "Enter must reveal the answer"
+        );
+        capture(&e, &format!("chinese-riddles-{category}-answer"));
+        tap(&mut e, 21);
+        let next = record(&e).0;
+        assert_eq!(next, first + 1, "Down must advance one riddle");
+        assert_eq!(
+            &e.vm().memory()[viewer + 78..viewer + 82],
+            &[0xb4, 0xf0, 0xb0, 0xb8],
+            "changing riddles must restore the hidden-answer label"
+        );
+        tap(&mut e, 20);
+        assert_eq!(record(&e).0, first, "Up must restore the previous riddle");
+        tap(&mut e, b'a');
+        assert_eq!(record(&e).0, first);
+        assert!(
+            question != e.display().indexed_frame(),
+            "an ordinary letter must also reveal the answer"
+        );
+        tap(&mut e, 27);
+        capture(&e, &format!("chinese-riddles-{category}-returned"));
+    }
+    let mut random = load(path);
+    advance(&mut random, 300);
+    tap(&mut random, 21);
+    tap(&mut random, 13);
+    let first = record(&random).0;
+    tap(&mut random, 22);
+    assert_ne!(
+        record(&random).0,
+        first,
+        "random browsing must select another record"
+    );
+    capture(&random, "chinese-riddles-random");
+    tap(&mut random, 27);
+    for frame in 0..1200 {
+        let key = if frame == 0 {
+            Some(27)
+        } else if frame % 60 < 3 {
+            Some(13)
+        } else {
+            None
+        };
+        random.input_mut().set_keys(key);
+        if let FrameStatus::Halted(code) = random.run_frame().unwrap().status {
+            assert_eq!(code, 0);
+            return;
+        }
+    }
+    panic!("Escape from the title must exit the browser");
+}
