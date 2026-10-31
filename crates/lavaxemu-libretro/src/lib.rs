@@ -14,7 +14,14 @@ use lavaxemu_core::{Emulator, PointerState, Program};
 const FRAMES_PER_SECOND: f64 = 60.0;
 const AUDIO_SAMPLE_RATE: f64 = 44_100.0;
 const AUDIO_FRAMES_PER_VIDEO_FRAME: usize = 735;
-const SERIALIZED_STATE_CAPACITY: usize = 64 * 1024 * 1024 + 14;
+/// Save-state envelope written in front of the emulator's own payload.
+///
+/// The payload keeps its existing layout; the envelope only makes foreign or
+/// outdated states detectable before they are parsed as machine state.
+const SAVE_STATE_MAGIC: [u8; 4] = *b"LVXS";
+const SAVE_STATE_FORMAT: u32 = 1;
+const SAVE_STATE_HEADER_LEN: usize = SAVE_STATE_MAGIC.len() + size_of::<u32>();
+const SERIALIZED_STATE_CAPACITY: usize = 64 * 1024 * 1024 + 14 + SAVE_STATE_HEADER_LEN;
 
 #[derive(Default)]
 struct Callbacks {
@@ -379,6 +386,25 @@ pub extern "C" fn retro_serialize_size() -> usize {
     })
 }
 
+fn write_save_state_header(buffer: &mut [u8]) {
+    buffer[..SAVE_STATE_MAGIC.len()].copy_from_slice(&SAVE_STATE_MAGIC);
+    buffer[SAVE_STATE_MAGIC.len()..SAVE_STATE_HEADER_LEN]
+        .copy_from_slice(&SAVE_STATE_FORMAT.to_le_bytes());
+}
+
+/// Returns the payload when the envelope matches this build's format.
+fn read_save_state_payload(data: &[u8]) -> Option<&[u8]> {
+    if data.len() < SAVE_STATE_HEADER_LEN || data[..SAVE_STATE_MAGIC.len()] != SAVE_STATE_MAGIC {
+        return None;
+    }
+    let version = u32::from_le_bytes(
+        data[SAVE_STATE_MAGIC.len()..SAVE_STATE_HEADER_LEN]
+            .try_into()
+            .ok()?,
+    );
+    (version == SAVE_STATE_FORMAT).then(|| &data[SAVE_STATE_HEADER_LEN..])
+}
+
 #[unsafe(no_mangle)]
 /// # Safety
 /// `data` must point to at least `size` writable bytes.
@@ -398,12 +424,13 @@ pub unsafe extern "C" fn retro_serialize(data: *mut c_void, size: usize) -> bool
                 return false;
             }
         };
-        if state.len() > size {
+        if state.len() > size - SAVE_STATE_HEADER_LEN {
             return false;
         }
         let output = unsafe { std::slice::from_raw_parts_mut(data.cast::<u8>(), size) };
         output.fill(0);
-        output[..state.len()].copy_from_slice(&state);
+        write_save_state_header(output);
+        output[SAVE_STATE_HEADER_LEN..SAVE_STATE_HEADER_LEN + state.len()].copy_from_slice(&state);
         true
     })
 }
@@ -413,15 +440,25 @@ pub unsafe extern "C" fn retro_serialize(data: *mut c_void, size: usize) -> bool
 /// `data` must point to at least `size` readable bytes.
 pub unsafe extern "C" fn retro_unserialize(data: *const c_void, size: usize) -> bool {
     guard(false, || {
-        if data.is_null() || size < 14 {
+        if data.is_null() || size < SAVE_STATE_HEADER_LEN {
             return false;
         }
         let input = unsafe { std::slice::from_raw_parts(data.cast::<u8>(), size) };
+        let Some(payload) = read_save_state_payload(input) else {
+            log::warn!("rejecting save state with an unknown magic or format version");
+            return false;
+        };
         let mut core = core();
         let Some(emulator) = core.emulator.as_mut() else {
             return false;
         };
-        emulator.load_state(input).is_ok()
+        match emulator.load_state(payload) {
+            Ok(()) => true,
+            Err(error) => {
+                log::error!("failed to restore state: {error}");
+                false
+            }
+        }
     })
 }
 
@@ -675,8 +712,12 @@ mod tests {
         image[9] = 10;
         image[10] = 5;
         image[16] = 4;
-        let path =
-            std::env::temp_dir().join(format!("lavaxemu-libretro-{}.lav", std::process::id()));
+        // Keep the program in its own directory: companion-file import walks
+        // the content directory, so a shared temp root would be far too big.
+        let directory =
+            std::env::temp_dir().join(format!("lavaxemu-libretro-{}", std::process::id()));
+        fs::create_dir_all(&directory).unwrap();
+        let path = directory.join("game.lav");
         fs::write(&path, image).unwrap();
         let path = std::ffi::CString::new(path.to_str().unwrap()).unwrap();
         let info = GameInfo {
@@ -695,9 +736,37 @@ mod tests {
 
         let mut state = vec![0_u8; retro_serialize_size()];
         assert!(unsafe { retro_serialize(state.as_mut_ptr().cast(), state.len()) });
+        assert_eq!(&state[..SAVE_STATE_MAGIC.len()], &SAVE_STATE_MAGIC);
+        assert_eq!(
+            u32::from_le_bytes(
+                state[SAVE_STATE_MAGIC.len()..SAVE_STATE_HEADER_LEN]
+                    .try_into()
+                    .unwrap()
+            ),
+            SAVE_STATE_FORMAT
+        );
         assert!(unsafe { retro_unserialize(state.as_ptr().cast(), state.len()) });
         retro_unload_game();
-        fs::remove_file(path.to_str().unwrap()).unwrap();
+        fs::remove_dir_all(directory).unwrap();
+    }
+
+    #[test]
+    fn save_state_envelope_rejects_other_versions() {
+        let mut buffer = vec![0_u8; SAVE_STATE_HEADER_LEN + 3];
+        buffer[SAVE_STATE_HEADER_LEN..].copy_from_slice(&[1, 2, 3]);
+        write_save_state_header(&mut buffer);
+        assert_eq!(
+            read_save_state_payload(&buffer),
+            Some(&[1_u8, 2, 3][..]),
+            "a freshly written envelope must be accepted"
+        );
+
+        buffer[SAVE_STATE_MAGIC.len()] = 0xFF;
+        assert_eq!(
+            read_save_state_payload(&buffer),
+            None,
+            "a state from another format version must be rejected"
+        );
     }
 
     #[test]
