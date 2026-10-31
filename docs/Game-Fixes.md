@@ -1041,3 +1041,38 @@ without an execution error alone does not establish playability.
 | Deal | Selected card | Round result | Exit confirmation |
 | --- | --- | --- | --- |
 | ![Deal](images/fixes/seven-king-dealt.png) | ![Selected](images/fixes/seven-king-selected.png) | ![Result](images/fixes/seven-king-result.png) | ![Exit](images/fixes/seven-king-confirm-exit.png) |
+
+## Three Kingdoms (三国志): city commands, expedition and save/load
+
+- Content: `LAVA1 三国志/三国志.pac`, which supplies its program, `sgz.dat`
+  resources and an initial 16,384-byte `sgz.sav` slot file.
+- Validation gap: menus and the map selector have different cursor behavior.
+  Recruitment uses a four-digit editor controlled by arrows, rather than typing
+  digit characters. Save slots are accessed through Domestic / System / Store.
+- Validation: begin a new Ma Teng game in Xiliang. Population development with
+  the selected officer raises population from 800 to 820 and consumes one of
+  five command points. Recruit 100 reserve troops using the numeric editor;
+  gold falls from 210 to 190, reserves become 100 and another command point is
+  consumed. Store a slot and confirm that `sgz.sav` changes. Import those files
+  into a fresh PAC session and Continue from that slot: population 820, gold
+  190 and reserves 100 are restored. The system Exit choice terminates normally.
+  Map, city portrait, officer information, menus and save slots render correctly.
+  No additional emulator changes were required.
+- Expedition: switch administration to the frontier city of Tianshui, choose
+  an adjacent enemy city and select Han Sui to lead the force. Allocate 100 gold
+  and 100 rice using the numeric editors. The tactical map opens; select the
+  general, Move to the neighboring tile and verify his position changes in the
+  map. Retreat produces the defeat summary and returns to Tianshui commands.
+  Initial Xiliang has friendly neighbors, so its inability to attack them is a
+  rule restriction rather than failed input.
+- Scope still open: campaign month progression, tactical damage calculations
+  and victory remain unverified. The battlefield check covers deployment,
+  movement and retreat rather than defeating an opponent.
+
+| City commands | Officer | Recruitment editor | Save slots |
+| --- | --- | --- | --- |
+| ![City](images/fixes/three-kingdoms-city.png) | ![Officer](images/fixes/three-kingdoms-officer.png) | ![Recruit](images/fixes/three-kingdoms-recruit-number.png) | ![Save](images/fixes/three-kingdoms-save-slots.png) |
+
+| Tactical map | Retreat |
+| --- | --- |
+| ![Battle](images/fixes/three-kingdoms-battle.png) | ![Retreat](images/fixes/three-kingdoms-retreat.png) |

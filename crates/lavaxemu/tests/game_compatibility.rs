@@ -3346,3 +3346,146 @@ fn seven_king_selects_plays_passes_finishes_and_restarts_a_round() {
     }
     panic!("Y must confirm normal exit");
 }
+
+#[test]
+#[ignore = "requires the local game corpus via LAVAX_GAME_ROOT"]
+fn three_kingdoms_develops_recruits_and_reloads_a_saved_city() {
+    let tap = |e: &mut Emulator, key| {
+        e.input_mut().set_keys([key]);
+        advance(e, 1);
+        e.input_mut().set_keys([]);
+        advance(e, 59);
+    };
+    let word = |e: &Emulator, p| u16::from_le_bytes(e.vm().memory()[p..p + 2].try_into().unwrap());
+    let path = "LAVA1 三国志/三国志.pac";
+    let mut e = load(path);
+    for frame in 0..1200 {
+        e.input_mut()
+            .set_keys(((300..480).contains(&frame) && (frame - 300) % 60 < 3).then_some(13));
+        advance(&mut e, 1);
+    }
+    assert_eq!(e.vm().memory()[0x2008], 5);
+    assert_eq!(word(&e, 0x2086), 800);
+    capture(&e, "three-kingdoms-city");
+    let mut campaign = e.clone();
+    for _ in 0..3 {
+        tap(&mut e, 13);
+    }
+    capture(&e, "three-kingdoms-officer");
+    tap(&mut e, 13);
+    assert_eq!(
+        word(&e, 0x2086),
+        820,
+        "population development must increase the city's population"
+    );
+    assert_eq!(e.vm().memory()[0x2008], 4);
+    for key in [21, 13, 21, 13, 22, 20] {
+        tap(&mut e, key);
+    }
+    capture(&e, "three-kingdoms-recruit-number");
+    tap(&mut e, 13);
+    assert_eq!(
+        word(&e, 0x208c),
+        190,
+        "recruiting 100 troops must cost 20 gold"
+    );
+    assert_eq!(word(&e, 0x2094), 100);
+    assert_eq!(e.vm().memory()[0x2008], 3);
+    capture(&e, "three-kingdoms-recruited");
+    let original_save = e.files().file("/LavaData/sgz.sav").unwrap().to_vec();
+    for key in [20, 13, 21, 21, 21, 21, 21, 13, 13] {
+        tap(&mut e, key);
+    }
+    capture(&e, "three-kingdoms-save-slots");
+    tap(&mut e, 13);
+    let files = e.files_mut().take_dirty_files();
+    let saved = files
+        .iter()
+        .find(|(name, _)| name.ends_with("sgz.sav"))
+        .expect("saving a slot must update sgz.sav");
+    assert_eq!(saved.1.len(), 16384);
+    assert_ne!(saved.1, original_save);
+    let mut restored = load(path);
+    for (name, bytes) in files {
+        restored.files_mut().import_file(&name, bytes);
+    }
+    advance(&mut restored, 300);
+    for key in [13, 21, 13, 13] {
+        tap(&mut restored, key);
+    }
+    advance(&mut restored, 600);
+    assert_eq!(word(&restored, 0x2086), 820);
+    assert_eq!(word(&restored, 0x208c), 190);
+    assert_eq!(word(&restored, 0x2094), 100);
+    capture(&restored, "three-kingdoms-restored");
+    let map_point = |e: &mut Emulator, x: u16, y: u16| {
+        assert_eq!(e.vm().pc(), 0x2ff7);
+        let bp = e.vm().local_bp() as usize;
+        for (address, target, lower, higher) in [(bp + 9, x, 23, 22), (bp + 11, y, 20, 21)] {
+            for _ in 0..20 {
+                let current = word(e, address);
+                if current == target {
+                    break;
+                }
+                tap(e, if current < target { higher } else { lower });
+            }
+            assert_eq!(word(e, address), target);
+        }
+        tap(e, 13);
+    };
+    tap(&mut campaign, 27);
+    map_point(&mut campaign, 3, 2);
+    assert_eq!(
+        campaign.vm().memory()[0x2e32],
+        4,
+        "switch to the frontier city of Tianshui"
+    );
+    for key in [21, 13, 13] {
+        tap(&mut campaign, key);
+    }
+    map_point(&mut campaign, 6, 2);
+    for key in [13, 21, 21, 13, 13, 22, 20, 13, 22, 20, 13] {
+        tap(&mut campaign, key);
+    }
+    assert_eq!(
+        campaign.vm().pc(),
+        0xa4e9,
+        "the expedition must enter tactical unit selection"
+    );
+    assert_eq!(campaign.vm().memory()[0x3c1f], 0);
+    capture(&campaign, "three-kingdoms-battle");
+    for key in [13, 13, 22, 13] {
+        tap(&mut campaign, key);
+    }
+    assert_ne!(campaign.vm().memory()[0x3c1f], 0);
+    assert_eq!(
+        campaign.vm().memory()[0x3c20],
+        0,
+        "Move must move the general from camp to its neighboring tile"
+    );
+    capture(&campaign, "three-kingdoms-battle-moved");
+    for key in [13, 22, 22, 22, 22, 13] {
+        tap(&mut campaign, key);
+    }
+    tap(&mut campaign, 13);
+    capture(&campaign, "three-kingdoms-retreat");
+    tap(&mut campaign, 13);
+    assert_eq!(
+        campaign.vm().pc(),
+        0xda1,
+        "retreat must return to strategic commands"
+    );
+    assert_eq!(campaign.vm().memory()[0x2e32], 4);
+    capture(&campaign, "three-kingdoms-after-battle");
+    for key in [13, 21, 21, 21, 21, 21, 13, 21] {
+        tap(&mut restored, key);
+    }
+    for frame in 0..120 {
+        restored.input_mut().set_keys((frame == 0).then_some(13));
+        if let FrameStatus::Halted(code) = restored.run_frame().unwrap().status {
+            assert_eq!(code, 0);
+            return;
+        }
+    }
+    panic!("the system Exit choice must terminate the game");
+}
