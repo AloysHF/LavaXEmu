@@ -167,13 +167,17 @@ pub extern "C" fn retro_get_region() -> u32 {
 /// `info` and its referenced fields must remain valid for this call.
 pub unsafe extern "C" fn retro_load_game(info: *const GameInfo) -> bool {
     let Some(info) = (unsafe { info.as_ref() }) else {
+        log::error!("frontend passed a null game info");
         return false;
     };
-    let path = game_path(info.path);
-    let data = match game_data(info, path.as_deref()) {
+    let Some(path) = game_path(info.path) else {
+        log::error!("content has no file path; in-memory loading is not supported");
+        return false;
+    };
+    let data = match fs::read(&path) {
         Ok(data) => data,
         Err(error) => {
-            log::error!("failed to read content: {error}");
+            log::error!("failed to read {}: {error}", path.display());
             return false;
         }
     };
@@ -186,9 +190,7 @@ pub unsafe extern "C" fn retro_load_game(info: *const GameInfo) -> bool {
     };
 
     let mut emulator = Emulator::new(program);
-    if let Some(path) = path.as_deref()
-        && let Err(error) = import_companion_files(path, emulator.files_mut())
-    {
+    if let Err(error) = import_companion_files(&path, emulator.files_mut()) {
         log::warn!("failed to import companion files: {error}");
     }
 
@@ -489,20 +491,6 @@ fn game_path(path: *const c_char) -> Option<PathBuf> {
     ))
 }
 
-fn game_data(info: &GameInfo, path: Option<&Path>) -> std::io::Result<Vec<u8>> {
-    if !info.data.is_null() && info.size != 0 {
-        return Ok(
-            unsafe { std::slice::from_raw_parts(info.data.cast::<u8>(), info.size) }.to_vec(),
-        );
-    }
-    fs::read(path.ok_or_else(|| {
-        std::io::Error::new(
-            std::io::ErrorKind::InvalidInput,
-            "content has no path or data",
-        )
-    })?)
-}
-
 fn import_companion_files(
     program_path: &Path,
     files: &mut lavaxemu_core::VirtualFileSystem,
@@ -565,10 +553,14 @@ mod tests {
         image[9] = 10;
         image[10] = 5;
         image[16] = 4;
+        let path =
+            std::env::temp_dir().join(format!("lavaxemu-libretro-{}.lav", std::process::id()));
+        fs::write(&path, image).unwrap();
+        let path = std::ffi::CString::new(path.to_str().unwrap()).unwrap();
         let info = GameInfo {
-            path: ptr::null(),
-            data: image.as_ptr().cast(),
-            size: image.len(),
+            path: path.as_ptr(),
+            data: ptr::null(),
+            size: 0,
             meta: ptr::null(),
         };
 
@@ -583,5 +575,18 @@ mod tests {
         assert!(unsafe { retro_serialize(state.as_mut_ptr().cast(), state.len()) });
         assert!(unsafe { retro_unserialize(state.as_ptr().cast(), state.len()) });
         retro_unload_game();
+        fs::remove_file(path.to_str().unwrap()).unwrap();
+    }
+
+    #[test]
+    fn rejects_in_memory_content() {
+        let image = [0_u8; 17];
+        let info = GameInfo {
+            path: ptr::null(),
+            data: image.as_ptr().cast(),
+            size: image.len(),
+            meta: ptr::null(),
+        };
+        assert!(!unsafe { retro_load_game(&info) });
     }
 }
