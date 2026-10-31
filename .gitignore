@@ -1,6 +1,6 @@
 /target/
 /tmp/
-/CLAUDE.md
+/AGENTS.md
 .claude/
 *.dll
 *.so
