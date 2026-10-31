@@ -195,7 +195,7 @@ pub unsafe extern "C" fn retro_get_system_info(info: *mut SystemInfo) {
         };
         *info = SystemInfo {
             library_name: c"LavaXEmu".as_ptr(),
-            library_version: c"0.1.0".as_ptr(),
+            library_version: concat!(env!("CARGO_PKG_VERSION"), "\0").as_ptr().cast(),
             valid_extensions: c"lav".as_ptr(),
             need_fullpath: true,
             block_extract: false,
