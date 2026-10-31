@@ -4160,3 +4160,170 @@ fn school_legend_versions_move_use_medicine_and_reload_progress() {
         capture(&battle, &format!("school-{version}-after-victory"));
     }
 }
+
+#[test]
+#[ignore = "requires the local game corpus via LAVAX_GAME_ROOT"]
+fn five_in_a_row_versions_win_undo_save_reload_and_restart() {
+    fn fixture(filename: &str) -> String {
+        let root = PathBuf::from(std::env::var_os("LAVAX_GAME_ROOT").expect("set LAVAX_GAME_ROOT"));
+        let mut directories = vec![root.clone()];
+        let mut matches = Vec::new();
+        while let Some(directory) = directories.pop() {
+            for entry in std::fs::read_dir(directory).unwrap() {
+                let path = entry.unwrap().path();
+                if path.is_dir() {
+                    directories.push(path);
+                } else if path.file_name().is_some_and(|name| name == filename) {
+                    matches.push(path);
+                }
+            }
+        }
+        assert_eq!(matches.len(), 1, "the requested fixture must be unique");
+        matches[0]
+            .strip_prefix(root)
+            .unwrap()
+            .to_str()
+            .unwrap()
+            .to_owned()
+    }
+    fn tap(e: &mut Emulator, key: u8) {
+        press(e, key);
+        advance(e, 27);
+    }
+    fn start(e: &mut Emulator) {
+        for frame in 0..1800 {
+            e.input_mut()
+                .set_keys(((300..480).contains(&frame) && (frame - 300) % 60 < 3).then_some(13));
+            advance(e, 1);
+        }
+    }
+    fn point(e: &mut Emulator, cursor: usize, x: u8, y: u8) {
+        for (axis, target, negative, positive) in [(0, x, 23, 22), (1, y, 20, 21)] {
+            for _ in 0..40 {
+                let m = e.vm().memory();
+                let current = if axis == 0 {
+                    m[cursor]
+                } else {
+                    m[cursor + 1] + m[cursor - 2]
+                };
+                if current == target {
+                    break;
+                }
+                tap(e, if current < target { positive } else { negative });
+            }
+            let m = e.vm().memory();
+            assert_eq!(
+                if axis == 0 {
+                    m[cursor]
+                } else {
+                    m[cursor + 1] + m[cursor - 2]
+                },
+                target
+            );
+        }
+    }
+    fn board(e: &Emulator, cursor: usize) -> &[u8] {
+        &e.vm().memory()[cursor + 10..cursor + 235]
+    }
+    for (version, path, cursor) in [
+        ("mono", "WZLZ_黑白.lav", 0x209a),
+        ("gray", "WZLZ_16灰度.lav", 0x21ca),
+    ] {
+        let path = fixture(path);
+        let mut e = load(&path);
+        start(&mut e);
+        assert_eq!(board(&e, cursor)[7 * 15 + 7], 2);
+        capture(&e, &format!("five-in-a-row-{version}-board"));
+        tap(&mut e, 25);
+        capture(&e, &format!("five-in-a-row-{version}-help"));
+        tap(&mut e, 13);
+        for (turn, (x, y)) in [
+            (0, 0),
+            (8, 7),
+            (0, 1),
+            (9, 7),
+            (0, 2),
+            (10, 7),
+            (0, 3),
+            (11, 7),
+        ]
+        .into_iter()
+        .enumerate()
+        {
+            point(&mut e, cursor, x, y);
+            tap(&mut e, 13);
+            assert_eq!(
+                board(&e, cursor)[usize::from(x) * 15 + usize::from(y)],
+                if turn % 2 == 0 { 1 } else { 2 }
+            );
+        }
+        assert!((7..=11).all(|x| board(&e, cursor)[x * 15 + 7] == 2));
+        assert_eq!(board(&e, cursor).iter().filter(|&&v| v != 0).count(), 9);
+        let won = board(&e, cursor).to_vec();
+        capture(&e, &format!("five-in-a-row-{version}-won"));
+        tap(&mut e, 13);
+        tap(&mut e, b'i');
+        assert_eq!(board(&e, cursor)[11 * 15 + 7], 0);
+        capture(&e, &format!("five-in-a-row-{version}-undone"));
+        tap(&mut e, b'o');
+        assert_eq!(board(&e, cursor), won);
+        tap(&mut e, 13);
+        for key in [29, b'y', b'e', b'm', b'u', 13, 13] {
+            tap(&mut e, key);
+        }
+        capture(&e, &format!("five-in-a-row-{version}-save-result"));
+        let files = e.files_mut().take_dirty_files();
+        assert!(
+            files
+                .iter()
+                .any(|(name, bytes)| name.ends_with("emu.5lz") && bytes.starts_with(b"[WZLZ_5LZ]"))
+        );
+        capture(&e, &format!("five-in-a-row-{version}-saved"));
+        let mut restored = load(&path);
+        for (name, bytes) in files {
+            restored.files_mut().import_file(&name, bytes);
+        }
+        start(&mut restored);
+        for key in [30, b'y'] {
+            tap(&mut restored, key);
+        }
+        capture(&restored, &format!("five-in-a-row-{version}-file-picker"));
+        for key in [13, 13] {
+            tap(&mut restored, key);
+        }
+        advance(&mut restored, 120);
+        assert_eq!(board(&restored, cursor), won);
+        capture(&restored, &format!("five-in-a-row-{version}-restored"));
+        for key in [28, b'n'] {
+            tap(&mut restored, key);
+        }
+        assert_eq!(board(&restored, cursor), won);
+        for key in [28, b'y'] {
+            tap(&mut restored, key);
+        }
+        assert!(board(&restored, cursor).iter().all(|&v| v == 0));
+        capture(&restored, &format!("five-in-a-row-{version}-new-game"));
+        for key in [27, b'n'] {
+            tap(&mut restored, key);
+        }
+        assert!(board(&restored, cursor).iter().all(|&v| v == 0));
+        tap(&mut restored, 27);
+        let mut exited = false;
+        for frame in 0..1200 {
+            restored.input_mut().set_keys(if frame < 3 {
+                Some(b'y')
+            } else {
+                (frame % 60 < 3).then_some(13)
+            });
+            if let FrameStatus::Halted(code) = restored.run_frame().unwrap().status {
+                assert_eq!(code, 255);
+                exited = true;
+                break;
+            }
+        }
+        assert!(
+            exited,
+            "confirmed exit must reach the closing page and terminate"
+        );
+    }
+}

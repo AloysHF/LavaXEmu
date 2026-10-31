@@ -15,9 +15,9 @@ do not satisfy this status.
 ## Current evidence
 
 - Input update checked on 2026-10-31: full rerun of 49 workflows, followed by a corrected Dragon Kiss intro replay and the dedicated WarCraft workflow. Those 50 workflows passed with the updated input behavior; later entries have separate incremental checks.
-- 59 dedicated release workflows passed in this audit.
-- 95 of 324 entry points were loaded by those successful workflows.
-- 229 entry points still need dedicated workflow verification.
+- 60 dedicated release workflows passed in this audit.
+- 97 of 324 entry points were loaded by those successful workflows.
+- 227 entry points still need dedicated workflow verification.
 - The historical [startup gallery](Game-Compatibility.md) is a separate check
   and must not be interpreted as this workflow audit.
 
@@ -88,8 +88,8 @@ an optional screenshot directory. Keep each test's logs and captures separate.
 | 047 | `LAVA1 中国麻将/中国麻将.lav` | Game / game package | [Workflow passed: `chinese_mahjong_draws_selects_discards_and_finishes_a_hand`](../crates/lavaxemu/tests/game_compatibility.rs#L3889) |
 | 048 | `LAVA1 中学传奇/打包的/SCH_RPGPACK.pac` | Game / game package | [Workflow passed: `school_legend_versions_move_use_medicine_and_reload_progress`](../crates/lavaxemu/tests/game_compatibility.rs#L3957) |
 | 049 | `LAVA1 中学传奇/未打包的/中学传奇.lav` | Game / game package | [Workflow passed: `school_legend_versions_move_use_medicine_and_reload_progress`](../crates/lavaxemu/tests/game_compatibility.rs#L3957) |
-| 050 | `LAVA1 五子连珠/WZLZ_16灰度.lav` | Game / game package | Pending |
-| 051 | `LAVA1 五子连珠/WZLZ_黑白.lav` | Game / game package | Pending |
+| 050 | `LAVA1 五子连珠/WZLZ_16灰度.lav` | Game / game package | [Workflow passed: `five_in_a_row_versions_win_undo_save_reload_and_restart`](../crates/lavaxemu/tests/game_compatibility.rs#L4166) |
+| 051 | `LAVA1 五子连珠/WZLZ_黑白.lav` | Game / game package | [Workflow passed: `five_in_a_row_versions_win_undo_save_reload_and_restart`](../crates/lavaxemu/tests/game_compatibility.rs#L4166) |
 | 052 | `LAVA1 五虎/Fivet.lav` | Game / game package | Pending |
 | 053 | `LAVA1 五骰Yahtzee/Yahtzee.lav` | Game / game package | Pending |
 | 054 | `LAVA1 仙剑后传/Pala.lav` | Game / game package | Pending |

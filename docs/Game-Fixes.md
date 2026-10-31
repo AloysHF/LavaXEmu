@@ -1205,3 +1205,22 @@ without an execution error alone does not establish playability.
 | Loose version after victory | PAC version after victory |
 | --- | --- |
 | ![Loose](images/fixes/school-loose-after-victory.png) | ![PAC](images/fixes/school-pac-after-victory.png) |
+
+## Five in a Row v0.80 (五子联珠)
+
+- Validation gap: initial board rendering alone did not verify alternating
+  play, victory, undo/redo or persistent game records.
+- Both monochrome and 16-level grayscale editions pass the same real-input
+  workflow. Place alternating white and black stones, scroll the board and
+  complete five black stones in a row. Verify all nine occupied cells and the
+  victory prompt. Undo removes the winning stone; redo restores it and the
+  victory result. Open help and verify its Chinese controls visually.
+- Save a named `.5LZ` record, import the actual written file into a fresh
+  emulator and select it through the native file picker. The complete board
+  must match. Cancel restarting, then confirm a new game and verify an empty
+  board. Cancel quitting, then confirm and acknowledge the closing page;
+  the guest explicitly exits with code 255.
+- The workflow required sufficient released time between menu inputs; no
+  additional emulator changes were needed. Local captures were inspected
+  but are not distributed. Autoplay and every numeric shortcut are outside
+  this workflow's scope.
