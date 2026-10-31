@@ -1,7 +1,7 @@
 mod ffi;
 
 use std::{
-    ffi::{CStr, c_char, c_void},
+    ffi::{CStr, CString, c_char, c_void},
     fs,
     path::{Path, PathBuf},
     ptr,
@@ -48,9 +48,25 @@ fn core() -> MutexGuard<'static, Core> {
     CORE.lock().unwrap_or_else(|poisoned| poisoned.into_inner())
 }
 
+/// Frontend log sink installed through `RETRO_ENVIRONMENT_GET_LOG_INTERFACE`.
+///
+/// It lives outside `CORE` so logging while the core mutex is held cannot
+/// deadlock.
+static FRONTEND_LOG: Mutex<LogCallback> = Mutex::new(None);
+
 #[unsafe(no_mangle)]
 pub extern "C" fn retro_set_environment(callback: EnvironmentCallback) {
     core().callbacks.environment = callback;
+    let mut log = LogCallbackStruct { log: None };
+    call_environment(
+        callback,
+        ENVIRONMENT_GET_LOG_INTERFACE,
+        ptr::from_mut(&mut log).cast(),
+    );
+    *FRONTEND_LOG
+        .lock()
+        .unwrap_or_else(|poisoned| poisoned.into_inner()) = log.log;
+
     let mut support_no_game = false;
     call_environment(
         callback,
@@ -85,8 +101,44 @@ pub extern "C" fn retro_set_input_state(callback: InputStateCallback) {
     core().callbacks.input_state = callback;
 }
 
+struct FrontendLogger;
+
+impl log::Log for FrontendLogger {
+    fn enabled(&self, _metadata: &log::Metadata) -> bool {
+        true
+    }
+
+    fn log(&self, record: &log::Record) {
+        if !self.enabled(record.metadata()) {
+            return;
+        }
+        let level = match record.level() {
+            log::Level::Error => LOG_ERROR,
+            log::Level::Warn => LOG_WARN,
+            log::Level::Info => LOG_INFO,
+            log::Level::Debug | log::Level::Trace => LOG_DEBUG,
+        };
+        let Ok(message) = CString::new(record.args().to_string()) else {
+            return;
+        };
+        let callback = *FRONTEND_LOG
+            .lock()
+            .unwrap_or_else(|poisoned| poisoned.into_inner());
+        if let Some(callback) = callback {
+            unsafe { callback(level, c"%s".as_ptr(), message.as_ptr()) };
+        }
+    }
+
+    fn flush(&self) {}
+}
+
+static LOGGER: FrontendLogger = FrontendLogger;
+
 #[unsafe(no_mangle)]
-pub extern "C" fn retro_init() {}
+pub extern "C" fn retro_init() {
+    let _ = log::set_logger(&LOGGER);
+    log::set_max_level(log::LevelFilter::Debug);
+}
 
 #[unsafe(no_mangle)]
 pub extern "C" fn retro_deinit() {
@@ -166,32 +218,38 @@ pub extern "C" fn retro_get_region() -> u32 {
 /// `info` and its referenced fields must remain valid for this call.
 pub unsafe extern "C" fn retro_load_game(info: *const GameInfo) -> bool {
     let Some(info) = (unsafe { info.as_ref() }) else {
-        log::error!("frontend passed a null game info");
-        return false;
+        return fail("LavaX: the frontend passed no game information.");
     };
     // The frontend must accept the video format before any frame is produced;
     // declaring it up front also keeps it intact when content turns out to be
     // unreadable.
     let environment = core().callbacks.environment;
     if !configure_frontend(environment) {
-        return false;
+        return fail("LavaX: this frontend does not support RGB565 video.");
     }
     let Some(path) = game_path(info.path) else {
-        log::error!("content has no file path; in-memory loading is not supported");
-        return false;
+        return fail(
+            "LavaX: content has no file path. Only .lav files on the filesystem are supported.",
+        );
     };
     let data = match fs::read(&path) {
         Ok(data) => data,
         Err(error) => {
-            log::error!("failed to read {}: {error}", path.display());
-            return false;
+            return fail(&format!(
+                "LavaX: failed to read the content file.
+{error}"
+            ));
         }
     };
     let program = match Program::load(&data) {
         Ok(program) => program,
         Err(error) => {
-            log::error!("failed to load content: {error}");
-            return false;
+            return fail(&format!(
+                "LavaX: failed to load this program.
+{error}
+
+Supported content: .lav files."
+            ));
         }
     };
 
@@ -357,6 +415,24 @@ pub extern "C" fn retro_get_memory_size(id: u32) -> usize {
         .map_or(0, |emulator| emulator.vm().memory().len())
 }
 
+/// Report a load failure to both the log and the frontend's on-screen message.
+fn fail(message: &str) -> bool {
+    log::error!("{message}");
+    let Ok(c_message) = CString::new(message) else {
+        return false;
+    };
+    let mut message = Message {
+        msg: c_message.as_ptr(),
+        frames: 300,
+    };
+    call_environment(
+        core().callbacks.environment,
+        ENVIRONMENT_SET_MESSAGE,
+        ptr::from_mut(&mut message).cast(),
+    );
+    false
+}
+
 fn configure_frontend(environment: EnvironmentCallback) -> bool {
     let mut pixel_format = PIXEL_FORMAT_RGB565;
     if !call_environment(
@@ -364,7 +440,6 @@ fn configure_frontend(environment: EnvironmentCallback) -> bool {
         ENVIRONMENT_SET_PIXEL_FORMAT,
         ptr::from_mut(&mut pixel_format).cast(),
     ) {
-        log::error!("frontend rejected the required RGB565 pixel format");
         return false;
     }
 

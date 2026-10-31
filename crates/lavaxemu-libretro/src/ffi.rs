@@ -3,10 +3,17 @@ use std::ffi::{c_char, c_void};
 pub const API_VERSION: u32 = 1;
 pub const REGION_NTSC: u32 = 0;
 
+pub const ENVIRONMENT_SET_MESSAGE: u32 = 6;
 pub const ENVIRONMENT_SET_PERFORMANCE_LEVEL: u32 = 8;
 pub const ENVIRONMENT_SET_PIXEL_FORMAT: u32 = 10;
 pub const ENVIRONMENT_SET_INPUT_DESCRIPTORS: u32 = 11;
 pub const ENVIRONMENT_SET_SUPPORT_NO_GAME: u32 = 18;
+pub const ENVIRONMENT_GET_LOG_INTERFACE: u32 = 27;
+
+pub const LOG_DEBUG: u32 = 0;
+pub const LOG_INFO: u32 = 1;
+pub const LOG_WARN: u32 = 2;
+pub const LOG_ERROR: u32 = 3;
 
 pub const PIXEL_FORMAT_RGB565: u32 = 2;
 pub const DEVICE_NONE: u32 = 0;
@@ -38,6 +45,19 @@ pub type AudioSampleCallback = Option<unsafe extern "C" fn(i16, i16)>;
 pub type AudioSampleBatchCallback = Option<unsafe extern "C" fn(*const i16, usize) -> usize>;
 pub type InputPollCallback = Option<unsafe extern "C" fn()>;
 pub type InputStateCallback = Option<unsafe extern "C" fn(u32, u32, u32, u32) -> i16>;
+pub type LogCallback = Option<unsafe extern "C" fn(u32, *const c_char, ...)>;
+
+#[repr(C)]
+pub struct LogCallbackStruct {
+    pub log: LogCallback,
+}
+
+#[repr(C)]
+pub struct Message {
+    pub msg: *const c_char,
+    /// Duration in frames.
+    pub frames: u32,
+}
 
 #[repr(C)]
 pub struct SystemInfo {
