@@ -1100,3 +1100,27 @@ without an execution error alone does not establish playability.
 | Question | Answer revealed | Character riddle | Random browsing |
 | --- | --- | --- | --- |
 | ![Question](images/fixes/chinese-riddles-0-question.png) | ![Answer](images/fixes/chinese-riddles-0-answer.png) | ![Character](images/fixes/chinese-riddles-4-answer.png) | ![Random](images/fixes/chinese-riddles-random.png) |
+
+## Chinese Fireworks 1.1 (绚丽中国烟火)
+
+- Content: `LAVA1 中国烟火 1.1/中国烟火.lav` and `FirePic.dat`.
+  The in-game manual describes rotating fuses to connect the fire source on
+  the left to the rockets on the right. Arrows/WASD move, Z/X and other
+  documented confirmation keys rotate, P pauses and Escape asks to quit.
+- Validation gap: rotating a visible tile alone does not prove a working fuse
+  connection. A scoring exit also enters the high-score name flow before
+  returning to the main menu.
+- Validation: start difficulty one and use real arrows and Z to connect six
+  tiles across the board. Cursor positions and orientations are checked read
+  only. The connected route lights fireworks and scores 20, above an idle clone
+  over the exact same frame interval. Pause freezes the image for 120 frames;
+  Enter resumes. Escape/N cancels quitting, then Escape/Y reaches name entry.
+  Enter `emu`, verify the score/name written to `Firefig.dat`, return to the
+  menu and choose Stop Fireworks. Confirm the closing pages and exit normally.
+  Pipe tiles, night scenery, fireworks, score and leaderboard render correctly.
+  No additional emulator changes were required. Other difficulty levels and
+  custom picture selection are not covered by this workflow.
+
+| Fuse board | Paused | Lit fireworks | Saved high score |
+| --- | --- | --- | --- |
+| ![Board](images/fixes/chinese-fireworks-board.png) | ![Pause](images/fixes/chinese-fireworks-paused.png) | ![Fireworks](images/fixes/chinese-fireworks-scored.png) | ![Score](images/fixes/chinese-fireworks-high-score.png) |

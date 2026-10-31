@@ -15,9 +15,9 @@ do not satisfy this status.
 ## Current evidence
 
 - Input update checked on 2026-10-31: full rerun of 49 workflows, followed by a corrected Dragon Kiss intro replay and the dedicated WarCraft workflow. Those 50 workflows passed with the updated input behavior; later entries have separate incremental checks.
-- 55 dedicated release workflows passed in this audit.
-- 90 of 324 entry points were loaded by those successful workflows.
-- 234 entry points still need dedicated workflow verification.
+- 56 dedicated release workflows passed in this audit.
+- 91 of 324 entry points were loaded by those successful workflows.
+- 233 entry points still need dedicated workflow verification.
 - The historical [startup gallery](Game-Compatibility.md) is a separate check
   and must not be interpreted as this workflow audit.
 
@@ -83,7 +83,7 @@ an optional screenshot directory. Keep each test's logs and captures separate.
 | 042 | `LAVA1 七王五二三/七王五二三.lav` | Game / game package | [Workflow passed: `seven_king_selects_plays_passes_finishes_and_restarts_a_round`](../crates/lavaxemu/tests/game_compatibility.rs#L3257) |
 | 043 | `LAVA1 三国志/三国志.pac` | Game / game package | [Workflow passed: `three_kingdoms_develops_recruits_and_reloads_a_saved_city`](../crates/lavaxemu/tests/game_compatibility.rs#L3352) |
 | 044 | `LAVA1 中国灯谜/中国灯谜.lav` | Game / game package | [Workflow passed: `chinese_riddles_browses_all_categories_reveals_answers_and_exits`](../crates/lavaxemu/tests/game_compatibility.rs#L3495) |
-| 045 | `LAVA1 中国烟火 1.1/中国烟火.lav` | Game / game package | Pending |
+| 045 | `LAVA1 中国烟火 1.1/中国烟火.lav` | Game / game package | [Workflow passed: `chinese_fireworks_rotates_connects_scores_pauses_and_confirms_exit`](../crates/lavaxemu/tests/game_compatibility.rs#L3598) |
 | 046 | `LAVA1 中国象棋/象棋90.lav` | Game / game package | Pending |
 | 047 | `LAVA1 中国麻将/中国麻将.lav` | Game / game package | Pending |
 | 048 | `LAVA1 中学传奇/打包的/SCH_RPGPACK.pac` | Game / game package | Pending |

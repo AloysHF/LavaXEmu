@@ -3592,3 +3592,151 @@ fn chinese_riddles_browses_all_categories_reveals_answers_and_exits() {
     }
     panic!("Escape from the title must exit the browser");
 }
+
+#[test]
+#[ignore = "requires the local game corpus via LAVAX_GAME_ROOT"]
+fn chinese_fireworks_rotates_connects_scores_pauses_and_confirms_exit() {
+    let word = |e: &Emulator, p| u16::from_le_bytes(e.vm().memory()[p..p + 2].try_into().unwrap());
+    let score =
+        |e: &Emulator| i32::from_le_bytes(e.vm().memory()[0x20e5..0x20e9].try_into().unwrap());
+    let mut e = load("LAVA1 中国烟火 1.1/中国烟火.lav");
+    for frame in 0..1200 {
+        e.input_mut()
+            .set_keys(((300..480).contains(&frame) && (frame - 300) % 60 < 3).then_some(13));
+        advance(&mut e, 1);
+    }
+    e.input_mut().set_keys([13]);
+    advance(&mut e, 1);
+    e.input_mut().set_keys([]);
+    advance(&mut e, 299);
+    capture(&e, "chinese-fireworks-board");
+    let mut paused = e.clone();
+    press(&mut paused, b'p');
+    let frozen = paused.display().indexed_frame().to_vec();
+    capture(&paused, "chinese-fireworks-paused");
+    advance(&mut paused, 120);
+    assert!(
+        frozen == paused.display().indexed_frame(),
+        "pause must freeze the game view"
+    );
+    press(&mut paused, 13);
+    assert!(
+        frozen != paused.display().indexed_frame(),
+        "Enter must resume the fireworks"
+    );
+    let mut idle = e.clone();
+    let mut elapsed = 0;
+    for (x, y, rotation) in [
+        (0, 5, 3),
+        (1, 5, 1),
+        (2, 5, 1),
+        (3, 5, 3),
+        (4, 5, 1),
+        (5, 5, 0),
+    ] {
+        for (address, target, negative, positive) in [(0x2027, x, 23, 22), (0x2029, y, 20, 21)] {
+            for _ in 0..300 {
+                let current = word(&e, address);
+                if current == target {
+                    break;
+                }
+                e.input_mut()
+                    .set_keys([if current < target { positive } else { negative }]);
+                advance(&mut e, 1);
+                elapsed += 1;
+            }
+            e.input_mut().set_keys([]);
+            advance(&mut e, 6);
+            elapsed += 6;
+            assert_eq!(
+                word(&e, address),
+                target,
+                "arrows must reach the selected fuse"
+            );
+        }
+        let cell = 0x35ab + (usize::from(x) * 20 + usize::from(y)) * 12;
+        for _ in 0..10 {
+            if word(&e, cell + 8) == rotation {
+                break;
+            }
+            e.input_mut().set_keys(*b"z");
+            advance(&mut e, 1);
+            e.input_mut().set_keys([]);
+            advance(&mut e, 6);
+            elapsed += 7;
+        }
+        assert_eq!(
+            word(&e, cell + 8),
+            rotation,
+            "Z must rotate the fuse to its connected orientation"
+        );
+    }
+    capture(&e, "chinese-fireworks-connected");
+    for _ in 0..12000 {
+        e.input_mut().set_keys([]);
+        advance(&mut e, 1);
+        elapsed += 1;
+        if score(&e) > 0 {
+            break;
+        }
+    }
+    advance(&mut idle, elapsed);
+    assert!(
+        score(&e) > score(&idle),
+        "connecting the fuses must light fireworks and score above the idle branch"
+    );
+    capture(&e, "chinese-fireworks-scored");
+
+    let confirm = |e: &mut Emulator| {
+        let mut waiting = false;
+        for _ in 0..120 {
+            e.input_mut().set_keys([27]);
+            if e.run_frame().unwrap().status == FrameStatus::WaitingForInput {
+                waiting = true;
+                break;
+            }
+        }
+        e.input_mut().set_keys([]);
+        assert!(waiting, "Escape must open a confirmation prompt");
+    };
+    confirm(&mut e);
+    capture(&e, "chinese-fireworks-confirm-exit");
+    let confirmation = e.display().indexed_frame().to_vec();
+    press(&mut e, b'n');
+    assert!(e.vm().is_running());
+    assert!(
+        confirmation != e.display().indexed_frame(),
+        "N must close the confirmation and resume play"
+    );
+    confirm(&mut e);
+    press(&mut e, b'y');
+    capture(&e, "chinese-fireworks-name");
+    for key in *b"emu" {
+        press(&mut e, key);
+    }
+    press(&mut e, 13);
+    capture(&e, "chinese-fireworks-high-score");
+    let files = e.files_mut().take_dirty_files();
+    let saved = files
+        .iter()
+        .find(|(name, _)| name.ends_with("firefig.dat"))
+        .expect("the leaderboard must be saved");
+    assert_eq!(
+        i32::from_le_bytes(saved.1[1..5].try_into().unwrap()),
+        score(&e)
+    );
+    assert_eq!(&saved.1[21..24], b"emu");
+    press(&mut e, 13);
+    capture(&e, "chinese-fireworks-menu");
+    press(&mut e, 21);
+    press(&mut e, 21);
+    press(&mut e, 22);
+    for frame in 0..1200 {
+        e.input_mut().set_keys((frame % 60 < 3).then_some(13));
+        if let FrameStatus::Halted(code) = e.run_frame().unwrap().status {
+            assert_eq!(code, 0);
+            return;
+        }
+    }
+    panic!("Stop Fireworks must exit after the closing pages");
+}
