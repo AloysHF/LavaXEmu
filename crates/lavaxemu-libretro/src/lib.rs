@@ -20,7 +20,6 @@ const SERIALIZED_STATE_CAPACITY: usize = 64 * 1024 * 1024 + 14;
 struct Callbacks {
     environment: EnvironmentCallback,
     video_refresh: VideoRefreshCallback,
-    audio_sample: AudioSampleCallback,
     audio_sample_batch: AudioSampleBatchCallback,
     input_poll: InputPollCallback,
     input_state: InputStateCallback,
@@ -37,7 +36,6 @@ static CORE: Mutex<Core> = Mutex::new(Core {
     callbacks: Callbacks {
         environment: None,
         video_refresh: None,
-        audio_sample: None,
         audio_sample_batch: None,
         input_poll: None,
         input_state: None,
@@ -67,8 +65,9 @@ pub extern "C" fn retro_set_video_refresh(callback: VideoRefreshCallback) {
 }
 
 #[unsafe(no_mangle)]
-pub extern "C" fn retro_set_audio_sample(callback: AudioSampleCallback) {
-    core().callbacks.audio_sample = callback;
+pub extern "C" fn retro_set_audio_sample(_callback: AudioSampleCallback) {
+    // LavaX has no audio hardware; the core only emits silence and does so
+    // through the batch callback, so the single-sample callback is unused.
 }
 
 #[unsafe(no_mangle)]
@@ -479,10 +478,6 @@ fn emit_silence(callbacks: &Callbacks) {
     static SILENCE: [i16; AUDIO_FRAMES_PER_VIDEO_FRAME * 2] = [0; AUDIO_FRAMES_PER_VIDEO_FRAME * 2];
     if let Some(callback) = callbacks.audio_sample_batch {
         unsafe { callback(SILENCE.as_ptr(), AUDIO_FRAMES_PER_VIDEO_FRAME) };
-    } else if let Some(callback) = callbacks.audio_sample {
-        for _ in 0..AUDIO_FRAMES_PER_VIDEO_FRAME {
-            unsafe { callback(0, 0) };
-        }
     }
 }
 
