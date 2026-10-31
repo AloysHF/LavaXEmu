@@ -4835,3 +4835,73 @@ fn arbitrary_picture_puzzle_swaps_tiles_completes_all_pictures_and_exits() {
         assert!(exited, "acknowledging completion must exit normally");
     }
 }
+
+#[test]
+#[ignore = "requires the local game corpus via LAVAX_GAME_ROOT"]
+fn russian_poker_moves_accelerates_locks_scores_and_finishes() {
+    fn word(e: &Emulator, address: usize) -> u16 {
+        u16::from_le_bytes(e.vm().memory()[address..address + 2].try_into().unwrap())
+    }
+    fn replay(e: &mut Emulator, key: u8, held: usize, frames: usize) {
+        for frame in 0..frames {
+            e.input_mut().set_keys((frame % 60 < held).then_some(key));
+            advance(e, 1);
+        }
+    }
+    let mut e = load(&fixture_path("俄罗斯扑克.lav"));
+    advance(&mut e, 300);
+    capture(&e, "russian-poker-title");
+    replay(&mut e, 13, 3, 60);
+    assert_eq!(word(&e, 0x2006), 0);
+    assert_eq!(word(&e, 0x2008), 3);
+    assert_eq!(word(&e, 0x200a), 11);
+    assert_eq!(word(&e, 0x200c), 11);
+    capture(&e, "russian-poker-first-card");
+    for (key, column) in [(23, 0), (22, 6)] {
+        let mut moved = e.clone();
+        replay(&mut moved, key, 3, 720);
+        assert_eq!(word(&moved, 0x2008), column);
+        assert_eq!(word(&moved, 0x2006), 0);
+        capture(&moved, &format!("russian-poker-boundary-{column}"));
+    }
+    let mut idle = e.clone();
+    advance(&mut idle, 240);
+    replay(&mut e, 21, 59, 240);
+    assert_eq!(word(&idle, 0x2063), 0);
+    assert_eq!(word(&idle, 0x2065), 0);
+    assert_eq!(word(&e, 0x2063), 11);
+    assert_eq!(word(&e, 0x2065), 11);
+    assert_eq!(word(&e, 0x2006), 0);
+    capture(&e, "russian-poker-two-locked-cards");
+    replay(&mut e, 21, 59, 240);
+    assert_eq!(word(&e, 0x2006), 20);
+    capture(&e, "russian-poker-scored");
+    let mut overflowed = false;
+    for frame in 0..12000 {
+        e.input_mut().set_keys((frame % 60 < 59).then_some(21));
+        if let FrameStatus::Halted(code) = e.run_frame().unwrap().status {
+            assert_eq!(code, 0);
+            overflowed = true;
+            break;
+        }
+    }
+    assert!(overflowed, "stacking cards must reach a normal game end");
+    assert_ne!(
+        word(&e, 0x2055),
+        0,
+        "the stack must reach the top playable row"
+    );
+    assert!(word(&e, 0x2006) >= 20);
+    capture(&e, "russian-poker-finished");
+    let mut exited = false;
+    for frame in 0..120 {
+        idle.input_mut().set_keys((frame < 3).then_some(27));
+        if let FrameStatus::Halted(code) = idle.run_frame().unwrap().status {
+            assert_eq!(code, 1, "Escape explicitly requests exit(1)");
+            exited = true;
+            break;
+        }
+    }
+    assert!(exited, "Escape must terminate play");
+    capture(&idle, "russian-poker-escape-exit");
+}

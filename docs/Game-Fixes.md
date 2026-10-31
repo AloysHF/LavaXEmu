@@ -1303,3 +1303,20 @@ without an execution error alone does not establish playability.
   the internal count includes that exchange. Acknowledging victory exits
   normally with code zero for every picture. No additional core changes were
   required. Captures and picture resources are not distributed.
+
+## Russian Poker (俄罗斯扑克)
+
+- Validation gap: a falling card did not prove horizontal control, accelerated
+  falling, locked cards, scoring or either termination path.
+- Left and Right reach columns 0 and 6 while preserving the initial score.
+  Compare two identical game states for 240 frames: with Down held, two J
+  cards lock in the central column; without input those cells remain empty.
+  Continue accelerated play and verify the sampled score changes from 0 to
+  20. Check the current/next cards, stack and score display locally.
+- Continue stacking until the top playable row is occupied. The game reaches
+  its credits and ends with code zero. Separately press Escape during play;
+  the guest explicitly calls `exit(1)`, which the regression checks as a
+  distinct requested termination status. No emulator errors are suppressed.
+- No additional core changes were required. The workflow samples one scoring
+  sequence; it does not exhaustively validate every card combination or level.
+  Captures and game resources are not distributed.
