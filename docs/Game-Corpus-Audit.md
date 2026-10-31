@@ -15,9 +15,9 @@ do not satisfy this status.
 ## Current evidence
 
 - Input update checked on 2026-10-31: full rerun of 49 workflows, followed by a corrected Dragon Kiss intro replay and the dedicated WarCraft workflow. Those 50 workflows passed with the updated input behavior; later entries have separate incremental checks.
-- 63 dedicated release workflows passed in this audit.
-- 101 of 324 entry points were loaded by those successful workflows.
-- 223 entry points still need dedicated workflow verification.
+- 64 dedicated release workflows passed in this audit.
+- 102 of 324 entry points were loaded by those successful workflows.
+- 222 entry points still need dedicated workflow verification.
 - The historical [startup gallery](Game-Compatibility.md) is a separate check
   and must not be interpreted as this workflow audit.
 
@@ -97,7 +97,7 @@ an optional screenshot directory. Keep each test's logs and captures separate.
 | 056 | `LAVA1 仙剑后传/Pala_TC800.lav` | Game / game package | Pending |
 | 057 | `LAVA1 仙境奇缘/仙境奇缘/打包后的文件/仙境奇缘.pac` | Game / game package | [Workflow passed: `fairy_fate_moves_saves_restores_and_resolves_a_battle`](../crates/lavaxemu/tests/game_compatibility.rs#L4611) |
 | 058 | `LAVA1 仙境奇缘/仙境奇缘/未打包文件/仙境奇缘.lav` | Game / game package | [Workflow passed: `fairy_fate_moves_saves_restores_and_resolves_a_battle`](../crates/lavaxemu/tests/game_compatibility.rs#L4611) |
-| 059 | `LAVA1 任意拼图/任意拼图.lav` | Game / game package | Pending |
+| 059 | `LAVA1 任意拼图/任意拼图.lav` | Game / game package | [Workflow passed: `arbitrary_picture_puzzle_swaps_tiles_completes_all_pictures_and_exits`](../crates/lavaxemu/tests/game_compatibility.rs#L4735) |
 | 060 | `LAVA1 俄罗斯扑克/俄罗斯扑克.lav` | Game / game package | Pending |
 | 061 | `LAVA1 俄罗斯方块1.3/俄罗斯方块灰.lav` | Game / game package | Pending |
 | 062 | `LAVA1 俄罗斯方块1.3/俄罗斯方块黑.lav` | Game / game package | Pending |

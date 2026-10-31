@@ -4729,3 +4729,109 @@ fn fairy_fate_moves_saves_restores_and_resolves_a_battle() {
         capture(&battle, &format!("fairy-{version}-game-over"));
     }
 }
+
+#[test]
+#[ignore = "requires the local game corpus via LAVAX_GAME_ROOT"]
+fn arbitrary_picture_puzzle_swaps_tiles_completes_all_pictures_and_exits() {
+    fn tap(e: &mut Emulator, key: u8) {
+        for frame in 0..60 {
+            e.input_mut().set_keys((frame < 3).then_some(key));
+            advance(e, 1);
+        }
+    }
+    fn word(e: &Emulator, address: usize) -> u16 {
+        u16::from_le_bytes(e.vm().memory()[address..address + 2].try_into().unwrap())
+    }
+    fn board(e: &Emulator) -> Vec<u16> {
+        (0..24).map(|i| word(e, 0x3540 + i * 2)).collect()
+    }
+    fn select(e: &mut Emulator, target: usize) {
+        let (x, y) = (word(e, 0x357f) as usize, word(e, 0x3581) as usize);
+        let (tx, ty) = (target % 6, target / 6);
+        for _ in 0..x.abs_diff(tx) {
+            tap(e, if tx > x { 22 } else { 23 });
+        }
+        for _ in 0..y.abs_diff(ty) {
+            tap(e, if ty > y { 21 } else { 20 });
+        }
+        assert_eq!((word(e, 0x357f), word(e, 0x3581)), (tx as u16, ty as u16));
+        tap(e, 13);
+    }
+    let path = fixture_path("任意拼图.lav");
+    let mut pictures = Vec::new();
+    for (number, key) in (*b"bnmg").into_iter().enumerate() {
+        let mut e = load(&path);
+        advance(&mut e, 300);
+        tap(&mut e, 13);
+        tap(&mut e, key);
+        let preview = e.display().indexed_frame().to_vec();
+        assert!(
+            !pictures.contains(&preview),
+            "each choice must load a different picture"
+        );
+        pictures.push(preview.clone());
+        capture(&e, &format!("picture-puzzle-{number}-preview"));
+        tap(&mut e, 13);
+        let mut tiles = board(&e);
+        let goal: Vec<u16> = (0..24).collect();
+        let mut sorted = tiles.clone();
+        sorted.sort_unstable();
+        assert_eq!(sorted, goal);
+        assert_ne!(tiles, goal);
+        tap(&mut e, 23);
+        tap(&mut e, 20);
+        assert_eq!((word(&e, 0x357f), word(&e, 0x3581)), (0, 0));
+        assert_eq!(
+            board(&e),
+            tiles,
+            "boundary presses must preserve every tile"
+        );
+        assert_eq!(word(&e, 0x358b), 0);
+        capture(&e, &format!("picture-puzzle-{number}-shuffled"));
+        let mut swaps = 0;
+        for i in 0..24 {
+            if tiles[i] == i as u16 {
+                continue;
+            }
+            let j = tiles.iter().position(|&tile| tile == i as u16).unwrap();
+            select(&mut e, i);
+            assert_eq!(board(&e), tiles, "selection alone must not swap tiles");
+            select(&mut e, j);
+            tiles.swap(i, j);
+            swaps += 1;
+            assert_eq!(
+                board(&e),
+                tiles,
+                "Enter must exchange exactly the selected pair"
+            );
+            assert_eq!(word(&e, 0x358b), swaps);
+        }
+        assert_eq!(board(&e), goal);
+        assert_eq!(word(&e, 0x357b), 24);
+        let (cx, cy) = (word(&e, 0x357f) as usize, word(&e, 0x3581) as usize);
+        capture(&e, &format!("picture-puzzle-{number}-completed"));
+        for y in 8..72 {
+            for x in 8..104 {
+                let cursor = (x - 8) / 16 == cx && (y - 8) / 16 == cy;
+                let message = (32..92).contains(&x) && (32..44).contains(&y);
+                if !cursor && !message {
+                    assert_eq!(
+                        e.display().indexed_frame()[y * 160 + x],
+                        preview[y * 160 + x],
+                        "restored picture {number} at {x},{y}"
+                    );
+                }
+            }
+        }
+        let mut exited = false;
+        for frame in 0..120 {
+            e.input_mut().set_keys((frame < 3).then_some(13));
+            if let FrameStatus::Halted(code) = e.run_frame().unwrap().status {
+                assert_eq!(code, 0);
+                exited = true;
+                break;
+            }
+        }
+        assert!(exited, "acknowledging completion must exit normally");
+    }
+}

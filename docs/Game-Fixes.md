@@ -1284,3 +1284,22 @@ without an execution error alone does not establish playability.
 - No additional emulator core changes were needed. This workflow verifies a
   losing battle; victory, equipment purchases and later story progression
   remain unverified. Captures, saves and game resources are not distributed.
+
+## Arbitrary Picture Puzzle (任意拼图)
+
+- Validation gap: the title and picture menu did not establish whether tile
+  selection, swapping, image reconstruction or completion worked.
+- Choose each of the four pictures using the number-key aliases B, N, M and
+  G. Verify distinct previews and shuffled permutations of all 24 tiles.
+  Left/Up at the initial boundary preserve the cursor, board and swap count.
+- Use arrows and Enter to select two tiles. Selection alone preserves the
+  board; each confirmed exchange changes exactly those two tiles and advances
+  the internal swap count. Solve each shuffled picture in 20 exchanges using
+  actual inputs, with no guest memory writes. Check all 24 final tile indices
+  and the reconstructed image against the preview, excluding the highlighted
+  cursor tile and victory banner.
+- Inspect all four previews, shuffled boards and victory pictures locally.
+  The result screen retains the count displayed before the winning exchange;
+  the internal count includes that exchange. Acknowledging victory exits
+  normally with code zero for every picture. No additional core changes were
+  required. Captures and picture resources are not distributed.
