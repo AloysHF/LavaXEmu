@@ -15,9 +15,9 @@ do not satisfy this status.
 ## Current evidence
 
 - Input update checked on 2026-10-31: full rerun of 49 workflows, followed by a corrected Dragon Kiss intro replay and the dedicated WarCraft workflow. Those 50 workflows passed with the updated input behavior; later entries have separate incremental checks.
-- 65 dedicated release workflows passed in this audit.
-- 103 of 324 entry points were loaded by those successful workflows.
-- 221 entry points still need dedicated workflow verification.
+- 66 dedicated release workflows passed in this audit.
+- 105 of 324 entry points were loaded by those successful workflows.
+- 219 entry points still need dedicated workflow verification.
 - The historical [startup gallery](Game-Compatibility.md) is a separate check
   and must not be interpreted as this workflow audit.
 
@@ -99,8 +99,8 @@ an optional screenshot directory. Keep each test's logs and captures separate.
 | 058 | `LAVA1 仙境奇缘/仙境奇缘/未打包文件/仙境奇缘.lav` | Game / game package | [Workflow passed: `fairy_fate_moves_saves_restores_and_resolves_a_battle`](../crates/lavaxemu/tests/game_compatibility.rs#L4611) |
 | 059 | `LAVA1 任意拼图/任意拼图.lav` | Game / game package | [Workflow passed: `arbitrary_picture_puzzle_swaps_tiles_completes_all_pictures_and_exits`](../crates/lavaxemu/tests/game_compatibility.rs#L4735) |
 | 060 | `LAVA1 俄罗斯扑克/俄罗斯扑克.lav` | Game / game package | [Workflow passed: `russian_poker_moves_accelerates_locks_scores_and_finishes`](../crates/lavaxemu/tests/game_compatibility.rs#L4841) |
-| 061 | `LAVA1 俄罗斯方块1.3/俄罗斯方块灰.lav` | Game / game package | Pending |
-| 062 | `LAVA1 俄罗斯方块1.3/俄罗斯方块黑.lav` | Game / game package | Pending |
+| 061 | `LAVA1 俄罗斯方块1.3/俄罗斯方块灰.lav` | Game / game package | [Workflow passed: `tetris_13_versions_rotate_clear_lines_and_preserve_ranking_names`](../crates/lavaxemu/tests/game_compatibility.rs#L4911) |
+| 062 | `LAVA1 俄罗斯方块1.3/俄罗斯方块黑.lav` | Game / game package | [Workflow passed: `tetris_13_versions_rotate_clear_lines_and_preserve_ranking_names`](../crates/lavaxemu/tests/game_compatibility.rs#L4911) |
 | 063 | `LAVA1 假日神秘岛/假日神秘岛 abcdef.lav` | Game / game package | [Workflow passed: `holiday_island_finishes_the_intro_talks_and_moves_on_the_map`](../crates/lavaxemu/tests/game_compatibility.rs#L1058) |
 | 064 | `LAVA1 先赌为快/先赌★为快.lav` | Game / game package | [Workflow passed: `gamble_creates_a_local_account_and_accepts_bets`](../crates/lavaxemu/tests/game_compatibility.rs#L891) |
 | 065 | `LAVA1 冒险岛IV/黑白版/打包的文件/冒险岛IV.pac` | Game / game package | Pending |

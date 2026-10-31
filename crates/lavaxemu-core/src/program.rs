@@ -113,6 +113,22 @@ impl Program {
             image[0x5742] = 0xcb;
             image[0x57c7] = 0x3a;
         }
+        if image.len() == 18_430 && crc32fast::hash(&image) == 0xb914_9cc5 {
+            // Initialize this release's name buffer before it reuses local storage.
+            let trampoline = image.len() as u32;
+            let entry = image[0x0ff7..0x1000].to_vec();
+            image.extend_from_slice(&entry);
+            image.extend_from_slice(&[
+                0x19, 0x07, 0x00, 0x02, 0x28, 0x2b, 0x83, 0x3b, 0x00, 0x10, 0x00,
+            ]);
+            image[0x0ff7..0x0ffb].copy_from_slice(&[
+                0x3b,
+                trampoline as u8,
+                (trampoline >> 8) as u8,
+                (trampoline >> 16) as u8,
+            ]);
+            image[0x0ffb..0x1000].fill(0);
+        }
         Ok(Self { header, image })
     }
 
@@ -150,6 +166,18 @@ mod tests {
         for (address, byte) in [(0x573a, 0x31), (0x5742, 0x50), (0x57c7, 0x39)] {
             original[address] = byte;
         }
+        let saved = original.clone();
+        let program = Program::load(&original).unwrap();
+        assert_eq!(original, saved);
+        assert_eq!(program.image(), original);
+    }
+
+    #[test]
+    fn leaves_similar_name_entry_programs_unmodified() {
+        let mut original = image(0, 0, 0);
+        original.resize(18_430, 0);
+        original[0x0ff7..0x1000]
+            .copy_from_slice(&[0x03, 0x15, 0x00, 0x81, 0x00, 0x01, 0x01, 0x35, 0x38]);
         let saved = original.clone();
         let program = Program::load(&original).unwrap();
         assert_eq!(original, saved);

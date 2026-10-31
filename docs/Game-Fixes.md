@@ -1320,3 +1320,31 @@ without an execution error alone does not establish playability.
 - No additional core changes were required. The workflow samples one scoring
   sequence; it does not exhaustively validate every card combination or level.
   Captures and game resources are not distributed.
+
+## Tetris v1.3 (俄罗斯方块 1.3)
+
+- Bug: after ordinary play, the monochrome release reads an uninitialized
+  local name buffer. Confirming the displayed Chinese name can copy leftover
+  stack values into the ranking file, replacing its first two bytes with
+  control bytes. The regression reproduced this failure before the repair.
+- Identify the exact monochrome image by length and CRC. In the loaded copy,
+  preserve the function's original entry instructions and initialize its local
+  name buffer from the current name before continuing. The source file and
+  general VM local-storage behavior stay unchanged. A guard test checks that
+  a similar image with a different CRC is left untouched.
+- Both monochrome and grayscale workflows pause for 180 frames, assert that
+  the piece, board and image freeze, and verify that resuming restarts gravity.
+  Replay 40 placements using actual rotation, movement and Down inputs, with
+  bounded waits for each piece to lock. Every placement checks the occupied
+  cell count against four cells per piece minus ten per cleared row.
+- Clear 14 lines, including single, double and triple clears. Check each score
+  increment as `10 * cleared_rows * cleared_rows`, ending at 220 points.
+  Stack to game over, confirm the Chinese name and inspect the ranking. Verify
+  its six saved name bytes, score and line count in the real 101-byte file.
+  Import that file into a fresh emulator and compare the ranking display.
+  Confirm exit and allow the farewell animation to finish before checking
+  termination with code zero. All captured stages were inspected locally.
+- Coverage is the standard seven-piece mode. Four-line clears, the five
+  extended piece modes, custom key settings and dictionary-based name entry
+  remain unverified. Captures, ranking files and game resources are not
+  distributed.

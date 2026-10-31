@@ -4905,3 +4905,194 @@ fn russian_poker_moves_accelerates_locks_scores_and_finishes() {
     assert!(exited, "Escape must terminate play");
     capture(&idle, "russian-poker-escape-exit");
 }
+
+#[test]
+#[ignore = "requires the local game corpus via LAVAX_GAME_ROOT"]
+fn tetris_13_versions_rotate_clear_lines_and_preserve_ranking_names() {
+    fn word(e: &Emulator, address: usize) -> u16 {
+        u16::from_le_bytes(e.vm().memory()[address..address + 2].try_into().unwrap())
+    }
+    fn tap(e: &mut Emulator, key: u8, frames: usize) {
+        for frame in 0..frames {
+            e.input_mut().set_keys((frame < 3).then_some(key));
+            advance(e, 1);
+        }
+    }
+    fn grid(e: &Emulator) -> Vec<u8> {
+        (1..11)
+            .flat_map(|x| (0..24).map(move |y| e.vm().memory()[0x205c + x * 26 + y]))
+            .collect()
+    }
+    let placements = [
+        (0, 1),
+        (0, 4),
+        (0, 8),
+        (1, 8),
+        (3, 1),
+        (1, 4),
+        (1, 5),
+        (0, 0),
+        (2, 8),
+        (1, 3),
+        (1, 4),
+        (0, 6),
+        (1, 8),
+        (0, 5),
+        (1, 1),
+        (2, 2),
+        (0, 1),
+        (1, 4),
+        (0, 3),
+        (2, 7),
+        (3, 7),
+        (0, 3),
+        (0, 7),
+        (0, 0),
+        (0, 9),
+        (0, 8),
+        (1, 5),
+        (2, 0),
+        (1, 2),
+        (0, 1),
+        (1, 6),
+        (0, 0),
+        (1, 3),
+        (0, 4),
+        (0, 9),
+        (0, 1),
+        (0, 7),
+        (0, 5),
+        (2, 7),
+        (1, 0),
+    ];
+    for (version, filename, extra_prompt) in [
+        ("mono", "俄罗斯方块黑.lav", false),
+        ("gray", "俄罗斯方块灰.lav", true),
+    ] {
+        let path = fixture_path(filename);
+        let mut e = load(&path);
+        advance(&mut e, 300);
+        if extra_prompt {
+            tap(&mut e, 13, 60);
+        }
+        tap(&mut e, 13, 60);
+        tap(&mut e, 13, 2);
+        assert_eq!(word(&e, 0x2042), 1);
+        let mut paused = e.clone();
+        paused.input_mut().release_all();
+        tap(&mut paused, 13, 6);
+        let picture = paused.display().indexed_frame().to_vec();
+        let paused_grid = grid(&paused);
+        let y = word(&paused, 0x2042);
+        advance(&mut paused, 180);
+        assert_eq!(word(&paused, 0x2042), y);
+        assert_eq!(grid(&paused), paused_grid);
+        assert_eq!(paused.display().indexed_frame(), picture);
+        capture(&paused, &format!("tetris13-{version}-paused"));
+        tap(&mut paused, 13, 6);
+        advance(&mut paused, 30);
+        assert_ne!(word(&paused, 0x2042), y, "resuming must restart gravity");
+
+        let mut previous_lines = 0;
+        let mut expected_score = 0;
+        let mut cleared_sizes = std::collections::BTreeSet::new();
+        for (n, (rotations, target)) in placements.into_iter().enumerate() {
+            for _ in 0..rotations {
+                let rotation = word(&e, 0x2058);
+                tap(&mut e, 20, 6);
+                assert_ne!(word(&e, 0x2058), rotation);
+            }
+            for _ in 0..12 {
+                let x = word(&e, 0x2040);
+                if x == target {
+                    break;
+                }
+                tap(&mut e, if x < target { 22 } else { 23 }, 6);
+            }
+            assert_eq!(word(&e, 0x2040), target);
+            let mut last_y = word(&e, 0x2042);
+            let mut landed = false;
+            for _ in 0..150 {
+                tap(&mut e, 21, 6);
+                let y = word(&e, 0x2042);
+                if last_y > 3 && y <= 3 {
+                    landed = true;
+                    break;
+                }
+                last_y = y;
+            }
+            assert!(landed, "piece {n} must lock and spawn its successor");
+            let lines = word(&e, 0x225f);
+            let cleared = lines - previous_lines;
+            if cleared > 0 {
+                cleared_sizes.insert(cleared);
+            }
+            expected_score += 10 * cleared * cleared;
+            assert_eq!(word(&e, 0x2241), expected_score);
+            assert_eq!(
+                grid(&e).iter().filter(|&&c| c != 0).count(),
+                4 * (n + 1) - 10 * usize::from(lines)
+            );
+            previous_lines = lines;
+        }
+        assert_eq!(previous_lines, 14);
+        assert_eq!(expected_score, 220);
+        assert_eq!(cleared_sizes, [1, 2, 3].into_iter().collect());
+        capture(&e, &format!("tetris13-{version}-cleared"));
+        let mut ended = false;
+        for frame in 0..6000 {
+            e.input_mut().set_keys((frame % 60 < 59).then_some(21));
+            if e.run_frame().unwrap().status == FrameStatus::WaitingForInput {
+                ended = true;
+                break;
+            }
+        }
+        assert!(ended, "stacking must reach the ranking prompt");
+        capture(&e, &format!("tetris13-{version}-game-over"));
+        tap(&mut e, 13, 60);
+        capture(&e, &format!("tetris13-{version}-name"));
+        tap(&mut e, 13, 60);
+        capture(&e, &format!("tetris13-{version}-ranking"));
+        let ranking = e.display().indexed_frame()[..160 * 70].to_vec();
+        let files = e.files_mut().take_dirty_files();
+        let (_, saved) = files
+            .iter()
+            .find(|(name, _)| name.ends_with("elsboxsave.dat"))
+            .expect("ranking file must be written");
+        assert_eq!(saved.len(), 101);
+        assert_eq!(u32::from_le_bytes(saved[..4].try_into().unwrap()), 220);
+        assert_eq!(u16::from_le_bytes(saved[20..22].try_into().unwrap()), 14);
+        assert_eq!(
+            &saved[35..41],
+            &[0xce, 0xc4, 0xc7, 0xfa, 0xd0, 0xc7],
+            "the confirmed name must survive reused stack storage"
+        );
+        let mut restored = load(&path);
+        for (name, bytes) in files {
+            restored.files_mut().import_file(&name, bytes);
+        }
+        advance(&mut restored, 300);
+        if extra_prompt {
+            tap(&mut restored, 13, 60);
+        }
+        for _ in 0..3 {
+            tap(&mut restored, 22, 60);
+        }
+        tap(&mut restored, 13, 60);
+        capture(&restored, &format!("tetris13-{version}-ranking-restored"));
+        assert_eq!(&restored.display().indexed_frame()[..160 * 70], ranking);
+        tap(&mut restored, 27, 60);
+        tap(&mut restored, 27, 60);
+        capture(&restored, &format!("tetris13-{version}-exit-prompt"));
+        let mut exited = false;
+        for frame in 0..1200 {
+            restored.input_mut().set_keys((frame < 3).then_some(b'y'));
+            if let FrameStatus::Halted(code) = restored.run_frame().unwrap().status {
+                assert_eq!(code, 0);
+                exited = true;
+                break;
+            }
+        }
+        assert!(exited, "confirmed exit must terminate normally");
+    }
+}

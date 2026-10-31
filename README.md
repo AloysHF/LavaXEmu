@@ -59,6 +59,9 @@ Arbitrary Picture Puzzle has a workflow completing all four pictures with
 tile-swap checks, reconstructed image checks and normal completion exit.
 Russian Poker has a workflow for movement boundaries, accelerated falling,
 card locking, sampled scoring, stack overflow and Escape termination.
+Tetris v1.3 has monochrome and grayscale workflows for rotation, pause/resume,
+line clearing, scoring and ranking persistence. A fingerprinted compatibility
+repair prevents corrupted ranking names in the monochrome release.
 
 ## Usage
 

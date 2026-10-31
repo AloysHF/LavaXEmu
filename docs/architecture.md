@@ -44,6 +44,12 @@ crates/
 4. The bytecode interpreter executes the program entry point.
 5. Each 60 Hz frame invokes the guest program's update and render logic.
 
+`Program` also applies narrowly scoped repairs to identified legacy releases
+in the loaded image. Length and CRC checks protect unrelated programs. The
+monochrome Tetris v1.3 repair initializes its name-entry buffer from the current
+name before the guest reads reused local storage. These repairs do not modify
+the content file or change the VM's general stack and local-variable rules.
+
 ## Bytecode Execution
 
 The LavaX VM uses a stack-based bytecode architecture with 117 opcodes:
