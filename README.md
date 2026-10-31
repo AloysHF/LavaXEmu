@@ -69,6 +69,8 @@ three misses, all five stages and normal victory exit. A fingerprinted repair
 restores new-game counters and makes its ending reachable.
 Volley Shooting v1.5 has a workflow for shooting goals, goalkeeper actions and
 record restoration. A fingerprinted repair preserves the separate record slots.
+Fighter of the Phoenix has a workflow covering movement, shooting, bombing,
+pause/resume, defeat/retry and defeating the first boss to enter stage two.
 
 ## Usage
 

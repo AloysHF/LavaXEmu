@@ -5603,3 +5603,153 @@ fn volley_shooting_scores_saves_records_and_drives_goalkeeper_controls() {
         );
     }
 }
+
+#[test]
+#[ignore = "requires the local game corpus via LAVAX_GAME_ROOT"]
+fn phoenix_fighter_moves_shoots_bombs_pauses_retries_and_clears_a_stage() {
+    fn word(e: &Emulator, p: usize) -> u16 {
+        u16::from_le_bytes(e.vm().memory()[p..p + 2].try_into().unwrap())
+    }
+    let path = fixture_path("Fighter.lav");
+    let mut e = load(&path);
+    for f in 0..421 {
+        e.input_mut()
+            .set_keys((f >= 300 && (f - 300) / 60 < 3 && (f - 300) % 60 < 3).then_some(13));
+        advance(&mut e, 1);
+    }
+    e.input_mut().release_all();
+    for f in 0..4 {
+        e.input_mut().set_keys((f < 3).then_some(13));
+        advance(&mut e, 1);
+    }
+    assert_eq!(&e.vm().memory()[0x39b5..0x39b7], &[107, 2]);
+    assert_eq!(&e.vm().memory()[0x39b9..0x39bb], &[20, 30]);
+    capture(&e, "phoenix-start");
+    for (key, position) in [
+        (20, (20, 0)),
+        (21, (20, 60)),
+        (22, (80, 30)),
+        (23, (20, 30)),
+    ] {
+        let mut branch = e.clone();
+        branch.input_mut().set_keys([key]);
+        advance(&mut branch, 12);
+        assert_eq!(
+            (branch.vm().memory()[0x39b9], branch.vm().memory()[0x39ba]),
+            position
+        );
+        capture(&branch, &format!("phoenix-move-{key}"));
+    }
+    let mut shot = e.clone();
+    shot.input_mut().set_keys(*b"a");
+    advance(&mut shot, 12);
+    assert_ne!(shot.vm().memory()[0x3a05], 0);
+    capture(&shot, "phoenix-shooting");
+    let mut bomb = e.clone();
+    bomb.input_mut().set_keys(*b"z");
+    advance(&mut bomb, 12);
+    assert_eq!(bomb.vm().memory()[0x39be], 1);
+    assert_eq!(&bomb.vm().memory()[0x39bc..0x39be], &[28, 38]);
+    capture(&bomb, "phoenix-bombing");
+    let mut pause = e.clone();
+    pause.input_mut().set_keys([32]);
+    advance(&mut pause, 3);
+    pause.input_mut().release_all();
+    advance(&mut pause, 177);
+    assert_eq!(pause.vm().pc(), 0x52c0);
+    let paused = pause.display().indexed_frame().to_vec();
+    let memory = pause.vm().memory().to_vec();
+    advance(&mut pause, 180);
+    assert_eq!(pause.display().indexed_frame(), paused);
+    assert_eq!(pause.vm().memory(), memory);
+    capture(&pause, "phoenix-paused");
+    pause.input_mut().set_keys([13]);
+    advance(&mut pause, 1);
+    pause.input_mut().set_keys([22]);
+    advance(&mut pause, 12);
+    assert!(pause.vm().memory()[0x39b9] > 20);
+    assert_ne!(pause.display().indexed_frame(), paused);
+    let mut loss = e.clone();
+    loss.input_mut().release_all();
+    let mut failed = false;
+    for _ in 0..600 {
+        let r = loss.run_frame().unwrap();
+        if r.status == FrameStatus::WaitingForInput {
+            assert!(loss.vm().memory()[0x39b5] <= 100);
+            assert_eq!(loss.vm().pc(), 0x5309);
+            failed = true;
+            break;
+        }
+    }
+    assert!(failed);
+    capture(&loss, "phoenix-defeat");
+    for _ in 0..2 {
+        loss.input_mut().release_all();
+        loss.input_mut().set_keys([13]);
+        advance(&mut loss, 1);
+    }
+    loss.input_mut().release_all();
+    advance(&mut loss, 1);
+    assert_eq!(loss.vm().memory()[0x39b5], 107);
+    assert_eq!(&loss.vm().memory()[0x39b9..0x39bb], &[20, 30]);
+    capture(&loss, "phoenix-retry");
+    let route = [
+        0, 0, 21, 20, 20, 0, 0, 21, 21, 22, 23, 20, 22, 0, 23, 0, 0, 20, 21, 21, 21, 0, 20, 0, 0,
+        22, 22, 22, 22, 20, 0, 23, 21, 23, 21, 23, 22, 20, 20, 23, 23, 0, 21, 21, 20, 20, 0, 22,
+        21, 23, 0, 0, 0, 0, 0, 21, 22, 22, 23, 20, 23, 0, 0, 0, 0, 0, 20, 22, 0, 21, 23, 20, 20,
+        22, 23, 21, 22, 21, 21, 22, 23, 0, 23, 20, 21, 22, 22, 20, 20, 23, 23, 21, 22, 21, 0, 22,
+        20, 0, 22, 20, 23, 23, 0, 23, 21, 21, 0, 0, 0, 0, 0, 0, 20, 0, 20, 22, 23, 21, 22, 22, 22,
+        0, 23, 23, 21, 22, 22, 23, 23, 20, 22, 21, 23, 20, 21, 20, 20, 20, 22, 22, 0, 21, 21, 21,
+        20, 23, 21, 23, 23, 0, 20, 20, 22, 20, 21, 21, 23, 0, 0, 20, 22, 21, 23, 22, 23, 0, 20, 20,
+        0, 22, 22, 21, 21, 23, 23, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 20, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+        0, 0, 0, 0, 20, 0, 22, 22, 22, 22, 22, 23, 23, 22, 23, 23, 23, 21, 21, 22, 22, 22, 23, 0,
+        23, 20, 23, 20, 21, 0,
+    ];
+    let mut saw_boss = false;
+    let mut damaged_boss = false;
+    for (step, key) in route.into_iter().enumerate() {
+        for _ in 0..4 {
+            e.input_mut()
+                .set_keys((*b"az").into_iter().chain((key != 0).then_some(key)));
+            advance(&mut e, 1);
+            assert!(e.vm().memory()[0x39b5] > 100);
+            if word(&e, 0x3d5b) == 83 && e.vm().memory()[0x39d1] == 6 {
+                let hp = word(&e, 0x3d4b);
+                if !saw_boss {
+                    capture(&e, "phoenix-boss");
+                }
+                saw_boss = true;
+                if hp < 45 && !damaged_boss {
+                    capture(&e, "phoenix-boss-damaged");
+                }
+                damaged_boss |= hp < 45;
+            }
+        }
+        if step % 50 == 49 {
+            capture(&e, &format!("phoenix-flight-{step}"));
+        }
+    }
+    assert!(saw_boss && damaged_boss);
+    assert_eq!(word(&e, 0x3d4b), 0);
+    assert_eq!(e.vm().memory()[0x39c0], 8);
+    capture(&e, "phoenix-boss-defeated");
+    e.input_mut().release_all();
+    advance(&mut e, 12);
+    assert_eq!(
+        e.vm().memory()[0x3d2a],
+        1,
+        "the script must advance to stage two"
+    );
+    assert!(e.vm().memory()[0x39b5] > 100);
+    capture(&e, "phoenix-stage-two");
+    e.input_mut().set_keys([27]);
+    let mut exited = false;
+    for _ in 0..10 {
+        if let FrameStatus::Halted(code) = e.run_frame().unwrap().status {
+            assert_eq!(code, 1, "Escape explicitly requests this exit status");
+            exited = true;
+            break;
+        }
+    }
+    assert!(exited);
+}

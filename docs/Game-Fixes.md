@@ -1421,3 +1421,25 @@ without an execution error alone does not establish playability.
 - Coverage is training mode and record persistence. Cup rounds, extra time
   and winning a tournament remain unverified. Captures, records and game
   resources are not distributed.
+
+## Fighter of the Phoenix (凤凰战斗机)
+
+- Validation gap: the title and a moving battlefield did not establish whether
+  the controls, damage, pause, retry or boss progression worked.
+- Check all four directions and movement boundaries. A produces an active
+  shot; Z produces a moving bomb. Space pauses the game, and 180 additional
+  frames preserve both guest memory and the presented image. Confirming the
+  pause resumes flight and movement.
+- Without defensive input, reach mission failure with depleted HP, inspect the
+  defeat screen and acknowledge both input waits. The retry restores seven HP
+  and the starting position. The successful route starts from an independent
+  copy of the original game state.
+- Replay 904 frames of fixed directional inputs with A and Z held. Check that
+  the player stays alive, the first boss appears, its weak point loses health
+  from its initial 45 HP and reaches zero, and its defeat removes the boss.
+  Continue for 12 frames and verify that the stage script advances to stage
+  two. Inspect ordinary flight, the boss, damage and the new stage locally.
+- Escape during play explicitly requests `exit(1)`; verify that requested exit
+  status without suppressing emulator errors. No additional core changes were
+  needed. Later bosses, advanced weapon pickups and healing crystals remain
+  unverified. Captures and game resources are not distributed.
