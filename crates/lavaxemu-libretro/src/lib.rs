@@ -48,6 +48,25 @@ fn core() -> MutexGuard<'static, Core> {
     CORE.lock().unwrap_or_else(|poisoned| poisoned.into_inner())
 }
 
+/// Run `body`, turning a panic into `fallback`.
+///
+/// A panic must never unwind across the C ABI: the host would be torn down with
+/// us. Swallowing it keeps the session recoverable and leaves a log entry.
+fn guard<T>(fallback: T, body: impl FnOnce() -> T) -> T {
+    match std::panic::catch_unwind(std::panic::AssertUnwindSafe(body)) {
+        Ok(value) => value,
+        Err(payload) => {
+            let detail = payload
+                .downcast_ref::<&str>()
+                .map(|text| (*text).to_owned())
+                .or_else(|| payload.downcast_ref::<String>().cloned())
+                .unwrap_or_else(|| "unknown panic".to_owned());
+            log::error!("LavaXEmu libretro entry point panicked: {detail}");
+            fallback
+        }
+    }
+}
+
 /// Frontend log sink installed through `RETRO_ENVIRONMENT_GET_LOG_INTERFACE`.
 ///
 /// It lives outside `CORE` so logging while the core mutex is held cannot
@@ -56,49 +75,52 @@ static FRONTEND_LOG: Mutex<LogCallback> = Mutex::new(None);
 
 #[unsafe(no_mangle)]
 pub extern "C" fn retro_set_environment(callback: EnvironmentCallback) {
-    core().callbacks.environment = callback;
-    let mut log = LogCallbackStruct { log: None };
-    call_environment(
-        callback,
-        ENVIRONMENT_GET_LOG_INTERFACE,
-        ptr::from_mut(&mut log).cast(),
-    );
-    *FRONTEND_LOG
-        .lock()
-        .unwrap_or_else(|poisoned| poisoned.into_inner()) = log.log;
+    guard((), || {
+        core().callbacks.environment = callback;
+        let mut log = LogCallbackStruct { log: None };
+        call_environment(
+            callback,
+            ENVIRONMENT_GET_LOG_INTERFACE,
+            ptr::from_mut(&mut log).cast(),
+        );
+        *FRONTEND_LOG
+            .lock()
+            .unwrap_or_else(|poisoned| poisoned.into_inner()) = log.log;
 
-    let mut support_no_game = false;
-    call_environment(
-        callback,
-        ENVIRONMENT_SET_SUPPORT_NO_GAME,
-        ptr::from_mut(&mut support_no_game).cast(),
-    );
+        let mut support_no_game = false;
+        call_environment(
+            callback,
+            ENVIRONMENT_SET_SUPPORT_NO_GAME,
+            ptr::from_mut(&mut support_no_game).cast(),
+        );
+    });
 }
 
 #[unsafe(no_mangle)]
 pub extern "C" fn retro_set_video_refresh(callback: VideoRefreshCallback) {
-    core().callbacks.video_refresh = callback;
+    guard((), || core().callbacks.video_refresh = callback);
 }
 
 #[unsafe(no_mangle)]
 pub extern "C" fn retro_set_audio_sample(_callback: AudioSampleCallback) {
     // LavaX has no audio hardware; the core only emits silence and does so
     // through the batch callback, so the single-sample callback is unused.
+    guard((), || {});
 }
 
 #[unsafe(no_mangle)]
 pub extern "C" fn retro_set_audio_sample_batch(callback: AudioSampleBatchCallback) {
-    core().callbacks.audio_sample_batch = callback;
+    guard((), || core().callbacks.audio_sample_batch = callback);
 }
 
 #[unsafe(no_mangle)]
 pub extern "C" fn retro_set_input_poll(callback: InputPollCallback) {
-    core().callbacks.input_poll = callback;
+    guard((), || core().callbacks.input_poll = callback);
 }
 
 #[unsafe(no_mangle)]
 pub extern "C" fn retro_set_input_state(callback: InputStateCallback) {
-    core().callbacks.input_state = callback;
+    guard((), || core().callbacks.input_state = callback);
 }
 
 struct FrontendLogger;
@@ -136,132 +158,138 @@ static LOGGER: FrontendLogger = FrontendLogger;
 
 #[unsafe(no_mangle)]
 pub extern "C" fn retro_init() {
-    let _ = log::set_logger(&LOGGER);
-    log::set_max_level(log::LevelFilter::Debug);
+    guard((), || {
+        let _ = log::set_logger(&LOGGER);
+        log::set_max_level(log::LevelFilter::Debug);
+    });
 }
 
 #[unsafe(no_mangle)]
 pub extern "C" fn retro_deinit() {
-    let mut core = core();
-    core.emulator = None;
-    core.video.clear();
+    guard((), || {
+        let mut core = core();
+        core.emulator = None;
+        core.video.clear();
+    });
 }
 
 #[unsafe(no_mangle)]
 pub extern "C" fn retro_api_version() -> u32 {
-    API_VERSION
+    guard(API_VERSION, || API_VERSION)
 }
 
 #[unsafe(no_mangle)]
 /// # Safety
 /// `info` must be null or point to writable `SystemInfo` storage.
 pub unsafe extern "C" fn retro_get_system_info(info: *mut SystemInfo) {
-    let Some(info) = (unsafe { info.as_mut() }) else {
-        return;
-    };
-    *info = SystemInfo {
-        library_name: c"LavaXEmu".as_ptr(),
-        library_version: c"0.1.0".as_ptr(),
-        valid_extensions: c"lav".as_ptr(),
-        need_fullpath: true,
-        block_extract: false,
-    };
+    guard((), || {
+        let Some(info) = (unsafe { info.as_mut() }) else {
+            return;
+        };
+        *info = SystemInfo {
+            library_name: c"LavaXEmu".as_ptr(),
+            library_version: c"0.1.0".as_ptr(),
+            valid_extensions: c"lav".as_ptr(),
+            need_fullpath: true,
+            block_extract: false,
+        };
+    });
 }
 
 #[unsafe(no_mangle)]
 /// # Safety
 /// `info` must be null or point to writable `SystemAvInfo` storage.
 pub unsafe extern "C" fn retro_get_system_av_info(info: *mut SystemAvInfo) {
-    let Some(info) = (unsafe { info.as_mut() }) else {
-        return;
-    };
-    let core = core();
-    let (width, height) = core
-        .emulator
-        .as_ref()
-        .map(|emulator| {
-            (
-                u32::from(emulator.display().width()),
-                u32::from(emulator.display().height()),
-            )
-        })
-        .unwrap_or((240, 160));
-    *info = SystemAvInfo {
-        geometry: GameGeometry {
-            base_width: width,
-            base_height: height,
-            max_width: 320,
-            max_height: 240,
-            aspect_ratio: width as f32 / height as f32,
-        },
-        timing: SystemTiming {
-            fps: FRAMES_PER_SECOND,
-            sample_rate: AUDIO_SAMPLE_RATE,
-        },
-    };
+    guard((), || {
+        let Some(info) = (unsafe { info.as_mut() }) else {
+            return;
+        };
+        let core = core();
+        let (width, height) = core
+            .emulator
+            .as_ref()
+            .map(|emulator| {
+                (
+                    u32::from(emulator.display().width()),
+                    u32::from(emulator.display().height()),
+                )
+            })
+            .unwrap_or((240, 160));
+        *info = SystemAvInfo {
+            geometry: GameGeometry {
+                base_width: width,
+                base_height: height,
+                max_width: 320,
+                max_height: 240,
+                aspect_ratio: width as f32 / height as f32,
+            },
+            timing: SystemTiming {
+                fps: FRAMES_PER_SECOND,
+                sample_rate: AUDIO_SAMPLE_RATE,
+            },
+        };
+    });
 }
 
 #[unsafe(no_mangle)]
 pub extern "C" fn retro_set_controller_port_device(port: u32, device: u32) {
-    if port == 0 && device != DEVICE_NONE && device != DEVICE_JOYPAD {
-        log::warn!("unsupported controller device {device} on port {port}");
-    }
+    guard((), || {
+        if port == 0 && device != DEVICE_NONE && device != DEVICE_JOYPAD {
+            log::warn!("unsupported controller device {device} on port {port}");
+        }
+    });
 }
 
 #[unsafe(no_mangle)]
 pub extern "C" fn retro_get_region() -> u32 {
-    REGION_NTSC
+    guard(REGION_NTSC, || REGION_NTSC)
 }
 
 #[unsafe(no_mangle)]
 /// # Safety
 /// `info` and its referenced fields must remain valid for this call.
 pub unsafe extern "C" fn retro_load_game(info: *const GameInfo) -> bool {
-    let Some(info) = (unsafe { info.as_ref() }) else {
-        return fail("LavaX: the frontend passed no game information.");
-    };
-    // The frontend must accept the video format before any frame is produced;
-    // declaring it up front also keeps it intact when content turns out to be
-    // unreadable.
-    let environment = core().callbacks.environment;
-    if !configure_frontend(environment) {
-        return fail("LavaX: this frontend does not support RGB565 video.");
-    }
-    let Some(path) = game_path(info.path) else {
-        return fail(
-            "LavaX: content has no file path. Only .lav files on the filesystem are supported.",
-        );
-    };
-    let data = match fs::read(&path) {
-        Ok(data) => data,
-        Err(error) => {
-            return fail(&format!(
-                "LavaX: failed to read the content file.
-{error}"
-            ));
+    guard(false, || {
+        let Some(info) = (unsafe { info.as_ref() }) else {
+            return fail("LavaX: the frontend passed no game information.");
+        };
+        // The frontend must accept the video format before any frame is
+        // produced; declaring it up front also keeps it intact when content
+        // turns out to be unreadable.
+        let environment = core().callbacks.environment;
+        if !configure_frontend(environment) {
+            return fail("LavaX: this frontend does not support RGB565 video.");
         }
-    };
-    let program = match Program::load(&data) {
-        Ok(program) => program,
-        Err(error) => {
-            return fail(&format!(
-                "LavaX: failed to load this program.
-{error}
+        let Some(path) = game_path(info.path) else {
+            return fail(
+                "LavaX: content has no file path. Only .lav files on the filesystem are supported.",
+            );
+        };
+        let data = match fs::read(&path) {
+            Ok(data) => data,
+            Err(error) => {
+                return fail(&format!("LavaX: failed to read the content file.\n{error}"));
+            }
+        };
+        let program = match Program::load(&data) {
+            Ok(program) => program,
+            Err(error) => {
+                return fail(&format!(
+                    "LavaX: failed to load this program.\n{error}\n\nSupported content: .lav files."
+                ));
+            }
+        };
 
-Supported content: .lav files."
-            ));
+        let mut emulator = Emulator::new(program);
+        if let Err(error) = import_companion_files(&path, emulator.files_mut()) {
+            log::warn!("failed to import companion files: {error}");
         }
-    };
 
-    let mut emulator = Emulator::new(program);
-    if let Err(error) = import_companion_files(&path, emulator.files_mut()) {
-        log::warn!("failed to import companion files: {error}");
-    }
-
-    let mut core = core();
-    core.video.clear();
-    core.emulator = Some(emulator);
-    true
+        let mut core = core();
+        core.video.clear();
+        core.emulator = Some(emulator);
+        true
+    })
 }
 
 #[unsafe(no_mangle)]
@@ -270,149 +298,169 @@ pub extern "C" fn retro_load_game_special(
     _info: *const GameInfo,
     _num_info: usize,
 ) -> bool {
-    false
+    guard(false, || false)
 }
 
 #[unsafe(no_mangle)]
 pub extern "C" fn retro_unload_game() {
-    let mut core = core();
-    core.emulator = None;
-    core.video.clear();
+    guard((), || {
+        let mut core = core();
+        core.emulator = None;
+        core.video.clear();
+    });
 }
 
 #[unsafe(no_mangle)]
 pub extern "C" fn retro_run() {
-    let mut core = core();
-    if let Some(callback) = core.callbacks.input_poll {
-        unsafe { callback() };
-    }
-    let input_state = core.callbacks.input_state;
-    let keys = read_joypad(input_state);
+    guard((), || {
+        let mut core = core();
+        if let Some(callback) = core.callbacks.input_poll {
+            unsafe { callback() };
+        }
+        let input_state = core.callbacks.input_state;
+        let keys = read_joypad(input_state);
 
-    if core.emulator.is_none() {
-        return;
-    }
-    let mut video = std::mem::take(&mut core.video);
-    let emulator = core.emulator.as_mut().expect("emulator was checked");
-    emulator.input_mut().set_keys(keys);
-    let pointer = read_pointer(
-        input_state,
-        emulator.display().width(),
-        emulator.display().height(),
-    );
-    emulator.input_mut().set_pointer(pointer);
-    if let Err(error) = emulator.run_frame() {
-        log::error!("frame execution failed: {error}");
-    }
+        if core.emulator.is_none() {
+            return;
+        }
+        let mut video = std::mem::take(&mut core.video);
+        let emulator = core.emulator.as_mut().expect("emulator was checked");
+        emulator.input_mut().set_keys(keys);
+        let pointer = read_pointer(
+            input_state,
+            emulator.display().width(),
+            emulator.display().height(),
+        );
+        emulator.input_mut().set_pointer(pointer);
+        if let Err(error) = emulator.run_frame() {
+            log::error!("frame execution failed: {error}");
+        }
 
-    let width = u32::from(emulator.display().width());
-    let height = u32::from(emulator.display().height());
-    let pixels = usize::try_from(width * height).expect("display dimensions fit usize");
-    if video.len() != pixels {
-        video.resize(pixels, 0);
-    }
-    emulator.display().to_rgb565(&mut video);
-    core.video = video;
+        let width = u32::from(emulator.display().width());
+        let height = u32::from(emulator.display().height());
+        let pixels = usize::try_from(width * height).expect("display dimensions fit usize");
+        if video.len() != pixels {
+            video.resize(pixels, 0);
+        }
+        emulator.display().to_rgb565(&mut video);
+        core.video = video;
 
-    if let Some(callback) = core.callbacks.video_refresh {
-        unsafe {
-            callback(
-                core.video.as_ptr().cast(),
-                width,
-                height,
-                width as usize * size_of::<u16>(),
-            )
-        };
-    }
-    emit_silence(&core.callbacks);
+        if let Some(callback) = core.callbacks.video_refresh {
+            unsafe {
+                callback(
+                    core.video.as_ptr().cast(),
+                    width,
+                    height,
+                    width as usize * size_of::<u16>(),
+                )
+            };
+        }
+        emit_silence(&core.callbacks);
+    });
 }
 
 #[unsafe(no_mangle)]
 pub extern "C" fn retro_reset() {
-    if let Some(emulator) = core().emulator.as_mut() {
-        emulator.reset();
-    }
+    guard((), || {
+        if let Some(emulator) = core().emulator.as_mut() {
+            emulator.reset();
+        }
+    });
 }
 
 #[unsafe(no_mangle)]
 pub extern "C" fn retro_serialize_size() -> usize {
-    if core().emulator.is_some() {
-        SERIALIZED_STATE_CAPACITY
-    } else {
-        0
-    }
+    guard(0, || {
+        if core().emulator.is_some() {
+            SERIALIZED_STATE_CAPACITY
+        } else {
+            0
+        }
+    })
 }
 
 #[unsafe(no_mangle)]
 /// # Safety
 /// `data` must point to at least `size` writable bytes.
 pub unsafe extern "C" fn retro_serialize(data: *mut c_void, size: usize) -> bool {
-    if data.is_null() || size < SERIALIZED_STATE_CAPACITY {
-        return false;
-    }
-    let core = core();
-    let Some(emulator) = core.emulator.as_ref() else {
-        return false;
-    };
-    let state = match emulator.save_state() {
-        Ok(state) => state,
-        Err(error) => {
-            log::error!("failed to serialize state: {error}");
+    guard(false, || {
+        if data.is_null() || size < SERIALIZED_STATE_CAPACITY {
             return false;
         }
-    };
-    if state.len() > size {
-        return false;
-    }
-    let output = unsafe { std::slice::from_raw_parts_mut(data.cast::<u8>(), size) };
-    output.fill(0);
-    output[..state.len()].copy_from_slice(&state);
-    true
+        let core = core();
+        let Some(emulator) = core.emulator.as_ref() else {
+            return false;
+        };
+        let state = match emulator.save_state() {
+            Ok(state) => state,
+            Err(error) => {
+                log::error!("failed to serialize state: {error}");
+                return false;
+            }
+        };
+        if state.len() > size {
+            return false;
+        }
+        let output = unsafe { std::slice::from_raw_parts_mut(data.cast::<u8>(), size) };
+        output.fill(0);
+        output[..state.len()].copy_from_slice(&state);
+        true
+    })
 }
 
 #[unsafe(no_mangle)]
 /// # Safety
 /// `data` must point to at least `size` readable bytes.
 pub unsafe extern "C" fn retro_unserialize(data: *const c_void, size: usize) -> bool {
-    if data.is_null() || size < 14 {
-        return false;
-    }
-    let input = unsafe { std::slice::from_raw_parts(data.cast::<u8>(), size) };
-    let mut core = core();
-    let Some(emulator) = core.emulator.as_mut() else {
-        return false;
-    };
-    emulator.load_state(input).is_ok()
+    guard(false, || {
+        if data.is_null() || size < 14 {
+            return false;
+        }
+        let input = unsafe { std::slice::from_raw_parts(data.cast::<u8>(), size) };
+        let mut core = core();
+        let Some(emulator) = core.emulator.as_mut() else {
+            return false;
+        };
+        emulator.load_state(input).is_ok()
+    })
 }
 
 #[unsafe(no_mangle)]
-pub extern "C" fn retro_cheat_reset() {}
+pub extern "C" fn retro_cheat_reset() {
+    guard((), || {});
+}
 
 #[unsafe(no_mangle)]
-pub extern "C" fn retro_cheat_set(_index: u32, _enabled: bool, _code: *const c_char) {}
+pub extern "C" fn retro_cheat_set(_index: u32, _enabled: bool, _code: *const c_char) {
+    guard((), || {});
+}
 
 #[unsafe(no_mangle)]
 pub extern "C" fn retro_get_memory_data(id: u32) -> *mut c_void {
-    if id != MEMORY_SYSTEM_RAM {
-        return ptr::null_mut();
-    }
-    core()
-        .emulator
-        .as_mut()
-        .map_or(ptr::null_mut(), |emulator| {
-            emulator.vm_mut().memory_mut().as_mut_ptr().cast()
-        })
+    guard(ptr::null_mut(), || {
+        if id != MEMORY_SYSTEM_RAM {
+            return ptr::null_mut();
+        }
+        core()
+            .emulator
+            .as_mut()
+            .map_or(ptr::null_mut(), |emulator| {
+                emulator.vm_mut().memory_mut().as_mut_ptr().cast()
+            })
+    })
 }
 
 #[unsafe(no_mangle)]
 pub extern "C" fn retro_get_memory_size(id: u32) -> usize {
-    if id != MEMORY_SYSTEM_RAM {
-        return 0;
-    }
-    core()
-        .emulator
-        .as_ref()
-        .map_or(0, |emulator| emulator.vm().memory().len())
+    guard(0, || {
+        if id != MEMORY_SYSTEM_RAM {
+            return 0;
+        }
+        core()
+            .emulator
+            .as_ref()
+            .map_or(0, |emulator| emulator.vm().memory().len())
+    })
 }
 
 /// Report a load failure to both the log and the frontend's on-screen message.
@@ -650,6 +698,11 @@ mod tests {
         assert!(unsafe { retro_unserialize(state.as_ptr().cast(), state.len()) });
         retro_unload_game();
         fs::remove_file(path.to_str().unwrap()).unwrap();
+    }
+
+    #[test]
+    fn catches_panics_at_the_abi_boundary() {
+        assert_eq!(guard(7, || panic!("boom")), 7);
     }
 
     #[test]
