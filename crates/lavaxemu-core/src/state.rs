@@ -3,7 +3,7 @@ use crc32fast::hash;
 use crate::{Emulator, Error, GUEST_MEMORY_SIZE, Result};
 
 const STATE_MAGIC: [u8; 4] = *b"LXST";
-const STATE_VERSION: u16 = 2;
+const STATE_VERSION: u16 = 4;
 const STATE_HEADER_SIZE: usize = 14;
 const MAX_STATE_SIZE: usize = 64 * 1024 * 1024;
 
@@ -34,7 +34,7 @@ impl Emulator {
         }
 
         let version = u16::from_le_bytes([state[4], state[5]]);
-        if version != STATE_VERSION {
+        if !(2..=STATE_VERSION).contains(&version) {
             return Err(Error::InvalidSaveState(format!(
                 "unsupported version {version}"
             )));
@@ -52,7 +52,26 @@ impl Emulator {
             return Err(Error::InvalidSaveState("checksum mismatch".to_owned()));
         }
 
-        let restored: Self = bincode::deserialize(payload)
+        let mut upgraded = Vec::new();
+        let payload = if version < STATE_VERSION {
+            upgraded.extend_from_slice(payload);
+            if version == 2 {
+                let defaults = bincode::serialize(&crate::filelist::FileListState::default())
+                    .map_err(|error| Error::InvalidSaveState(error.to_string()))?;
+                upgraded.extend(defaults);
+            }
+            // Direct graphics memory was appended to the version 3 layout.
+            upgraded.push(0);
+            if upgraded.len() > MAX_STATE_SIZE {
+                return Err(Error::InvalidSaveState(
+                    "state exceeds size limit".to_owned(),
+                ));
+            }
+            upgraded.as_slice()
+        } else {
+            payload
+        };
+        let mut restored: Self = bincode::deserialize(payload)
             .map_err(|error| Error::InvalidSaveState(error.to_string()))?;
         if restored.vm.program() != self.vm.program() {
             return Err(Error::InvalidSaveState(
@@ -67,7 +86,20 @@ impl Emulator {
                 "state contains invalid machine dimensions".to_owned(),
             ));
         }
+        if restored.legacy_graphics_memory
+            && (restored.display.width() != 160 || restored.display.height() != 80)
+        {
+            return Err(Error::InvalidSaveState(
+                "invalid graphics memory dimensions".to_owned(),
+            ));
+        }
+        if restored.file_list.destination.is_some() && !restored.file_list.selection_is_valid() {
+            return Err(Error::InvalidSaveState(
+                "invalid file-list selection".to_owned(),
+            ));
+        }
 
+        restored.vm.graphics_memory_dirty = restored.legacy_graphics_memory;
         *self = restored;
         Ok(())
     }
@@ -114,5 +146,43 @@ mod tests {
         let valid_state = emulator.save_state().unwrap();
         let mut other = Emulator::new(program(0x05));
         assert!(other.load_state(&valid_state).is_err());
+    }
+
+    #[test]
+    fn loads_version_two_states_with_default_file_list_settings() {
+        let mut emulator = Emulator::new(program(0x40));
+        emulator.vm_mut().memory_mut()[0x100] = 42;
+        emulator.set_command_line(b"legacy command".to_vec());
+        let state = emulator.save_state().unwrap();
+        let suffix = bincode::serialize(&crate::filelist::FileListState::default()).unwrap();
+        let payload = &state[STATE_HEADER_SIZE..state.len() - suffix.len() - 1];
+        let mut legacy = STATE_MAGIC.to_vec();
+        legacy.extend_from_slice(&2u16.to_le_bytes());
+        legacy.extend_from_slice(&(payload.len() as u32).to_le_bytes());
+        legacy.extend_from_slice(&hash(payload).to_le_bytes());
+        legacy.extend_from_slice(payload);
+        emulator.reset();
+        emulator.load_state(&legacy).unwrap();
+        assert_eq!(emulator.vm().memory()[0x100], 42);
+        assert_eq!(emulator.command_line, b"legacy command");
+        assert!(emulator.file_list.destination.is_none());
+        assert_eq!(emulator.file_list.flags, 0);
+        assert!(!emulator.legacy_graphics_memory);
+    }
+
+    #[test]
+    fn loads_version_three_states_without_direct_graphics_memory() {
+        let mut emulator = Emulator::new(program(0x40));
+        emulator.file_list.flags = 3;
+        let state = emulator.save_state().unwrap();
+        let payload = &state[STATE_HEADER_SIZE..state.len() - 1];
+        let mut legacy = STATE_MAGIC.to_vec();
+        legacy.extend_from_slice(&3u16.to_le_bytes());
+        legacy.extend_from_slice(&(payload.len() as u32).to_le_bytes());
+        legacy.extend_from_slice(&hash(payload).to_le_bytes());
+        legacy.extend_from_slice(payload);
+        emulator.load_state(&legacy).unwrap();
+        assert_eq!(emulator.file_list.flags, 3);
+        assert!(!emulator.legacy_graphics_memory);
     }
 }

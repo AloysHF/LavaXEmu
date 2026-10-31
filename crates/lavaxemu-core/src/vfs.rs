@@ -53,7 +53,7 @@ impl VirtualFileSystem {
     }
 
     pub fn file(&self, path: &str) -> Option<&[u8]> {
-        let path = self.normalize(path)?;
+        let path = self.resolve_file(path)?;
         self.files.get(&path).map(|entry| entry.data.as_slice())
     }
 
@@ -104,7 +104,7 @@ impl VirtualFileSystem {
     }
 
     pub fn delete(&mut self, path: &str) -> bool {
-        let Some(path) = self.normalize(path) else {
+        let Some(path) = self.resolve_file(path) else {
             return false;
         };
         if self.files.remove(&path).is_some() {
@@ -157,7 +157,7 @@ impl VirtualFileSystem {
     }
 
     pub fn open(&mut self, path: &str, mode: &str) -> Option<u8> {
-        let path = self.normalize(path)?;
+        let path = self.resolve_file(path)?;
         let slot = self.handles.iter().position(Option::is_none)?;
         let plus = mode.contains('+');
         let readable = mode.starts_with('r') || plus;
@@ -270,6 +270,21 @@ impl VirtualFileSystem {
         true
     }
 
+    fn resolve_file(&self, path: &str) -> Option<String> {
+        let path = self.normalize(path)?;
+        if !self.files.contains_key(&path)
+            && let Some(relative) = path
+                .strip_prefix("/lavadata/")
+                .or_else(|| path.strip_prefix("/gvmdata/"))
+        {
+            let flat = format!("/{relative}");
+            if self.files.contains_key(&flat) {
+                return Some(flat);
+            }
+        }
+        Some(path)
+    }
+
     fn normalize(&self, path: &str) -> Option<String> {
         let path = path.replace('\\', "/").to_lowercase();
         let mut components = if path.starts_with('/') {
@@ -353,6 +368,37 @@ mod tests {
         let handle = fs.open("save.dat", "ab").unwrap();
         fs.write(handle, &[7]).unwrap();
         assert_eq!(fs.file("save.dat"), Some([1, 2, 9, 8, 7].as_slice()));
+    }
+
+    #[test]
+    fn opens_flat_companion_data_at_the_device_lavadata_path() {
+        let mut fs = VirtualFileSystem::default();
+        fs.import_file("/SCC.dat", vec![1, 2, 3]);
+        let handle = fs.open("\\LavaData\\SCC.DAT", "r+").unwrap();
+        assert_eq!(fs.read(handle, 2).unwrap(), [1, 2]);
+        fs.write(handle, &[9]).unwrap();
+        fs.close(handle);
+        assert_eq!(fs.file("/LavaData/SCC.dat"), Some([1, 2, 9].as_slice()));
+        assert_eq!(fs.take_dirty_files(), [("/scc.dat".into(), vec![1, 2, 9])]);
+
+        fs.import_file("/LavaData/SCC.dat", vec![4, 5]);
+        let handle = fs.open("/LavaData/SCC.dat", "r").unwrap();
+        assert_eq!(fs.read(handle, 2).unwrap(), [4, 5]);
+        assert_eq!(fs.file("/SCC.dat"), Some([1, 2, 9].as_slice()));
+        assert!(fs.file("/other/SCC.dat").is_none());
+        assert!(fs.open("/LavaData/../../SCC.dat", "r").is_none());
+    }
+
+    #[test]
+    fn opens_legacy_gvmdata_companions_without_overriding_real_files() {
+        let mut fs = VirtualFileSystem::default();
+        fs.import_file("Psheep.dat", vec![1, 2, 3]);
+        let handle = fs.open("/GVMdata/Psheep.dat", "r").unwrap();
+        assert_eq!(fs.read(handle, 3).unwrap(), [1, 2, 3]);
+        fs.close(handle);
+        fs.import_file("/GVMdata/Psheep.dat", vec![9]);
+        assert_eq!(fs.file("/GVMdata/Psheep.dat"), Some([9].as_slice()));
+        assert!(fs.file("/other/Psheep.dat").is_none());
     }
 
     #[test]

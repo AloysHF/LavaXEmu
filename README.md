@@ -12,7 +12,7 @@
 </p>
 
 LavaXEmu is a cross-platform LavaX virtual machine written in Rust. It loads
-`.lav` game programs and executes them through a pure-Rust bytecode
+`.lav` game programs and `.pac` packages and executes them through a pure-Rust bytecode
 interpreter, providing:
 
 - Standalone desktop emulator with window display
@@ -47,6 +47,31 @@ being progressively improved.
   [online player](https://AloysHF.github.io/LavaXEmu/play.html) that runs `.lav`
   programs without uploading them
 
+Compatibility evidence is tracked in the [workflow audit](docs/Game-Corpus-Audit.md).
+Five in a Row v0.80 has reproducible monochrome and grayscale workflows for
+winning, undo/redo, record persistence, restarting and confirmed exit.
+Five Tigers has complete-round workflows for alternating play, all five
+scoring categories, restarting and exit. Yahtzee has a full-game workflow
+covering held dice, reroll limits, all 14 scoring choices and final settlement.
+Fairy Fate has LAV and PAC workflows covering map movement, saved progress
+restoration, combat damage and confirmed defeat exit.
+Arbitrary Picture Puzzle has a workflow completing all four pictures with
+tile-swap checks, reconstructed image checks and normal completion exit.
+Russian Poker has a workflow for movement boundaries, accelerated falling,
+card locking, sampled scoring, stack overflow and Escape termination.
+Tetris v1.3 has monochrome and grayscale workflows for rotation, pause/resume,
+line clearing, scoring and ranking persistence. A fingerprinted compatibility
+repair prevents corrupted ranking names in the monochrome release.
+Adventure Island IV has monochrome and grayscale LAV/PAC workflows completing
+the first stage, exercising damage and respawn, and restoring custom controls.
+Battle on Namek has a workflow covering incorrect guesses, restarting after
+three misses, all five stages and normal victory exit. A fingerprinted repair
+restores new-game counters and makes its ending reachable.
+Volley Shooting v1.5 has a workflow for shooting goals, goalkeeper actions and
+record restoration. A fingerprinted repair preserves the separate record slots.
+Fighter of the Phoenix has a workflow covering movement, shooting, bombing,
+pause/resume, defeat/retry and defeating the first boss to enter stage two.
+
 ## Usage
 
 ### Standalone Mode
@@ -70,7 +95,7 @@ supported platforms, RetroPad mapping, and features.
 
 ### Browser (EmulatorJS)
 
-Open <https://AloysHF.github.io/LavaXEmu/play.html>, then pick a `.lav` program
+Open <https://AloysHF.github.io/LavaXEmu/play.html>, then pick a `.lav` program, a `.pac` package,
 or a `.zip` that bundles it with its companion data files. It runs locally in
 the browser through the LavaXEmu WebAssembly core; nothing is uploaded. See the
 [EmulatorJS Core](docs/EmulatorJS-Core.md) guide for embedding the core in your
@@ -153,7 +178,9 @@ See [Architecture](docs/architecture.md) for implementation details.
 | --- | --- |
 | Direction keys | Arrow keys |
 | A–Z | A–Z |
-| B | Space or 1 |
+| B | B or 1 |
+| Space | Space |
+| 0 / period | 0 / period |
 | N | 2 |
 | M | 3 |
 | G | 4 |
@@ -177,15 +204,13 @@ The window also accepts mouse clicks as pointer input on the 160×240 screen.
 
 ## Game Compatibility
 
-The emulator supports LavaX bytecode programs in `.lav` format with 160×240
-display. Compatibility testing is in progress.
+The emulator loads `.lav` programs and uncompressed `.pac` packages. Display
+size and graphics mode come from the program header. Compatibility testing
+is in progress.
 
-| Status | Count |
-|--------|-------|
-| ✅ Pass | — |
-| ❌ Fail | — |
-
-For the full game list with screenshots, see [Game Compatibility](docs/Game-Compatibility.md).
+For verified operations and remaining entries, see the [Corpus Workflow Audit](docs/Game-Corpus-Audit.md)
+and [Game Fixes](docs/Game-Fixes.md). The [Game Compatibility gallery](docs/Game-Compatibility.md)
+contains historical startup screenshots.
 
 ## Testing
 

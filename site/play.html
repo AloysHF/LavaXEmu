@@ -193,7 +193,7 @@
   <main class="play-main">
     <h1 class="play-title">Play <span>LavaX</span> Online</h1>
     <p class="play-subtitle">
-      Pick a <code>.lav</code> program, or a <code>.zip</code> that also contains its
+      Pick a <code>.lav</code> program, a <code>.pac</code> package, or a <code>.zip</code> that also contains its
       companion data files. <strong>EmulatorJS</strong> runs it locally in your browser
       through the LavaXEmu WebAssembly core.
     </p>
@@ -209,13 +209,13 @@
       <div id="play-picker" class="play-overlay">
         <h2>Choose a program</h2>
         <p>
-          A bare <code>.lav</code> file plays on its own. Programs that load data files
-          must be zipped with them; keep the files in a folder inside the archive so
+          A <code>.pac</code> package includes its data files. For a loose
+          <code>.lav</code> program, bundle any companion files in a zip; keep them in a folder so
           their directory layout is preserved.
         </p>
         <label class="btn">
           <span>Choose Program</span>
-          <input id="game-file" type="file" accept=".lav,.zip,application/zip,application/octet-stream" hidden>
+          <input id="game-file" type="file" accept=".lav,.pac,.zip,application/zip,application/octet-stream" hidden>
         </label>
         <p id="play-picker-error" class="play-picker-error" hidden></p>
         <p class="play-picker-hint">
@@ -259,7 +259,7 @@
       'use strict';
 
       var RUNTIME_PATH = 'data/';
-      var GAME_EXTENSIONS = /\.(lav|zip)$/i;
+      var GAME_EXTENSIONS = /\.(lav|pac|zip)$/i;
       var stage = document.querySelector('.play-stage');
       var status = document.getElementById('play-status');
       var picker = document.getElementById('play-picker');
@@ -308,7 +308,7 @@
       function pick(file) {
         if (!file) return;
         if (!GAME_EXTENSIONS.test(file.name)) {
-          pickerError.textContent = 'Only .lav programs or .zip archives are supported.';
+          pickerError.textContent = 'Only .lav programs, .pac packages or .zip archives are supported.';
           show(pickerError);
           return;
         }

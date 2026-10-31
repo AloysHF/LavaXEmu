@@ -6,11 +6,26 @@ use serde_big_array::BigArray;
 /// the reference LavaX VM. Layout: 128x(6x12) ASCII, 128x(8x16) ASCII,
 /// GB2312 12x12 and GB2312 16x16.
 const LVM_FONT: &[u8] = include_bytes!("../assets/LVM.bin");
+const WQX_ICONS: &[u8] = include_bytes!("../assets/wqx-icons-16.bin");
 const FONT_ASCII6: usize = 0;
 const FONT_ASCII8: usize = 1536;
 const FONT_GB12: usize = FONT_ASCII8 + 2048;
 const FONT_GB16: usize = FONT_GB12 + 81 * 94 * 24;
 const FONT_GB_COUNT: usize = 81 * 94;
+
+const MONO_PIXELS: [[u8; 8]; 256] = {
+    let mut pixels = [[0; 8]; 256];
+    let mut byte = 0;
+    while byte < 256 {
+        let mut bit = 0;
+        while bit < 8 {
+            pixels[byte][bit] = ((byte >> (7 - bit)) & 1) as u8;
+            bit += 1;
+        }
+        byte += 1;
+    }
+    pixels
+};
 
 enum GlyphOrder {
     Ascii,
@@ -36,6 +51,13 @@ fn font_ascii(character: u8, large: bool) -> (&'static [u8], u16, u16) {
 }
 
 fn font_gbk(first: u8, second: u8, large: bool) -> Option<(&'static [u8], u16, u16)> {
+    if large && (0xf8..=0xfd).contains(&first) && (0xa1..=0xfe).contains(&second) {
+        let index = usize::from(first - 0xf8) * 94 + usize::from(second - 0xa1);
+        let offset = index * 32;
+        return WQX_ICONS
+            .get(offset..offset + 32)
+            .map(|glyph| (glyph, 16, 16));
+    }
     if !(0xa1..=0xf7).contains(&first) || !(0xa1..=0xfe).contains(&second) {
         return None;
     }
@@ -512,6 +534,32 @@ impl Display {
         let operation = mode & 7;
         let invert_source = mode & 8 != 0 || operation == 2;
         let max_color = self.max_color();
+        if self.graphics_mode == GraphicsMode::Mono
+            && matches!(operation, 0 | 1)
+            && !invert_source
+            && !mirror_horizontal
+            && width > 0
+            && width.is_multiple_of(8)
+            && x >= 0
+            && y >= 0
+            && x <= i32::from(self.width) - i32::from(width)
+            && y <= i32::from(self.height) - i32::from(height)
+            && source.len() >= stride * usize::from(height)
+        {
+            let screen_width = usize::from(self.width);
+            let buffer = self.buffer_mut(target);
+            for row in 0..usize::from(height) {
+                let start = (y as usize + row) * screen_width + x as usize;
+                let destination = &mut buffer[start..start + usize::from(width)];
+                for (&byte, pixels) in source[row * stride..(row + 1) * stride]
+                    .iter()
+                    .zip(destination.as_chunks_mut::<8>().0.iter_mut())
+                {
+                    pixels.copy_from_slice(&MONO_PIXELS[usize::from(byte)]);
+                }
+            }
+            return;
+        }
         for row in 0..usize::from(height) {
             let row_start = row.saturating_mul(stride);
             if row_start.saturating_add(stride) > source.len() {
@@ -570,6 +618,31 @@ impl Display {
             GraphicsMode::Color8 => usize::from(width),
         };
         let mut output = vec![0; stride * usize::from(height)];
+        if self.graphics_mode == GraphicsMode::Mono
+            && width > 0
+            && width.is_multiple_of(8)
+            && x >= 0
+            && y >= 0
+            && x <= i32::from(self.width) - i32::from(width)
+            && y <= i32::from(self.height) - i32::from(height)
+        {
+            let buffer = self.buffer(target);
+            let screen_width = usize::from(self.width);
+            for row in 0..usize::from(height) {
+                let start = (y as usize + row) * screen_width + x as usize;
+                for (column, pixels) in buffer[start..start + usize::from(width)]
+                    .as_chunks::<8>()
+                    .0
+                    .iter()
+                    .enumerate()
+                {
+                    output[row * stride + column] = pixels
+                        .iter()
+                        .fold(0, |packed, pixel| (packed << 1) | (pixel & 1));
+                }
+            }
+            return output;
+        }
         for row in 0..usize::from(height) {
             for column in 0..usize::from(width) {
                 let color = self
@@ -764,6 +837,32 @@ mod tests {
     }
 
     #[test]
+    fn expands_all_monochrome_byte_patterns_without_touching_neighboring_pixels() {
+        let source: Vec<u8> = (0..=255).collect();
+        for target in [BufferTarget::Front, BufferTarget::Back] {
+            for mode in [0, 1] {
+                let mut display = Display::new(160, 80, GraphicsMode::Mono);
+                display.blit(target, 8, 4, 128, 16, &source, mode, false);
+                assert_eq!(display.capture(target, 8, 4, 128, 16), source);
+                for (row, &packed) in source.iter().enumerate() {
+                    for bit in 0..8 {
+                        assert_eq!(
+                            display.get_pixel(
+                                target,
+                                8 + (row % 16 * 8 + bit) as i32,
+                                4 + (row / 16) as i32
+                            ),
+                            Some((packed >> (7 - bit)) & 1)
+                        );
+                    }
+                }
+                assert_eq!(display.get_pixel(target, 7, 4), Some(0));
+                assert_eq!(display.get_pixel(target, 136, 19), Some(0));
+            }
+        }
+    }
+
+    #[test]
     fn applies_palette_entries_from_rgba_data() {
         let mut display = Display::new(240, 160, GraphicsMode::Color8);
         assert_eq!(
@@ -786,6 +885,32 @@ mod tests {
             DrawOperation::Set,
         );
         assert!(display.indexed_frame().iter().any(|&pixel| pixel != 0));
+    }
+
+    #[test]
+    fn renders_the_device_heart_without_consuming_the_following_ascii() {
+        let mut display = Display::new(160, 80, GraphicsMode::Mono);
+        display.draw_text(
+            BufferTarget::Front,
+            0,
+            0,
+            b"\xf8\xa8A",
+            true,
+            DrawOperation::Set,
+        );
+        let heart = [
+            0x00, 0x00, 0x00, 0x00, 0x0c, 0x60, 0x1e, 0xf0, 0x3f, 0xd8, 0x3f, 0xf8, 0x3f, 0xd8,
+            0x1f, 0x90, 0x1f, 0xb0, 0x0f, 0xe0, 0x07, 0xc0, 0x03, 0x80, 0x01, 0x00, 0x00, 0x00,
+            0x00, 0x00, 0x00, 0x00,
+        ];
+        assert_eq!(display.capture(BufferTarget::Front, 0, 0, 16, 16), heart);
+        display.draw_text(BufferTarget::Back, 0, 0, b"A", true, DrawOperation::Set);
+        assert_eq!(
+            display.capture(BufferTarget::Front, 16, 0, 8, 16),
+            display.capture(BufferTarget::Back, 0, 0, 8, 16)
+        );
+        assert!(font_gbk(0xfd, 0xd9, true).is_some());
+        assert!(font_gbk(0xfd, 0xda, true).is_none());
     }
 
     #[test]

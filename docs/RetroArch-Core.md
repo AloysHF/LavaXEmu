@@ -3,6 +3,12 @@
 This guide covers installing and using the LavaXEmu libretro core with
 RetroArch.
 
+Content can be a `.lav` program or a `.pac` package. PAC loading launches its
+first LAV program with all embedded companion files available in the virtual filesystem.
+For a loose LAV, matching PAC files beside the program or in its parent directory
+can supply missing resources. The program bytes must match exactly, and existing
+companion files take priority over package defaults.
+
 ## Supported Platforms
 
 The core builds as a standard libretro dynamic library and runs on any
@@ -61,7 +67,10 @@ The core maps RetroPad inputs to LavaX keys:
 | L | Page Up (19) |
 | R | Page Down (14) |
 
-Keyboard input is also available when using RetroArch with a keyboard.
+Keyboard input is polled alongside the joypad. Letters, Enter, Escape, Space,
+arrows, page keys, Shift, and F1–F6 use the same guest codes as the standalone
+emulator. Space sends a real space; B or physical 1 sends B. Physical 2–9 retain
+the N/M/G/H/J/T/Y/U aliases, and 0 and period are available for text input.
 
 ## Features
 

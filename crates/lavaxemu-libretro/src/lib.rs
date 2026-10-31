@@ -9,7 +9,7 @@ use std::{
 };
 
 use ffi::*;
-use lavaxemu_core::{Emulator, PointerState, Program};
+use lavaxemu_core::{Emulator, PointerState};
 
 const FRAMES_PER_SECOND: f64 = 60.0;
 const AUDIO_SAMPLE_RATE: f64 = 44_100.0;
@@ -111,7 +111,7 @@ pub unsafe extern "C" fn retro_get_system_info(info: *mut SystemInfo) {
     *info = SystemInfo {
         library_name: c"LavaXEmu".as_ptr(),
         library_version: c"0.1.0".as_ptr(),
-        valid_extensions: c"lav".as_ptr(),
+        valid_extensions: c"lav|pac".as_ptr(),
         need_fullpath: true,
         block_extract: false,
     };
@@ -152,7 +152,7 @@ pub unsafe extern "C" fn retro_get_system_av_info(info: *mut SystemAvInfo) {
 
 #[unsafe(no_mangle)]
 pub extern "C" fn retro_set_controller_port_device(port: u32, device: u32) {
-    if port == 0 && device != DEVICE_NONE && device != DEVICE_JOYPAD {
+    if port == 0 && !matches!(device, DEVICE_NONE | DEVICE_JOYPAD | DEVICE_KEYBOARD) {
         log::warn!("unsupported controller device {device} on port {port}");
     }
 }
@@ -177,19 +177,23 @@ pub unsafe extern "C" fn retro_load_game(info: *const GameInfo) -> bool {
             return false;
         }
     };
-    let program = match Program::load(&data) {
-        Ok(program) => program,
+    let mut emulator = match Emulator::load_content(&data) {
+        Ok(emulator) => emulator,
         Err(error) => {
             log::error!("failed to load content: {error}");
             return false;
         }
     };
 
-    let mut emulator = Emulator::new(program);
     if let Some(path) = path.as_deref()
         && let Err(error) = import_companion_files(path, emulator.files_mut())
     {
         log::warn!("failed to import companion files: {error}");
+    }
+    if let Some(path) = path.as_deref()
+        && !data.starts_with(b"PAC ")
+    {
+        import_packaged_resources(path, &mut emulator);
     }
 
     let mut core = core();
@@ -224,7 +228,8 @@ pub extern "C" fn retro_run() {
         unsafe { callback() };
     }
     let input_state = core.callbacks.input_state;
-    let keys = read_joypad(input_state);
+    let mut keys = read_joypad(input_state);
+    keys.extend(read_keyboard(input_state));
 
     if core.emulator.is_none() {
         return;
@@ -448,6 +453,51 @@ fn read_joypad(callback: InputStateCallback) -> Vec<u8> {
         .collect()
 }
 
+fn read_keyboard(callback: InputStateCallback) -> Vec<u8> {
+    let Some(callback) = callback else {
+        return Vec::new();
+    };
+    let mut keys = Vec::new();
+    let mut poll = |physical, guest| {
+        if unsafe { callback(0, DEVICE_KEYBOARD, 0, physical) } != 0 {
+            keys.push(guest);
+        }
+    };
+    for letter in b'a'..=b'z' {
+        poll(u32::from(letter), letter);
+    }
+    for (index, guest) in b"bnmghjtyu".iter().copied().enumerate() {
+        poll(u32::from(b'1') + index as u32, guest);
+    }
+    // Physical IDs follow retro_key in libretro.h, not platform virtual keys.
+    for (physical, guest) in [
+        (8, 14),
+        (9, 19),
+        (13, 13),
+        (27, 27),
+        (32, b' '),
+        (46, b'.'),
+        (48, b'0'),
+        (273, 20),
+        (274, 21),
+        (275, 22),
+        (276, 23),
+        (280, 19),
+        (281, 14),
+        (282, 28),
+        (283, 29),
+        (284, 30),
+        (285, 31),
+        (286, 25),
+        (287, 18),
+        (303, 26),
+        (304, 26),
+    ] {
+        poll(physical, guest);
+    }
+    keys
+}
+
 fn read_pointer(callback: InputStateCallback, width: u16, height: u16) -> Option<PointerState> {
     let callback = callback?;
     let pressed = unsafe { callback(0, DEVICE_POINTER, 0, POINTER_PRESSED) != 0 };
@@ -484,9 +534,11 @@ fn game_path(path: *const c_char) -> Option<PathBuf> {
     if path.is_null() {
         return None;
     }
-    Some(PathBuf::from(
-        unsafe { CStr::from_ptr(path) }.to_string_lossy().as_ref(),
-    ))
+    let path = unsafe { CStr::from_ptr(path) };
+    if path.is_empty() {
+        return None;
+    }
+    std::path::absolute(PathBuf::from(path.to_string_lossy().as_ref())).ok()
 }
 
 fn game_data(info: &GameInfo, path: Option<&Path>) -> std::io::Result<Vec<u8>> {
@@ -507,12 +559,61 @@ fn import_companion_files(
     program_path: &Path,
     files: &mut lavaxemu_core::VirtualFileSystem,
 ) -> std::io::Result<()> {
-    let root = program_path.parent().unwrap_or_else(|| Path::new("."));
+    let parent = program_path.parent().unwrap_or_else(|| Path::new("."));
+    let root = parent
+        .ancestors()
+        .take(4)
+        .find(|ancestor| {
+            let device_folder = program_path
+                .strip_prefix(ancestor)
+                .ok()
+                .and_then(|relative| relative.components().next());
+            if !device_folder.is_some_and(|folder| {
+                folder.as_os_str().eq_ignore_ascii_case("GVmaker")
+                    || folder.as_os_str().eq_ignore_ascii_case("LAVA")
+                    || folder.as_os_str().eq_ignore_ascii_case("LAVA2")
+            }) {
+                return false;
+            }
+            fs::read_dir(ancestor).is_ok_and(|entries| {
+                entries.filter_map(Result::ok).any(|entry| {
+                    entry.file_type().is_ok_and(|kind| kind.is_dir())
+                        && entry.file_name().eq_ignore_ascii_case("LavaData")
+                })
+            })
+        })
+        .unwrap_or(parent);
     // EmulatorJS unpacks a flat ZIP archive into the wasm filesystem root,
     // which also holds its own virtual directories (/dev, /proc, /usr). Only
     // import the files sitting directly in the root in that case.
     let recurse = !(cfg!(target_os = "emscripten") && root == Path::new("/"));
     import_directory(root, root, program_path, files, recurse)
+}
+
+fn import_packaged_resources(program_path: &Path, emulator: &mut Emulator) {
+    let parent = program_path.parent().unwrap_or_else(|| Path::new("."));
+    for directory in parent.ancestors().take(2) {
+        let Ok(entries) = fs::read_dir(directory) else {
+            continue;
+        };
+        let mut packages: Vec<_> = entries
+            .filter_map(Result::ok)
+            .map(|entry| entry.path())
+            .filter(|path| {
+                path.extension()
+                    .is_some_and(|extension| extension.eq_ignore_ascii_case("pac"))
+            })
+            .collect();
+        packages.sort();
+        for path in packages {
+            let Ok(data) = fs::read(&path) else { continue };
+            match emulator.import_matching_package(&data) {
+                Ok(true) => return,
+                Ok(false) => {}
+                Err(error) => log::debug!("ignored companion package {}: {error}", path.display()),
+            }
+        }
+    }
 }
 
 fn import_directory(
@@ -558,6 +659,10 @@ mod tests {
         VIDEO_WIDTH.store(width, Ordering::Relaxed);
     }
 
+    unsafe extern "C" fn space_key(_port: u32, device: u32, _index: u32, id: u32) -> i16 {
+        i16::from(device == DEVICE_KEYBOARD && id == 32)
+    }
+
     #[test]
     fn loads_runs_and_serializes_content() {
         let mut image = [0_u8; 17];
@@ -566,7 +671,7 @@ mod tests {
         image[10] = 5;
         image[16] = 4;
         let info = GameInfo {
-            path: ptr::null(),
+            path: c"".as_ptr(),
             data: image.as_ptr().cast(),
             size: image.len(),
             meta: ptr::null(),
@@ -583,5 +688,76 @@ mod tests {
         assert!(unsafe { retro_serialize(state.as_mut_ptr().cast(), state.len()) });
         assert!(unsafe { retro_unserialize(state.as_ptr().cast(), state.len()) });
         retro_unload_game();
+
+        let mut package = vec![0; 18];
+        package[..4].copy_from_slice(b"PAC ");
+        package[16..18].copy_from_slice(&1u16.to_le_bytes());
+        let mut header = [0; 64];
+        header[..4].copy_from_slice(&(image.len() as u32).to_le_bytes());
+        header[4..17].copy_from_slice(b"LAVA/test.lav");
+        package.extend_from_slice(&header);
+        package.extend_from_slice(&image);
+        let info = GameInfo {
+            path: ptr::null(),
+            data: package.as_ptr().cast(),
+            size: package.len(),
+            meta: ptr::null(),
+        };
+        assert!(unsafe { retro_load_game(&info) });
+        retro_run();
+        assert_eq!(VIDEO_WIDTH.load(Ordering::Relaxed), 160);
+        retro_unload_game();
+
+        let mut keyboard_image = image[..16].to_vec();
+        keyboard_image.extend_from_slice(&[0x81, 0x38, 0x40]);
+        let info = GameInfo {
+            path: ptr::null(),
+            data: keyboard_image.as_ptr().cast(),
+            size: keyboard_image.len(),
+            meta: ptr::null(),
+        };
+        assert!(unsafe { retro_load_game(&info) });
+        retro_set_input_state(Some(space_key));
+        retro_run();
+        assert_eq!(core().emulator.as_ref().unwrap().vm().result(), 32);
+        retro_set_input_state(None);
+        retro_unload_game();
+    }
+
+    #[test]
+    fn polls_keyboard_letters_confirmation_help_and_number_aliases() {
+        unsafe extern "C" fn keyboard(_port: u32, device: u32, _index: u32, id: u32) -> i16 {
+            i16::from(device == DEVICE_KEYBOARD && matches!(id, 13 | 49 | 103 | 273 | 286 | 304))
+        }
+        let mut keys = read_keyboard(Some(keyboard));
+        keys.sort_unstable();
+        assert_eq!(keys, [13, 20, 25, 26, b'b', b'g']);
+    }
+
+    #[test]
+    fn finds_matching_packages_beside_the_unpacked_directory() {
+        let root = tempfile::tempdir().unwrap();
+        let unpacked = root.path().join("unpacked");
+        fs::create_dir(&unpacked).unwrap();
+        let image = b"LAV\x12\0\0\0\0\0\0\0\0\0\0\0\0\x40";
+        let path = unpacked.join("test.lav");
+        fs::write(&path, image).unwrap();
+        let mut package = vec![0; 18];
+        package[..4].copy_from_slice(b"PAC ");
+        package[16..18].copy_from_slice(&2u16.to_le_bytes());
+        for (name, bytes) in [
+            ("LAVA/test.lav", image.as_slice()),
+            ("LavaData/data.dat", &[7][..]),
+        ] {
+            let mut header = [0; 64];
+            header[..4].copy_from_slice(&(bytes.len() as u32).to_le_bytes());
+            header[4..4 + name.len()].copy_from_slice(name.as_bytes());
+            package.extend_from_slice(&header);
+            package.extend_from_slice(bytes);
+        }
+        fs::write(root.path().join("test.pac"), package).unwrap();
+        let mut emulator = Emulator::load_content(image).unwrap();
+        import_packaged_resources(&path, &mut emulator);
+        assert_eq!(emulator.files().file("/LavaData/data.dat"), Some(&[7][..]));
     }
 }
