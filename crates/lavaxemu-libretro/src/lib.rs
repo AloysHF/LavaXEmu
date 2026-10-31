@@ -170,6 +170,13 @@ pub unsafe extern "C" fn retro_load_game(info: *const GameInfo) -> bool {
         log::error!("frontend passed a null game info");
         return false;
     };
+    // The frontend must accept the video format before any frame is produced;
+    // declaring it up front also keeps it intact when content turns out to be
+    // unreadable.
+    let environment = core().callbacks.environment;
+    if !configure_frontend(environment) {
+        return false;
+    }
     let Some(path) = game_path(info.path) else {
         log::error!("content has no file path; in-memory loading is not supported");
         return false;
@@ -195,9 +202,6 @@ pub unsafe extern "C" fn retro_load_game(info: *const GameInfo) -> bool {
     }
 
     let mut core = core();
-    if !configure_frontend(core.callbacks.environment) {
-        return false;
-    }
     core.video.clear();
     core.emulator = Some(emulator);
     true
