@@ -1,0 +1,26 @@
+{
+  "schema": 1,
+  "core": "lavaxemu",
+  "so_name": "liblavaxemu.so",
+  "system": "lavax",
+  "display_name": {
+    "en": "LavaX",
+    "zh": "LavaX"
+  },
+  "short_name": "LavaX",
+  "manufacturer": "Various",
+  "supported_extensions": ["lav"],
+  "save_state_format": 1,
+  "firmware": [],
+  "input": {
+    "preset": "dpad-abcd-select"
+  },
+  "video": {
+    "orientation": "landscape",
+    "pixel_format": "rgb565"
+  },
+  "notes": {
+    "en": "Runs LavaX .lav programs with companion files from the same folder, joypad and pointer input, and save states.",
+    "zh": "运行 LavaX .lav 程序，支持同目录附属文件、手柄与触摸输入以及即时存档。"
+  }
+}
