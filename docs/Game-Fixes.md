@@ -1019,3 +1019,25 @@ without an execution error alone does not establish playability.
 | Selected ball | First move | Before clearing | Scored line |
 | --- | --- | --- | --- |
 | ![Selected](images/fixes/color-lines-selected.png) | ![Move](images/fixes/color-lines-moved.png) | ![Before](images/fixes/color-lines-before-clear.png) | ![Score](images/fixes/color-lines-scored.png) |
+
+## Seven King Five Two Three (七王五二三 v1.3)
+
+- Content: `LAVA1 七王五二三/七王五二三.lav`. The built-in rules explain
+  card order, matching combinations and controls: Left/Right choose a card,
+  Up selects it, Down cancels, Enter plays, P passes, and Escape ends the game.
+- Validation gap: fixed input intervals can collide with computer turns and
+  animations. The regression waits for the actual player prompt before each
+  command and distinguishes it from the round-result prompt.
+- Validation: deal five cards to each side, move the cursor, select and cancel
+  a card, then make a legal play that advances the deck and refills the hand.
+  Continue single-card play and passing through the full round. All 54 cards
+  are dealt, one hand empties, and the score/result menu appears. Play Again
+  starts another five-card deal. Escape opens confirmation; N preserves the
+  exact deal and Y exits normally. Card faces, backs, remaining count, score,
+  portraits, result and confirmation render correctly.
+  No additional emulator changes were required. The tested strategy loses;
+  victory and every multi-card combination are not claimed.
+
+| Deal | Selected card | Round result | Exit confirmation |
+| --- | --- | --- | --- |
+| ![Deal](images/fixes/seven-king-dealt.png) | ![Selected](images/fixes/seven-king-selected.png) | ![Result](images/fixes/seven-king-result.png) | ![Exit](images/fixes/seven-king-confirm-exit.png) |

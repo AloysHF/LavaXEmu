@@ -3251,3 +3251,98 @@ fn color_lines_selects_moves_cancels_and_scores_a_line() {
     }
     panic!("the title Exit choice must terminate the game");
 }
+
+#[test]
+#[ignore = "requires the local game corpus via LAVAX_GAME_ROOT"]
+fn seven_king_selects_plays_passes_finishes_and_restarts_a_round() {
+    fn wait(e: &mut Emulator) -> usize {
+        e.input_mut().set_keys([]);
+        for _ in 0..12000 {
+            let result = e.run_frame().unwrap();
+            assert!(!matches!(result.status, FrameStatus::Halted(_)));
+            if result.status == FrameStatus::WaitingForInput {
+                return e.vm().pc();
+            }
+        }
+        panic!("the card game must reach its next input prompt");
+    }
+    fn key(e: &mut Emulator, key: u8) -> usize {
+        e.input_mut().set_keys([key]);
+        e.run_frame().unwrap();
+        wait(e)
+    }
+    let mut e = load("LAVA1 七王五二三/七王五二三.lav");
+    for frame in 0..1200 {
+        e.input_mut()
+            .set_keys(((300..480).contains(&frame) && (frame - 300) % 60 < 3).then_some(13));
+        advance(&mut e, 1);
+    }
+    assert_eq!(wait(&mut e), 0x257c);
+    assert_eq!(&e.vm().memory()[0x3d3e..0x3d40], &[5, 5]);
+    assert_eq!(e.vm().memory()[0x3d39], 10);
+    capture(&e, "seven-king-dealt");
+    let hand = e.display().indexed_frame().to_vec();
+    key(&mut e, 22);
+    assert!(
+        hand != e.display().indexed_frame(),
+        "Right must move the card cursor"
+    );
+    key(&mut e, 23);
+    key(&mut e, 20);
+    capture(&e, "seven-king-selected");
+    assert!(hand != e.display().indexed_frame(), "Up must select a card");
+    key(&mut e, 21);
+    assert!(
+        hand == e.display().indexed_frame(),
+        "Down must cancel the selection"
+    );
+    key(&mut e, 20);
+    key(&mut e, 13);
+    assert!(
+        e.vm().memory()[0x3d39] > 10,
+        "a legal play must progress the deck and refill the hand"
+    );
+    capture(&e, "seven-king-played");
+    let mut finished = false;
+    for _ in 0..100 {
+        for command in [20, 13, 21, b'p'] {
+            let pc = key(&mut e, command);
+            if pc != 0x257c {
+                assert_eq!(pc, 0x1997, "the round must end at its result menu");
+                finished = true;
+                break;
+            }
+        }
+        if finished {
+            break;
+        }
+    }
+    assert!(
+        finished,
+        "legal single-card play and passing must complete the round"
+    );
+    assert_eq!(e.vm().memory()[0x3d39], 54);
+    assert!(e.vm().memory()[0x3d3e..0x3d40].contains(&0));
+    capture(&e, "seven-king-result");
+    assert_eq!(key(&mut e, 13), 0x257c, "Play Again must start a new deal");
+    assert_eq!(&e.vm().memory()[0x3d3e..0x3d40], &[5, 5]);
+    capture(&e, "seven-king-restarted");
+    let restarted = e.display().indexed_frame().to_vec();
+    key(&mut e, 27);
+    capture(&e, "seven-king-confirm-exit");
+    key(&mut e, b'n');
+    assert!(
+        restarted == e.display().indexed_frame(),
+        "N must cancel quitting without changing the deal"
+    );
+    key(&mut e, 27);
+    e.input_mut().set_keys(*b"y");
+    for _ in 0..120 {
+        if let FrameStatus::Halted(code) = e.run_frame().unwrap().status {
+            assert_eq!(code, 0);
+            return;
+        }
+        e.input_mut().set_keys([]);
+    }
+    panic!("Y must confirm normal exit");
+}
