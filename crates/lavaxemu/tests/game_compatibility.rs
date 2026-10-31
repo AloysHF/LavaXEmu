@@ -4605,3 +4605,127 @@ fn yahtzee_holds_rerolls_scores_every_category_and_finishes() {
     }
     assert!(exited, "the menu exit must terminate normally");
 }
+
+#[test]
+#[ignore = "requires the local game corpus via LAVAX_GAME_ROOT"]
+fn fairy_fate_moves_saves_restores_and_resolves_a_battle() {
+    fn replay(e: &mut Emulator, keys: &[u8], held: usize, start: usize, frames: usize) {
+        for frame in 0..frames {
+            let input = frame.saturating_sub(start);
+            e.input_mut().set_keys(
+                (frame >= start && input / 60 < keys.len() && input % 60 < held)
+                    .then_some(keys[(input / 60) % keys.len()]),
+            );
+            advance(e, 1);
+        }
+    }
+    fn word(e: &Emulator, address: usize) -> u16 {
+        u16::from_le_bytes(e.vm().memory()[address..address + 2].try_into().unwrap())
+    }
+    fn value(e: &Emulator, address: usize) -> i32 {
+        i32::from_le_bytes(e.vm().memory()[address..address + 4].try_into().unwrap())
+    }
+    fn location(e: &Emulator) -> (u16, u16, u16) {
+        (word(e, 0x69a8), word(e, 0x69aa), word(e, 0x69b2))
+    }
+    for (version, filename) in [("loose", "仙境奇缘.lav"), ("package", "仙境奇缘.pac")] {
+        let path = fixture_path(filename);
+        let mut e = load(&path);
+        replay(&mut e, &[13; 12], 18, 300, 3600);
+        replay(&mut e, &[13; 60], 18, 0, 6000);
+        assert_eq!(location(&e), (8, 10, 1));
+        assert_eq!(value(&e, 0x69d2), 200);
+        let mut battle = e.clone();
+        replay(&mut e, b"dd", 3, 0, 600);
+        assert_eq!(location(&e), (10, 10, 1));
+        capture(&e, &format!("fairy-{version}-moved"));
+        let field = e.display().indexed_frame().to_vec();
+        replay(&mut e, &[31, 22, 22, 22, 13], 3, 0, 600);
+        replay(&mut e, &[13; 3], 3, 0, 1200);
+        capture(&e, &format!("fairy-{version}-saved"));
+        let files = e.files_mut().take_dirty_files();
+        assert!(
+            files
+                .iter()
+                .any(|(name, bytes)| name.ends_with("xjsava1.dat") && bytes.len() == 952)
+        );
+        let mut restored = load(&path);
+        for (name, bytes) in files {
+            restored.files_mut().import_file(&name, bytes);
+        }
+        replay(&mut restored, &[13], 3, 300, 1800);
+        replay(&mut restored, &[21, 13, 13], 3, 0, 1200);
+        replay(&mut restored, &[13, 27, 27], 3, 0, 600);
+        assert_eq!(location(&restored), (10, 10, 1));
+        assert_eq!(value(&restored, 0x69d2), 200);
+        // Loading resets the actor's facing; the surrounding map must match.
+        assert!(
+            restored
+                .display()
+                .indexed_frame()
+                .iter()
+                .zip(&field)
+                .enumerate()
+                .all(|(i, (a, b))| {
+                    ((64..80).contains(&(i % 160)) && (32..64).contains(&(i / 160))) || a == b
+                }),
+            "loading must redraw the saved map"
+        );
+        capture(&restored, &format!("fairy-{version}-restored"));
+
+        let mut route = vec![b's'; 30];
+        for (key, count) in [
+            (b'a', 15),
+            (b's', 20),
+            (b'd', 4),
+            (b's', 50),
+            (b'd', 12),
+            (b's', 20),
+            (b'd', 2),
+            (b's', 18),
+            (b'd', 5),
+            (b's', 30),
+        ] {
+            route.extend(std::iter::repeat_n(key, count));
+        }
+        let frames = route.len() * 60 + 600;
+        replay(&mut battle, &route, 3, 0, frames);
+        assert_eq!(location(&battle), (25, 15, 3));
+        let health = value(&battle, 0x69de);
+        let enemy_health = value(&battle, 0x69fe);
+        assert!((1..200).contains(&health), "the enemy must inflict damage");
+        assert!(enemy_health > 0);
+        capture(&battle, &format!("fairy-{version}-battle"));
+        let mut attacks = vec![b'a'; 4];
+        attacks.extend([13; 20]);
+        replay(&mut battle, &attacks, 18, 0, 4800);
+        assert!(
+            value(&battle, 0x69fe) < enemy_health,
+            "attacking must damage the enemy"
+        );
+        assert!(value(&battle, 0x69de) < health, "enemy turns must continue");
+        capture(&battle, &format!("fairy-{version}-battle-damage"));
+        let mut defeated = false;
+        let mut exited = false;
+        for frame in 0..12000 {
+            battle
+                .input_mut()
+                .set_keys((frame / 60 < 100 && frame % 60 < 3).then_some(13));
+            let status = battle.run_frame().unwrap().status;
+            if value(&battle, 0x69de) <= 0 && !defeated {
+                capture(&battle, &format!("fairy-{version}-defeated"));
+                defeated = true;
+            }
+            if let FrameStatus::Halted(code) = status {
+                assert_eq!(code, 0);
+                exited = true;
+                break;
+            }
+        }
+        assert!(
+            defeated && exited,
+            "defeat must terminate normally after confirmation"
+        );
+        capture(&battle, &format!("fairy-{version}-game-over"));
+    }
+}

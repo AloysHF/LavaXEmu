@@ -1265,3 +1265,22 @@ without an execution error alone does not establish playability.
   generated during one complete game; it does not exhaustively cover every
   combination or demonstrate the upper-section bonus threshold. Captures
   and game resources are not distributed.
+
+## Fairy Fate (仙境奇缘)
+
+- Validation gap: startup alone did not verify the separate movement and menu
+  controls, cross-map travel, persistent progress or combat resolution.
+- Both the LAV and PAC workflows use WASD to move, arrows to navigate menus,
+  F4 to open the system menu and Enter to confirm. Move from (8, 10) to
+  (10, 10), write the game's 952-byte save and import the actual saved files
+  into a fresh emulator. Loading restores the coordinates and HP, and redraws
+  the surrounding map. The actor's facing resets when loading, so the image
+  comparison excludes the actor while checking the rest of the framebuffer.
+- Replay movement from the church through the outdoor map into the forest.
+  Verify the battle location, positive enemy HP, incoming damage and reduced
+  enemy HP after selecting attacks. Continue with the initial equipment until
+  defeat; inspect the battle HUD and defeat message, then verify confirmation
+  exits normally with code zero. Both distributions pass the same assertions.
+- No additional emulator core changes were needed. This workflow verifies a
+  losing battle; victory, equipment purchases and later story progression
+  remain unverified. Captures, saves and game resources are not distributed.

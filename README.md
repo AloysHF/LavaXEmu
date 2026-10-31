@@ -53,6 +53,8 @@ winning, undo/redo, record persistence, restarting and confirmed exit.
 Five Tigers has complete-round workflows for alternating play, all five
 scoring categories, restarting and exit. Yahtzee has a full-game workflow
 covering held dice, reroll limits, all 14 scoring choices and final settlement.
+Fairy Fate has LAV and PAC workflows covering map movement, saved progress
+restoration, combat damage and confirmed defeat exit.
 
 ## Usage
 
