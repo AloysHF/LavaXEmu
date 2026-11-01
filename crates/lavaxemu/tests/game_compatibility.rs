@@ -7650,3 +7650,118 @@ fn trapped_spider_versions_capture_territory_win_and_restore_the_ranking() {
         assert_eq!(restored.run_frame().unwrap().status, FrameStatus::Halted(0));
     }
 }
+
+#[test]
+#[ignore = "requires the local game corpus via LAVAX_GAME_ROOT"]
+fn territory_game_finishes_two_player_and_computer_boards() {
+    fn key(e: &mut Emulator, k: u8, frames: usize) {
+        e.input_mut().release_all();
+        for f in 0..frames {
+            e.input_mut().set_keys((f == 0).then_some(k));
+            if matches!(e.run_frame().unwrap().status, FrameStatus::Halted(_)) {
+                return;
+            }
+        }
+    }
+    for (mode, choice) in [("two-player", 110), ("computer", 98)] {
+        let mut e = load(&fixture_path("圈地运动.lav"));
+        advance(&mut e, 1200);
+        key(&mut e, 13, 1200);
+        assert_eq!(e.vm().pc(), 0x10b1);
+        capture(&e, &format!("territory-{mode}-title"));
+        key(&mut e, 13, 120);
+        assert_eq!(e.vm().pc(), 0x2286);
+        assert_eq!(e.vm().memory()[0x2e68], 1);
+        capture(&e, &format!("territory-{mode}-size"));
+        key(&mut e, 13, 120);
+        assert_eq!(e.vm().pc(), 0x32a4);
+        capture(&e, &format!("territory-{mode}-mode"));
+        key(&mut e, choice, 180);
+        assert_eq!(e.vm().memory()[0x2c4b], 3);
+        capture(&e, &format!("territory-{mode}-board"));
+        let mut extra_turn = false;
+        for _ in 0..24 {
+            if e.vm().memory()[0x2e67] == 24 {
+                break;
+            }
+            assert_eq!(e.vm().pc(), 0x374d);
+            let mut edge = None;
+            for y in 0..=3 {
+                for x in 0..3 {
+                    if e.vm().memory()[0x2c51 + (y * 2 + 1) * 23 + x * 2 + 2] == 0 {
+                        edge = Some((x, y, 22));
+                        break;
+                    }
+                }
+                if edge.is_some() {
+                    break;
+                }
+            }
+            if edge.is_none() {
+                for y in 0..3 {
+                    for x in 0..=3 {
+                        if e.vm().memory()[0x2c51 + (y * 2 + 2) * 23 + x * 2 + 1] == 0 {
+                            edge = Some((x, y, 21));
+                            break;
+                        }
+                    }
+                    if edge.is_some() {
+                        break;
+                    }
+                }
+            }
+            let (x, y, direction) = edge.expect("an unfinished board must have an open edge");
+            for _ in 0..4 {
+                if e.vm().memory()[0x2c4f] as usize == x {
+                    break;
+                }
+                key(&mut e, 22, 12);
+            }
+            for _ in 0..4 {
+                if e.vm().memory()[0x2c50] as usize == y {
+                    break;
+                }
+                key(&mut e, 21, 12);
+            }
+            assert_eq!(
+                (
+                    e.vm().memory()[0x2c4f] as usize,
+                    e.vm().memory()[0x2c50] as usize
+                ),
+                (x, y)
+            );
+            let lines = e.vm().memory()[0x2e67];
+            let turn = e.vm().memory()[0x2e66];
+            let score = u16::from(e.vm().memory()[0x2e64]) + u16::from(e.vm().memory()[0x2e65]);
+            key(&mut e, 13, 12);
+            assert_eq!(e.vm().pc(), 0x3792);
+            key(&mut e, direction, 180);
+            assert!(e.vm().memory()[0x2e67] > lines);
+            let new_score = u16::from(e.vm().memory()[0x2e64]) + u16::from(e.vm().memory()[0x2e65]);
+            assert!(new_score >= score && new_score <= 9);
+            if mode == "two-player" && e.vm().memory()[0x2e67] < 24 {
+                assert_eq!(e.vm().memory()[0x2e67], lines + 1);
+                assert_eq!(
+                    e.vm().memory()[0x2e66],
+                    if new_score > score { turn } else { 1 - turn }
+                );
+                extra_turn |= new_score > score;
+            }
+        }
+        assert_eq!(e.vm().memory()[0x2e67], 24);
+        assert_eq!(
+            u16::from(e.vm().memory()[0x2e64]) + u16::from(e.vm().memory()[0x2e65]),
+            9
+        );
+        if mode == "two-player" {
+            assert!(extra_turn);
+        }
+        capture(&e, &format!("territory-{mode}-result"));
+        key(&mut e, 13, 1200);
+        assert_eq!(e.vm().pc(), 0x10b1);
+        key(&mut e, 27, 120);
+        capture(&e, &format!("territory-{mode}-credits"));
+        key(&mut e, 13, 120);
+        assert_eq!(e.run_frame().unwrap().status, FrameStatus::Halted(0));
+    }
+}

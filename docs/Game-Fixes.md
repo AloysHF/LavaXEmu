@@ -1726,3 +1726,19 @@ without an execution error alone does not establish playability.
   emulator behavior change. Higher difficulties, custom controls, every
   background and the second-hit defeat result remain unverified. Game files,
   native rankings and captures are not distributed.
+
+## Territory Game (圈地运动)
+
+- The regression starts the original 3-by-3 board separately in two-player
+  and computer modes. It reads the board to choose an available wall and uses
+  only direction keys and the native start-point confirmation to build it.
+  Cursor movement remains bounded and verifies the selected position.
+- Complete all 24 walls and check that nine territories are awarded in total.
+  In two-player mode each accepted move builds exactly one wall, switches
+  turns when no territory is gained and keeps the same player after a claim.
+  In computer mode the original AI builds its own walls between human moves.
+- Inspect the native result screen, return to the title, open the credits and
+  exit with code zero. Captures are reviewed locally. This adds reproducible
+  workflow coverage without an emulator behavior change.
+- Larger boards and exhaustive strategies remain unverified. Game files and
+  captures are not distributed.

@@ -17,9 +17,9 @@ do not satisfy this status.
 - Input update checked on 2026-10-31: full rerun of 49 workflows, followed by a corrected Dragon Kiss intro replay and the dedicated WarCraft workflow. Those 50 workflows passed with the updated input behavior; later entries have separate incremental checks.
 - Shared guest text memory checked on 2026-11-01: all 75 dedicated release workflows passed after the text-buffer repair and state migration.
 - Inverted TextOut checked on 2026-11-01: all 77 dedicated release workflows passed after honoring the source-inversion flag.
-- 83 dedicated release workflows passed in this audit.
-- 127 of 324 entry points were loaded by those successful workflows.
-- 197 entry points still need dedicated workflow verification.
+- 84 dedicated release workflows passed in this audit.
+- 128 of 324 entry points were loaded by those successful workflows.
+- 196 entry points still need dedicated workflow verification.
 - The historical [startup gallery](Game-Compatibility.md) is a separate check
   and must not be interpreted as this workflow audit.
 
@@ -126,7 +126,7 @@ an optional screenshot directory. Keep each test's logs and captures separate.
 | 083 | `LAVA1 四人麻将/MahJong.lav` | Game / game package | [Workflow passed: `four_player_mahjong_selects_discards_and_restarts_after_a_draw`](../crates/lavaxemu/tests/game_compatibility.rs#L7412) |
 | 084 | `LAVA1 困虫斗 1.1/打包/kcd.pac` | Game / game package | [Workflow passed: `trapped_spider_versions_capture_territory_win_and_restore_the_ranking`](../crates/lavaxemu/tests/game_compatibility.rs#L7522) |
 | 085 | `LAVA1 困虫斗 1.1/未打包/困虫斗.lav` | Game / game package | [Workflow passed: `trapped_spider_versions_capture_territory_win_and_restore_the_ranking`](../crates/lavaxemu/tests/game_compatibility.rs#L7522) |
-| 086 | `LAVA1 圈地运动/圈地运动.lav` | Game / game package | Pending |
+| 086 | `LAVA1 圈地运动/圈地运动.lav` | Game / game package | [Workflow passed: `territory_game_finishes_two_player_and_computer_boards`](../crates/lavaxemu/tests/game_compatibility.rs#L7656) |
 | 087 | `LAVA1 圣金/Shengjin2.lav` | Game / game package | Pending |
 | 088 | `LAVA1 坦克2004/坦克2004.pac` | Game / game package | Pending |
 | 089 | `LAVA1 坦克2004/非PAC/坦克2004.lav` | Game / game package | Pending |

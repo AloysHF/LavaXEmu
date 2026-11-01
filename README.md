@@ -101,6 +101,8 @@ Four-player Mahjong has a workflow for tile selection, discarding, drawn and
 winning hands, redealing and exit. An empty wall now ends the hand before another draw.
 Trapped Spider packaged and loose versions have a workflow for collision recovery,
 four territory captures, victory, and native ranking save and reload.
+Territory Game has a workflow completing the small board in two-player and
+computer modes, including territory scores, extra turns, results and exit.
 
 ## Usage
 
