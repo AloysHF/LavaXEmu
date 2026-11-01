@@ -57,6 +57,8 @@ from party setup, reads P2's own roster values, counts P1 defeats correctly and
 clears defeated members' HP. The Tunshi v0.29 repair stops enemy targeting when
 the player's party is defeated, redraws the field after closing menus and
 returns to the title after defeat or Escape from exploration.
+The Sword repair reserves both 2,000-byte native save slots before seeking,
+preserving existing bytes when the second slot is saved first.
 These repairs do not modify the content file or
 change the VM's general stack, local variables or file-seek bounds.
 

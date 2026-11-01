@@ -94,6 +94,9 @@ Tunshi v0.29 has a workflow for map transitions, equipment and both battle
 results. Party defeat no longer produces a false victory, and Escape returns
 from exploration to the title.
 Closed Tunshi menus also redraw the map immediately.
+Sword packaged and loose versions have workflows for item collection, equipment,
+the opening story, a wild battle and native save restoration. Saving the second
+slot first now preserves its correct offset and keeps both slots independent.
 
 ## Usage
 

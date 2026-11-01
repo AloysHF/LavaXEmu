@@ -17,9 +17,9 @@ do not satisfy this status.
 - Input update checked on 2026-10-31: full rerun of 49 workflows, followed by a corrected Dragon Kiss intro replay and the dedicated WarCraft workflow. Those 50 workflows passed with the updated input behavior; later entries have separate incremental checks.
 - Shared guest text memory checked on 2026-11-01: all 75 dedicated release workflows passed after the text-buffer repair and state migration.
 - Inverted TextOut checked on 2026-11-01: all 77 dedicated release workflows passed after honoring the source-inversion flag.
-- 79 dedicated release workflows passed in this audit.
-- 122 of 324 entry points were loaded by those successful workflows.
-- 202 entry points still need dedicated workflow verification.
+- 81 dedicated release workflows passed in this audit.
+- 124 of 324 entry points were loaded by those successful workflows.
+- 200 entry points still need dedicated workflow verification.
 - The historical [startup gallery](Game-Compatibility.md) is a separate check
   and must not be interpreted as this workflow audit.
 
@@ -121,8 +121,8 @@ an optional screenshot directory. Keep each test's logs and captures separate.
 | 078 | `LAVA1 口袋妖怪（未完成）/pokemon.lav` | Game / game package | [Workflow passed: `pokemon_prototype_explores_collects_an_item_and_browses_its_existing_menus`](../crates/lavaxemu/tests/game_compatibility.rs#L6781) |
 | 079 | `LAVA1 吃月饼/吃月饼.lav` | Game / game package | [Workflow passed: `mooncake_opens_help_sets_speed_moves_and_reacts_to_all_five_items`](../crates/lavaxemu/tests/game_compatibility.rs#L6910) |
 | 080 | `LAVA1 吞食天地0.29/tunshi_V0.29.lav` | Game / game package | [Workflow passed: `tunshi_equips_explores_and_finishes_both_battle_results`](../crates/lavaxemu/tests/game_compatibility.rs#L7015) |
-| 081 | `LAVA1 听剑/听剑.pac` | Game / game package | Pending |
-| 082 | `LAVA1 听剑/非pac/Sword.lav` | Game / game package | Pending |
+| 081 | `LAVA1 听剑/听剑.pac` | Game / game package | [Workflow passed: `sword_versions_equip_follow_the_opening_story_and_finish_a_battle`](../crates/lavaxemu/tests/game_compatibility.rs#L7289), [Workflow passed: `sword_versions_preserve_both_native_save_slots`](../crates/lavaxemu/tests/game_compatibility.rs#L7202) |
+| 082 | `LAVA1 听剑/非pac/Sword.lav` | Game / game package | [Workflow passed: `sword_versions_equip_follow_the_opening_story_and_finish_a_battle`](../crates/lavaxemu/tests/game_compatibility.rs#L7289), [Workflow passed: `sword_versions_preserve_both_native_save_slots`](../crates/lavaxemu/tests/game_compatibility.rs#L7202) |
 | 083 | `LAVA1 四人麻将/MahJong.lav` | Game / game package | Pending |
 | 084 | `LAVA1 困虫斗 1.1/打包/kcd.pac` | Game / game package | Pending |
 | 085 | `LAVA1 困虫斗 1.1/未打包/困虫斗.lav` | Game / game package | Pending |

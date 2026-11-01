@@ -1662,3 +1662,27 @@ without an execution error alone does not establish playability.
   in this early program. The workflow does not claim native save creation,
   complete strategies or later story content. Captures are inspected locally;
   neither the initial-state file nor other game resources are distributed.
+
+## Sword (听剑)
+
+- Saving the second slot first previously wrote its 2,000 bytes at the start
+  of a new file: seeking past EOF failed and the program ignored that result.
+  The save regression first reproduces the 2,000-versus-4,000-byte failure.
+  A length/CRC-gated loaded-image repair reserves both slots before the
+  original save routine runs. It preserves existing bytes and leaves general
+  file-seek bounds unchanged; unrelated images remain unmodified.
+- For both packaged and loose versions, save slot two before slot one and
+  verify the first half is empty. Collect the blue coat, save slot one at a
+  different position and assert the complete second slot stays unchanged.
+  Import the actual save file into two fresh emulator sessions and use the
+  native load menu for each slot, checking its position, scroll and item count.
+- Collect and equip the coat through the original menus, verify its armor
+  field and increased defense, leave the room, finish the opening conversation
+  and check the story flag. Walk through the courtyard and village exit to
+  the forest, enter a real random encounter and use normal attacks. Verify
+  both sides take damage, the player survives, money and experience increase,
+  and the game returns to the map. Use the system menu to exit with code zero.
+- Both distributions run these workflows with deterministic keyboard input.
+  Captures are inspected locally. Later story content, optional tasks, other
+  combat commands and exhaustive item effects remain unverified. Captures,
+  native saves and other game resources are not distributed.

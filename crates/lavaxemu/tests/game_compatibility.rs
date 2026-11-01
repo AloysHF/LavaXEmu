@@ -7196,3 +7196,213 @@ fn tunshi_equips_explores_and_finishes_both_battle_results() {
     capture(&e, "tunshi-credits");
     assert_eq!(key(&mut e, 13), FrameStatus::Halted(0));
 }
+
+#[test]
+#[ignore = "requires the local game corpus via LAVAX_GAME_ROOT"]
+fn sword_versions_preserve_both_native_save_slots() {
+    fn key(e: &mut Emulator, k: u8) {
+        e.input_mut().release_all();
+        advance(e, 60);
+        for frame in 0..120 {
+            e.input_mut().set_keys((frame == 0).then_some(k));
+            e.run_frame().unwrap();
+        }
+    }
+    fn field(e: &Emulator) -> bool {
+        e.vm().local_bp() == 0x3f43 && (0x286..=0x29b).contains(&e.vm().pc())
+    }
+    for (variant, name) in [("package", "听剑.pac"), ("loose", "Sword.lav")] {
+        let mut e = load(&fixture_path(name));
+        advance(&mut e, 1200);
+        for _ in 0..10 {
+            if field(&e) {
+                break;
+            }
+            key(&mut e, 13);
+        }
+        assert!(field(&e));
+        assert_eq!(&e.vm().memory()[0x2a86..0x2a88], &[3, 2]);
+        capture(&e, &format!("sword-{variant}-started"));
+        for k in [25, 22, 22, 22, 22, 13, 13, 21, 13] {
+            key(&mut e, k);
+        }
+        let saved = e.files().file("/lavadata/sd_save.dat").unwrap();
+        assert_eq!(
+            saved.len(),
+            4000,
+            "saving the second slot first must reserve both slots"
+        );
+        assert!(saved[..2000].iter().all(|&v| v == 0));
+        assert!(saved[2000..].iter().any(|&v| v != 0));
+        capture(&e, &format!("sword-{variant}-saved-second-slot-first"));
+        let second_slot = saved[2000..].to_vec();
+        for _ in 0..8 {
+            if field(&e) {
+                break;
+            }
+            key(&mut e, 27);
+        }
+        assert!(field(&e));
+        for k in [22, 22, 20, 20, 13, 13] {
+            key(&mut e, k);
+        }
+        assert_eq!(&e.vm().memory()[0x2a86..0x2a88], &[4, 1]);
+        assert_eq!(e.vm().memory()[0x2a55], 1);
+        capture(&e, &format!("sword-{variant}-coat-collected"));
+        for k in [25, 22, 22, 22, 22, 13, 13, 13] {
+            key(&mut e, k);
+        }
+        let saved = e.files().file("/lavadata/sd_save.dat").unwrap().to_vec();
+        assert_eq!(saved.len(), 4000);
+        assert_eq!(&saved[2000..], second_slot);
+        assert!(saved[..2000].iter().any(|&v| v != 0));
+        capture(&e, &format!("sword-{variant}-both-slots-saved"));
+        for (slot, position, coats) in [(1, [4, 1], 1), (2, [3, 2], 0)] {
+            let mut restored = load(&fixture_path(name));
+            restored
+                .files_mut()
+                .import_file("/lavadata/sd_save.dat", saved.clone());
+            advance(&mut restored, 1200);
+            key(&mut restored, 20);
+            key(&mut restored, 13);
+            if slot == 2 {
+                key(&mut restored, 21);
+            }
+            key(&mut restored, 13);
+            for _ in 0..8 {
+                if field(&restored) {
+                    break;
+                }
+                key(&mut restored, 13);
+            }
+            assert!(field(&restored));
+            assert_eq!(&restored.vm().memory()[0x2a86..0x2a88], &position);
+            assert_eq!(restored.vm().memory()[0x2a55], coats);
+            assert_eq!(&restored.vm().memory()[0x2a8a..0x2a8c], &[32, 1]);
+            capture(&restored, &format!("sword-{variant}-slot-{slot}-restored"));
+        }
+    }
+}
+
+#[test]
+#[ignore = "requires the local game corpus via LAVAX_GAME_ROOT"]
+fn sword_versions_equip_follow_the_opening_story_and_finish_a_battle() {
+    fn key(e: &mut Emulator, k: u8) {
+        e.input_mut().release_all();
+        for frame in 0..180 {
+            e.input_mut().set_keys((frame == 60).then_some(k));
+            if matches!(e.run_frame().unwrap().status, FrameStatus::Halted(_)) {
+                return;
+            }
+        }
+    }
+    fn field(e: &Emulator) -> bool {
+        e.vm().local_bp() == 0x3f43 && (0x286..=0x29b).contains(&e.vm().pc())
+    }
+    fn word(e: &Emulator, address: usize) -> u16 {
+        u16::from_le_bytes(e.vm().memory()[address..address + 2].try_into().unwrap())
+    }
+    for (variant, name) in [("package", "听剑.pac"), ("loose", "Sword.lav")] {
+        let mut e = load(&fixture_path(name));
+        advance(&mut e, 1200);
+        for _ in 0..10 {
+            if field(&e) {
+                break;
+            }
+            key(&mut e, 13);
+        }
+        assert!(field(&e));
+        for k in [22, 22, 20, 20, 13] {
+            key(&mut e, k);
+        }
+        capture(&e, &format!("sword-{variant}-coat-found"));
+        key(&mut e, 13);
+        assert_eq!(e.vm().memory()[0x2a55], 1);
+        let defense = e.vm().memory()[0x29f9];
+        for k in [25, 22, 22, 13, 21, 13, 13, 121] {
+            key(&mut e, k);
+        }
+        assert_eq!(e.vm().memory()[0x2a9c], 3);
+        assert!(e.vm().memory()[0x29f9] > defense);
+        capture(&e, &format!("sword-{variant}-coat-equipped"));
+        for _ in 0..8 {
+            if field(&e) {
+                break;
+            }
+            key(&mut e, 27);
+        }
+        assert!(field(&e));
+        for k in std::iter::repeat_n(21, 5)
+            .chain(std::iter::repeat_n(22, 4))
+            .chain([21; 3])
+        {
+            key(&mut e, k);
+        }
+        assert_eq!(&e.vm().memory()[0x2a8a..0x2a8c], &[5, 2]);
+        capture(&e, &format!("sword-{variant}-opening-conversation"));
+        for _ in 0..50 {
+            if field(&e) {
+                break;
+            }
+            key(&mut e, 13);
+        }
+        assert!(field(&e));
+        assert_eq!(e.vm().memory()[0x2aab], 1);
+        assert_eq!(&e.vm().memory()[0x2a86..0x2a88], &[3, 2]);
+        capture(&e, &format!("sword-{variant}-courtyard"));
+        for k in [
+            21, 23, 23, 23, 21, 21, 21, 21, 21, 21, 21, 21, 21, 21, 22, 22, 22, 22, 22, 21, 21, 21,
+            21, 21, 21, 21, 21, 22, 22, 22, 22, 22, 22, 22, 22, 22, 22, 22, 22,
+        ] {
+            key(&mut e, k);
+        }
+        assert_eq!(&e.vm().memory()[0x2a8a..0x2a8c], &[2, 63]);
+        assert_eq!(&e.vm().memory()[0x2a86..0x2a88], &[1, 3]);
+        capture(&e, &format!("sword-{variant}-forest"));
+        let mut direction = 22;
+        for _ in 0..100 {
+            if !field(&e) {
+                break;
+            }
+            let x = u16::from(e.vm().memory()[0x2a8a]) + u16::from(e.vm().memory()[0x2a86]);
+            if x >= 35 {
+                direction = 23;
+            } else if x <= 8 {
+                direction = 22;
+            }
+            key(&mut e, direction);
+        }
+        assert!(!field(&e));
+        assert_ne!(e.vm().memory()[0x2958], 0);
+        let enemy_hp = word(&e, 0x2ce7);
+        let player_hp = word(&e, 0x2c83);
+        let money = word(&e, 0x2a1f);
+        let experience = word(&e, 0x29ea);
+        assert!(enemy_hp > 0 && player_hp > 0);
+        capture(&e, &format!("sword-{variant}-battle"));
+        let mut enemy_damaged = false;
+        let mut player_damaged = false;
+        let mut victory = false;
+        for _ in 0..200 {
+            key(&mut e, 13);
+            enemy_damaged |= word(&e, 0x2ce7) < enemy_hp;
+            player_damaged |= word(&e, 0x2c83) < player_hp;
+            if word(&e, 0x2a1f) > money && !victory {
+                capture(&e, &format!("sword-{variant}-victory"));
+                victory = true;
+            }
+            if field(&e) {
+                break;
+            }
+        }
+        assert!(field(&e));
+        assert!(enemy_damaged && player_damaged && victory);
+        assert!(word(&e, 0x29e6) > 0);
+        assert!(word(&e, 0x29ea) > experience);
+        capture(&e, &format!("sword-{variant}-after-battle"));
+        for k in [25, 22, 22, 22, 22, 13, 21, 21, 13, 13] {
+            key(&mut e, k);
+        }
+        assert_eq!(e.run_frame().unwrap().status, FrameStatus::Halted(0));
+    }
+}
