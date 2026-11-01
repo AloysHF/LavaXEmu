@@ -6334,3 +6334,98 @@ fn dragon_quest_editions_trade_defend_recruit_and_restore_progress() {
         assert_eq!(key(&mut restored, 13), FrameStatus::Halted(0));
     }
 }
+
+#[test]
+#[ignore = "requires the local game corpus via LAVAX_GAME_ROOT"]
+fn hell_adventure_triggers_switches_restarts_and_clears_the_first_stage() {
+    fn key(e: &mut Emulator, k: u8) -> FrameStatus {
+        e.input_mut().release_all();
+        e.input_mut().set_keys([k]);
+        let mut status = FrameStatus::Running;
+        for frame in 0..1001 {
+            status = e.run_frame().expect("scripted input must execute").status;
+            if frame == 0 {
+                e.input_mut().set_keys([]);
+            }
+            if matches!(
+                status,
+                FrameStatus::Running | FrameStatus::WaitingForInput | FrameStatus::Halted(_)
+            ) {
+                return status;
+            }
+        }
+        status
+    }
+    fn position(e: &Emulator) -> &[u8] {
+        &e.vm().memory()[0x2000..0x2002]
+    }
+    fn tile(e: &Emulator, x: usize, y: usize) -> u8 {
+        e.vm().memory()[0x2002 + y * 20 + x]
+    }
+    let mut e = load(&fixture_path("勇闯地狱.lav"));
+    advance(&mut e, 300);
+    for _ in 0..5 {
+        key(&mut e, 13);
+    }
+    assert_eq!(position(&e), &[8, 8]);
+    assert_eq!(e.vm().memory()[0x2174], 0);
+    let initial = e.vm().memory()[0x2002..0x20ca].to_vec();
+    capture(&e, "hell-stage-one");
+    for k in [20, 23] {
+        key(&mut e, k);
+        assert_eq!(position(&e), &[8, 8], "border walls must block movement");
+    }
+    for _ in 0..9 {
+        key(&mut e, 22);
+    }
+    assert_eq!(position(&e), &[88, 16]);
+    assert_eq!(tile(&e, 4, 2), 0);
+    assert_eq!(tile(&e, 10, 1), 2);
+    assert_eq!(tile(&e, 5, 2), 4);
+    assert_eq!(tile(&e, 10, 2), 11);
+    capture(&e, "hell-first-switch-forced-turn");
+    for k in [20, 22, 21] {
+        key(&mut e, k);
+        assert_eq!(position(&e), &[88, 16]);
+    }
+    key(&mut e, 23);
+    assert_eq!(position(&e), &[72, 16]);
+    assert_eq!(tile(&e, 5, 2), 0);
+    assert_eq!(tile(&e, 10, 2), 2);
+    capture(&e, "hell-second-switch");
+    key(&mut e, 28);
+    assert_eq!(position(&e), &[8, 8]);
+    assert_eq!(&e.vm().memory()[0x2002..0x20ca], initial);
+    assert_eq!(e.vm().memory()[0x2174], 0);
+    capture(&e, "hell-restarted-board");
+    for k in [
+        22, 22, 22, 22, 22, 22, 22, 22, 22, 23, 20, 23, 23, 23, 23, 21, 21, 21, 21, 21, 21, 23, 23,
+        23, 20, 20, 20, 20, 23,
+    ] {
+        assert!(!matches!(key(&mut e, k), FrameStatus::Halted(_)));
+    }
+    assert_eq!(e.vm().memory()[0x2174], 1);
+    assert_eq!(position(&e), &[8, 8]);
+    assert_ne!(&e.vm().memory()[0x2002..0x20ca], initial);
+    capture(&e, "hell-stage-two");
+    key(&mut e, 27);
+    assert_eq!(e.vm().pc(), 0x1306);
+    capture(&e, "hell-returned-to-menu");
+    for k in [21, 21, 21, 13] {
+        key(&mut e, k);
+    }
+    capture(&e, "hell-help");
+    for page in 0..8 {
+        if e.vm().pc() == 0x1306 {
+            break;
+        }
+        key(&mut e, 13);
+        capture(&e, &format!("hell-help-page-{page}"));
+    }
+    assert_eq!(e.vm().pc(), 0x1306);
+    for k in [21, 21, 21, 21, 13] {
+        key(&mut e, k);
+    }
+    capture(&e, "hell-farewell");
+    assert_eq!(key(&mut e, 13), FrameStatus::Halted(0));
+}

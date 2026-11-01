@@ -1517,3 +1517,25 @@ without an execution error alone does not establish playability.
   for both editions are inspected locally. These operations need no additional
   core changes. Breeding, arena ranks, later dungeons, sale and item effects
   remain unverified. Captures, save files and game resources are not distributed.
+
+## Hell Adventure (勇闯地狱)
+
+- Validation gap: the opening board did not establish whether paired mechanisms,
+  forced movement, wall collision, restart or stage transitions worked.
+- Verify that the top and left borders block movement. Enter the first switch
+  from the left: its paired obstacle disappears, its source becomes a wall,
+  and forced movement reaches the cell beside the second switch. Verify the
+  three surrounding walls block movement. Approach the second switch from the
+  right to clear its corresponding obstacle and regain the upper corridor.
+- Press F1 and compare all 200 map cells with the original board, including both
+  switches and both obstacles. Check the player returns to the starting cell
+  and the stage index stays unchanged.
+- Replay 29 directional inputs through the first stage. Verify the stage index
+  advances, the second board replaces the first and the player starts at its
+  entrance. Actual VM execution determines the route, including the special
+  movement around neighboring switches; no guest state is edited for progress.
+- Escape returns to the menu. Browse the help's multiple pages, return to the
+  menu, select Exit and acknowledge the farewell for normal exit with code zero.
+  Captures are inspected locally. No additional core changes were needed.
+  Later stages, the level selector and the editor remain unverified. Captures,
+  map data and game resources are not distributed.

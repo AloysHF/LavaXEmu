@@ -15,9 +15,9 @@ do not satisfy this status.
 ## Current evidence
 
 - Input update checked on 2026-10-31: full rerun of 49 workflows, followed by a corrected Dragon Kiss intro replay and the dedicated WarCraft workflow. Those 50 workflows passed with the updated input behavior; later entries have separate incremental checks.
-- 73 dedicated release workflows passed in this audit.
-- 116 of 324 entry points were loaded by those successful workflows.
-- 208 entry points still need dedicated workflow verification.
+- 74 dedicated release workflows passed in this audit.
+- 117 of 324 entry points were loaded by those successful workflows.
+- 207 entry points still need dedicated workflow verification.
 - The historical [startup gallery](Game-Compatibility.md) is a separate check
   and must not be interpreted as this workflow audit.
 
@@ -113,7 +113,7 @@ an optional screenshot directory. Keep each test's logs and captures separate.
 | 072 | `LAVA1 勇者传说/勇者传说.lav` | Game / game package | [Workflow passed: `brave_legend_restarts_moves_platforms_and_completes_all_forty_stages`](../crates/lavaxemu/tests/game_compatibility.rs#L5926) |
 | 073 | `LAVA1 勇者斗恶龙/勇者斗恶龙.lav` | Game / game package | [Workflow passed: `dragon_quest_editions_trade_defend_recruit_and_restore_progress`](../crates/lavaxemu/tests/game_compatibility.rs#L6189) |
 | 074 | `LAVA1 勇者斗恶龙特别版/勇者斗恶龙.lav` | Game / game package | [Workflow passed: `dragon_quest_editions_trade_defend_recruit_and_restore_progress`](../crates/lavaxemu/tests/game_compatibility.rs#L6189) |
-| 075 | `LAVA1 勇闯地狱/勇闯地狱.lav` | Game / game package | Pending |
+| 075 | `LAVA1 勇闯地狱/勇闯地狱.lav` | Game / game package | [Workflow passed: `hell_adventure_triggers_switches_restarts_and_clears_the_first_stage`](../crates/lavaxemu/tests/game_compatibility.rs#L6340) |
 | 076 | `LAVA1 博士失踪记/博士失踪记.lav` | Game / game package | Pending |
 | 077 | `LAVA1 口袋妖怪PK场/pmpk.pac` | Game / game package | Pending |
 | 078 | `LAVA1 口袋妖怪（未完成）/pokemon.lav` | Game / game package | Pending |

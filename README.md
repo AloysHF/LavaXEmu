@@ -78,6 +78,8 @@ Brave Legend has a workflow completing all 40 stages, verifying key-gated
 doors, all four platform directions, stage restart and the ending.
 Dragon Quest Monsters standard and special editions have a workflow for
 map travel, purchases, combat, recruitment and native save restoration.
+Hell Adventure has a workflow covering paired switches, forced movement,
+board restart, the first stage, help pages and normal exit.
 
 ## Usage
 
