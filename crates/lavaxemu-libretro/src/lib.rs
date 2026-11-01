@@ -258,7 +258,10 @@ pub extern "C" fn retro_get_region() -> u32 {
 pub unsafe extern "C" fn retro_load_game(info: *const GameInfo) -> bool {
     guard(false, || {
         let Some(info) = (unsafe { info.as_ref() }) else {
-            return fail("LavaX: the frontend passed no game information.");
+            return fail(MISSING_CONTENT_PATH);
+        };
+        let Some(path) = game_path(info.path) else {
+            return fail(MISSING_CONTENT_PATH);
         };
         // The frontend must accept the video format before any frame is
         // produced; declaring it up front also keeps it intact when content
@@ -267,11 +270,6 @@ pub unsafe extern "C" fn retro_load_game(info: *const GameInfo) -> bool {
         if !configure_frontend(environment) {
             return fail("LavaX: this frontend does not support RGB565 video.");
         }
-        let Some(path) = game_path(info.path) else {
-            return fail(
-                "LavaX: content has no file path. Only .lav files on the filesystem are supported.",
-            );
-        };
         let data = match fs::read(&path) {
             Ok(data) => data,
             Err(error) => {
@@ -499,6 +497,9 @@ pub extern "C" fn retro_get_memory_size(id: u32) -> usize {
             .map_or(0, |emulator| emulator.vm().memory().len())
     })
 }
+
+const MISSING_CONTENT_PATH: &str =
+    "The frontend passed no content path; this core loads content from a file path only.";
 
 /// Report a load failure to both the log and the frontend's on-screen message.
 fn fail(message: &str) -> bool {
@@ -775,7 +776,7 @@ mod tests {
     }
 
     #[test]
-    fn rejects_in_memory_content() {
+    fn rejects_content_without_a_path() {
         let image = [0_u8; 17];
         let info = GameInfo {
             path: ptr::null(),

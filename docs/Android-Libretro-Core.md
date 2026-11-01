@@ -27,7 +27,7 @@ virtual-controller preset, firmware requirements and orientation.
 Rules the core follows for any Android host:
 
 - The core declares `need_fullpath` and always opens the real content path;
-  in-memory content is rejected with a message instead of being buffered.
+  an in-memory buffer is ignored.
 - Saves and in-game files go to the directory answered by
   `RETRO_ENVIRONMENT_GET_SAVE_DIRECTORY` (the content path itself may be a
   disposable cache copy). Firmware and other assets belong to
