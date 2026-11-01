@@ -1633,3 +1633,32 @@ without an execution error alone does not establish playability.
   placeholders. This workflow covers its existing exploration and menus and
   does not claim native saving, trading, combat or complete game content.
   Captures and game resources are not distributed.
+
+## Tunshi v0.29 (吞食天地)
+
+- Reproduced a false victory after all five party members lost their troops:
+  enemy target selection continued into enemy slots and killed its own side,
+  awarding experience and money. The deterministic regression fails on this
+  outcome before the repair. A length/CRC-gated loaded-image repair checks
+  party defeat before each actor and before ending the round, reuses the
+  program's defeat message and returns without rewards. Escape also returns
+  from exploration to the existing title, clearing its pending request first.
+- Closed equipment menus previously remained visible until movement. Redraw
+  the field and standing character before accepting the next input; compare
+  all pixels outside the character tile with the original map. Canceling the
+  field menu with Escape stays on the map, while Escape on the map returns
+  to the title.
+- Acknowledge the intro, walk from the starting room through the city to the
+  world map, enter a real random encounter and finish a loss while enemies
+  remain alive. Confirm no rewards, return to the title and restart; the
+  complete party records reload from the supplied initial-state file.
+- Use the original inventory menus to equip all five members' weapons, clothing,
+  headgear and shields. Assert item transfers, emptied held inventories and
+  attack/defense values against item records. Return to the world map, attack
+  until the enemy side is defeated while allies survive, and verify positive
+  money and experience rewards. Escape returns to the title; normal exit
+  displays the farewell and halts with code zero.
+- Saving/loading slots and several command choices remain explicit placeholders
+  in this early program. The workflow does not claim native save creation,
+  complete strategies or later story content. Captures are inspected locally;
+  neither the initial-state file nor other game resources are distributed.

@@ -54,7 +54,10 @@ slots in the guest file and rewinds before updating the shooting record. The
 Power Ski repair directs its ending pictures to the front buffer before the
 guest waits for confirmation. The Pokemon PK repair separates move metadata
 from party setup, reads P2's own roster values, counts P1 defeats correctly and
-clears defeated members' HP. These repairs do not modify the content file or
+clears defeated members' HP. The Tunshi v0.29 repair stops enemy targeting when
+the player's party is defeated, redraws the field after closing menus and
+returns to the title after defeat or Escape from exploration.
+These repairs do not modify the content file or
 change the VM's general stack, local variables or file-seek bounds.
 
 ## Bytecode Execution

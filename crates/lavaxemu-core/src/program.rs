@@ -259,6 +259,69 @@ impl Program {
                 image[entry + 4] = 0;
             }
         }
+        if image.len() == 14_140
+            && crc32fast::hash(&image) == 0x0044_87e2
+            && image[0x1940..0x1946] == [0x0f, 0x2e, 0, 0x4f, 0x0a, 0]
+            && image[0x2e2d..0x2e31] == [0x3d, 0xac, 1, 0]
+            && image[0x2ee6..0x2eea] == [0x3d, 0x3b, 0x26, 0]
+        {
+            // Stop this release's enemy targeting after a party wipe.
+            let original = image[0x1940..0x1946].to_vec();
+            let mut defeat = image[0x1b09..0x1b2d].to_vec();
+            defeat[0x11..0x14].copy_from_slice(&[0x02, 0x4b, 0x42]);
+            let result_offset = defeat.len() - 2;
+            defeat[result_offset] = 2;
+            let battle_guard = image.len() as u32;
+            for (index, address) in [0x425fu16, 0x428f, 0x42bf, 0x42ef, 0x431f]
+                .into_iter()
+                .enumerate()
+            {
+                image.push(0x05);
+                image.extend_from_slice(&address.to_le_bytes());
+                if index != 0 {
+                    image.push(0x21);
+                }
+            }
+            image.extend_from_slice(&[0x51, 0, 0, 0x38, 0x39, 0, 0, 0]);
+            let healthy_jump = image.len() - 3;
+            image.extend_from_slice(&[0x03, 0x10, 0x20, 0x02, 0, 0x01, 5, 0x35, 0x38]);
+            image.extend_from_slice(&defeat);
+            let healthy = image.len() as u32;
+            image[healthy_jump..healthy_jump + 3].copy_from_slice(&healthy.to_le_bytes()[..3]);
+            image.extend_from_slice(&original);
+            image.extend_from_slice(&[0x3b, 0x46, 0x19, 0]);
+            image[0x1940] = 0x3b;
+            image[0x1941..0x1944].copy_from_slice(&battle_guard.to_le_bytes()[..3]);
+            image[0x1944..0x1946].fill(0);
+
+            // Return to the existing title after defeat or an Escape request.
+            let field_guard = image.len() as u32;
+            let next_input = field_guard + 21;
+            image.extend_from_slice(&[0x05, 0x10, 0x20, 0x4c, 5, 0, 0x38, 0x39]);
+            image.extend_from_slice(&next_input.to_le_bytes()[..3]);
+            image.extend_from_slice(&[0x03, 0x10, 0x20, 0x02, 0, 0x01, 0, 0x35, 0x38]);
+            image.push(0x3f);
+            image.extend_from_slice(&[
+                0x3d, 0xac, 1, 0, 0x05, 0x10, 0x20, 0x4c, 4, 0, 0x38, 0x39, 0x31, 0x2e, 0, 0x03,
+                0x10, 0x20, 0x02, 0, 0x01, 0, 0x35, 0x38, 0x3f,
+            ]);
+            image[0x2e2d] = 0x3b;
+            image[0x2e2e..0x2e31].copy_from_slice(&field_guard.to_le_bytes()[..3]);
+
+            // Remove menu overlays before the field waits for another input.
+            let redraw = image.len() as u32;
+            image.extend_from_slice(&[
+                0x05, 0x10, 0x20, 0x4c, 2, 0, 0x05, 0x10, 0x20, 0x4c, 4, 0, 0x28, 0x38, 0x39,
+            ]);
+            let redraw_jump = image.len();
+            image.extend_from_slice(&[0, 0, 0]);
+            image.extend_from_slice(&[0x3d, 0xad, 0x24, 0, 0x01, 0x11, 0x3d, 0xb2, 0x22, 0, 0x89]);
+            let resume = image.len() as u32;
+            image[redraw_jump..redraw_jump + 3].copy_from_slice(&resume.to_le_bytes()[..3]);
+            image.extend_from_slice(&[0x3d, 0x3b, 0x26, 0, 0x3b, 0xea, 0x2e, 0]);
+            image[0x2ee6] = 0x3b;
+            image[0x2ee7..0x2eea].copy_from_slice(&redraw.to_le_bytes()[..3]);
+        }
         Ok(Self { header, image })
     }
 
@@ -358,6 +421,19 @@ mod tests {
         original[0x113b3..0x113b8].copy_from_slice(&[0x03, 0xa1, 0x37, 0x02, 0x00]);
         original[0x112a8..0x112ad].copy_from_slice(&[0x01, 0x01, 0x05, 0xad, 0x37]);
         original[0x1133e..0x11343].copy_from_slice(&[0x01, 0x01, 0x05, 0xa1, 0x37]);
+        let saved = original.clone();
+        let program = Program::load(&original).unwrap();
+        assert_eq!(original, saved);
+        assert_eq!(program.image(), original);
+    }
+
+    #[test]
+    fn leaves_similar_party_defeat_programs_unmodified() {
+        let mut original = image(0, 0, 0);
+        original.resize(14_140, 0);
+        original[0x1940..0x1946].copy_from_slice(&[0x0f, 0x2e, 0, 0x4f, 0x0a, 0]);
+        original[0x2e2d..0x2e31].copy_from_slice(&[0x3d, 0xac, 1, 0]);
+        original[0x2ee6..0x2eea].copy_from_slice(&[0x3d, 0x3b, 0x26, 0]);
         let saved = original.clone();
         let program = Program::load(&original).unwrap();
         assert_eq!(original, saved);

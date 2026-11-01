@@ -7009,3 +7009,196 @@ fn mooncake_opens_help_sets_speed_moves_and_reacts_to_all_five_items() {
     capture(&e, "mooncake-credits");
     assert_eq!(key(&mut e, 13), FrameStatus::Halted(0));
 }
+
+#[test]
+#[ignore = "requires the local game corpus via LAVAX_GAME_ROOT"]
+fn tunshi_equips_explores_and_finishes_both_battle_results() {
+    fn key(e: &mut Emulator, k: u8) -> FrameStatus {
+        e.input_mut().release_all();
+        e.input_mut().set_keys([k]);
+        let mut status = FrameStatus::Running;
+        for frame in 0..4000 {
+            status = e.run_frame().unwrap().status;
+            if frame == 0 {
+                e.input_mut().release_all();
+            }
+            if matches!(
+                status,
+                FrameStatus::WaitingForInput | FrameStatus::Halted(_)
+            ) {
+                return status;
+            }
+        }
+        panic!("scripted input did not reach its next wait: {status:?}");
+    }
+    fn word(e: &Emulator, address: usize) -> i16 {
+        i16::from_le_bytes(e.vm().memory()[address..address + 2].try_into().unwrap())
+    }
+    fn hp(e: &Emulator, side: usize) -> i32 {
+        (side * 5..side * 5 + 5)
+            .map(|slot| i32::from(word(e, 0x425f + slot * 48)))
+            .sum()
+    }
+    let mut e = load(&fixture_path("tunshi_V0.29.lav"));
+    advance(&mut e, 1200);
+    let title_bp = e.vm().local_bp();
+    key(&mut e, 13);
+    capture(&e, "tunshi-intro");
+    for _ in 0..42 {
+        key(&mut e, 13);
+    }
+    assert_eq!(e.vm().pc(), 0x1ed);
+    assert_eq!(e.vm().memory()[0x4210], 5);
+    assert_eq!((word(&e, 0x2000), word(&e, 0x2002)), (3, 3));
+    let party = e.vm().memory()[0x4248..0x4338].to_vec();
+    capture(&e, "tunshi-start");
+    key(&mut e, 23);
+    for _ in 0..16 {
+        key(&mut e, 21);
+    }
+    assert_eq!(e.vm().memory()[0x4210], 1);
+    assert_eq!((word(&e, 0x2000), word(&e, 0x2002)), (9, 5));
+    capture(&e, "tunshi-city");
+    for _ in 0..21 {
+        key(&mut e, 21);
+    }
+    assert_eq!(e.vm().memory()[0x4210], 0);
+    assert_eq!((word(&e, 0x2000), word(&e, 0x2002)), (-2, 22));
+    capture(&e, "tunshi-world");
+    for k in [21, 21, 22, 22, 22, 22, 21, 21, 22, 22] {
+        if e.vm().local_bp() != 0x47e5 {
+            break;
+        }
+        key(&mut e, k);
+    }
+    for turn in 0..200 {
+        if e.vm().local_bp() != 0x47e5 {
+            break;
+        }
+        key(&mut e, if turn % 2 == 0 { 22 } else { 23 });
+    }
+    assert_ne!(e.vm().local_bp(), 0x47e5);
+    assert!(hp(&e, 0) > 0 && hp(&e, 1) > 0);
+    capture(&e, "tunshi-battle");
+    for _ in 0..100 {
+        key(&mut e, 13);
+        if word(&e, 0x2010) == 5 || e.vm().pc() == 0x1b29 {
+            break;
+        }
+    }
+    assert_eq!(hp(&e, 0), 0);
+    assert!(
+        hp(&e, 1) > 0,
+        "defeated enemies must not turn a party wipe into victory"
+    );
+    assert_eq!(word(&e, 0x2010), 5);
+    assert_eq!(
+        &e.vm().memory()[0x383f..0x3847],
+        &[200, 0, 0, 0, 0, 0, 0, 0]
+    );
+    capture(&e, "tunshi-defeat");
+    let returned = key(&mut e, 13);
+    assert_eq!(
+        e.vm().local_bp(),
+        title_bp,
+        "return status={returned:?} pc={:x}",
+        e.vm().pc()
+    );
+    capture(&e, "tunshi-defeat-returned");
+    key(&mut e, 13);
+    for _ in 0..42 {
+        key(&mut e, 13);
+    }
+    assert_eq!(&e.vm().memory()[0x4248..0x4338], party);
+    assert_eq!(e.vm().memory()[0x4210], 5);
+    capture(&e, "tunshi-restarted");
+    let map_frame = e.display().indexed_frame().to_vec();
+    key(&mut e, 13);
+    key(&mut e, 27);
+    assert_eq!(e.vm().local_bp(), 0x47e5);
+    capture(&e, "tunshi-menu-canceled");
+    let items = e.files().file("/TSTDitem.dat").unwrap().to_vec();
+    for member in 0..5 {
+        let base = 0x4248 + member * 48;
+        let inventory = e.vm().memory()[base + 0x24..base + 0x28].to_vec();
+        for _ in 0..4 {
+            for k in [13, 21, 21, 21, 21, 13] {
+                key(&mut e, k);
+            }
+            for _ in 0..member {
+                key(&mut e, 21);
+            }
+            for k in [13, 13, 21, 21, 13, 13] {
+                key(&mut e, k);
+            }
+            assert_eq!(e.vm().pc(), 0x2d11);
+            key(&mut e, 13);
+            key(&mut e, 13);
+            assert_eq!(e.vm().local_bp(), 0x47e5);
+        }
+        assert_eq!(&e.vm().memory()[base + 0x20..base + 0x24], inventory);
+        assert_eq!(&e.vm().memory()[base + 0x24..base + 0x2a], &[0; 6]);
+        assert_eq!(
+            e.vm().memory()[base + 0x13],
+            items[usize::from(inventory[0]) * 10 + 8]
+        );
+        let defense: u8 = inventory[1..]
+            .iter()
+            .map(|&id| items[usize::from(id) * 10 + 8])
+            .sum();
+        assert_eq!(e.vm().memory()[base + 0x14], defense);
+        capture(&e, &format!("tunshi-equipped-{member}"));
+    }
+    for y in 0..80 {
+        for x in 0..160 {
+            if !(64..80).contains(&x) || !(32..48).contains(&y) {
+                assert_eq!(
+                    e.display().indexed_frame()[y * 160 + x],
+                    map_frame[y * 160 + x],
+                    "closed equipment menus must reveal the map at {x},{y}"
+                );
+            }
+        }
+    }
+    for k in std::iter::once(23)
+        .chain(std::iter::repeat_n(21, 37))
+        .chain([21, 21, 22, 22, 22, 22, 21, 21, 22, 22])
+    {
+        if e.vm().local_bp() != 0x47e5 {
+            break;
+        }
+        key(&mut e, k);
+    }
+    for turn in 0..200 {
+        if e.vm().local_bp() != 0x47e5 {
+            break;
+        }
+        key(&mut e, if turn % 2 == 0 { 22 } else { 23 });
+    }
+    assert_eq!(e.vm().memory()[0x4210], 0);
+    assert_ne!(e.vm().local_bp(), 0x47e5);
+    capture(&e, "tunshi-equipped-battle");
+    for _ in 0..200 {
+        key(&mut e, 13);
+        if word(&e, 0x2010) == 5 || e.vm().pc() == 0x1b29 {
+            break;
+        }
+    }
+    assert_eq!(e.vm().pc(), 0x1b29);
+    assert!(hp(&e, 0) > 0);
+    assert_eq!(hp(&e, 1), 0);
+    capture(&e, "tunshi-victory");
+    key(&mut e, 13);
+    assert_eq!(e.vm().local_bp(), 0x47e5);
+    assert!(word(&e, 0x383f) > 200);
+    assert!(word(&e, 0x3843) > 0);
+    capture(&e, "tunshi-rewarded");
+    key(&mut e, 27);
+    assert_eq!(e.vm().local_bp(), title_bp);
+    capture(&e, "tunshi-escape-returned");
+    key(&mut e, 21);
+    key(&mut e, 21);
+    key(&mut e, 13);
+    capture(&e, "tunshi-credits");
+    assert_eq!(key(&mut e, 13), FrameStatus::Halted(0));
+}

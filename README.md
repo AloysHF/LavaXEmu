@@ -90,6 +90,10 @@ collection, bag categories, the catalog and party pages. Inverted TextOut
 styles now preserve its menu and catalog contrast.
 Mooncake has a workflow for help, speed limits, movement boundaries, all five
 item reactions, recovery, returning to the menu and normal exit.
+Tunshi v0.29 has a workflow for map transitions, equipment and both battle
+results. Party defeat no longer produces a false victory, and Escape returns
+from exploration to the title.
+Closed Tunshi menus also redraw the map immediately.
 
 ## Usage
 
