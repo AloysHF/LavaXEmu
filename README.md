@@ -71,6 +71,9 @@ Volley Shooting v1.5 has a workflow for shooting goals, goalkeeper actions and
 record restoration. A fingerprinted repair preserves the separate record slots.
 Fighter of the Phoenix has a workflow covering movement, shooting, bombing,
 pause/resume, defeat/retry and defeating the first boss to enter stage two.
+Power Ski has a workflow for steering, jumping, collision recovery, status
+pause and completing the course. A fingerprinted repair makes both ending
+pictures visible while waiting for confirmation.
 
 ## Usage
 

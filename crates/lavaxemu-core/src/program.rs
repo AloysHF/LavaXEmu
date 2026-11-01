@@ -188,6 +188,15 @@ impl Program {
             // Rewind after reading the shooting record before replacing slot zero.
             image[0x3098..0x309d].copy_from_slice(&[0x04, 0x46, 0x4f, 0xb5, 0x00]);
         }
+        if image.len() == 12_883
+            && crc32fast::hash(&image) == 0xf2bc_baa6
+            && image[0x2dfb] == 0x01
+            && image[0x2e11] == 0x01
+        {
+            // Present this release's ending pictures before waiting for input.
+            image[0x2dfb] = 0x41;
+            image[0x2e11] = 0x41;
+        }
         Ok(Self { header, image })
     }
 
@@ -261,6 +270,18 @@ mod tests {
         original.resize(32_559, 0);
         original[0x33e5..0x33eb].copy_from_slice(&[0x04, 0x7a, 0x4f, 0xaf, 0x8e, 0x89]);
         original[0x3098..0x309d].copy_from_slice(&[0x04, 0x47, 0x4f, 0xb6, 0x38]);
+        let saved = original.clone();
+        let program = Program::load(&original).unwrap();
+        assert_eq!(original, saved);
+        assert_eq!(program.image(), original);
+    }
+
+    #[test]
+    fn leaves_similar_ski_ending_programs_unmodified() {
+        let mut original = image(0, 0, 0);
+        original.resize(12_883, 0);
+        original[0x2dfb] = 0x01;
+        original[0x2e11] = 0x01;
         let saved = original.clone();
         let program = Program::load(&original).unwrap();
         assert_eq!(original, saved);

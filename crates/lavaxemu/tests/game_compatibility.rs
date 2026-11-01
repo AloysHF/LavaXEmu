@@ -5753,3 +5753,170 @@ fn phoenix_fighter_moves_shoots_bombs_pauses_retries_and_clears_a_stage() {
     }
     assert!(exited);
 }
+
+#[test]
+#[ignore = "requires the local game corpus via LAVAX_GAME_ROOT"]
+fn power_ski_moves_jumps_recovers_and_presents_both_endings() {
+    fn word(e: &Emulator, p: usize) -> u16 {
+        u16::from_le_bytes(e.vm().memory()[p..p + 2].try_into().unwrap())
+    }
+    fn input_window(e: &mut Emulator) {
+        for _ in 0..1000 {
+            if e.vm().pc() == 0x2e9a {
+                return;
+            }
+            advance(e, 1);
+        }
+        panic!("the next skiing input window must be reachable");
+    }
+    fn step(e: &mut Emulator, k: u8) {
+        input_window(e);
+        e.input_mut().release_all();
+        e.input_mut().set_keys([k]);
+        advance(e, 1);
+        e.input_mut().set_keys([]);
+        for _ in 0..1000 {
+            if e.vm().pc() == 0x2ecd {
+                return;
+            }
+            advance(e, 1);
+        }
+        panic!("the skier must be drawn after applying an input");
+    }
+    fn ending(e: &Emulator, address: usize) {
+        let expected: Vec<u8> = e.vm().memory()[address..address + 1600]
+            .iter()
+            .flat_map(|b| (0..8).map(move |bit| u8::from(b & (0x80 >> bit) != 0)))
+            .collect();
+        assert!(
+            e.display().indexed_frame() == expected,
+            "the ending picture must be visible while waiting for confirmation"
+        );
+    }
+    let path = fixture_path("滑雪.lav");
+    let mut e = load(&path);
+    for f in 0..450 {
+        e.input_mut()
+            .set_keys((f >= 300 && (f - 300) / 60 < 3 && (f - 300) % 60 < 3).then_some(13));
+        advance(&mut e, 1);
+    }
+    e.input_mut().release_all();
+    assert_eq!(word(&e, 0x5793), 3);
+    assert_eq!(word(&e, 0x5795), 10);
+    assert_eq!(e.vm().memory()[0x5799], 80);
+    capture(&e, "ski-start");
+    for (key, count, x) in [(22, 8, 100), (23, 14, 40)] {
+        let mut branch = e.clone();
+        for _ in 0..count {
+            step(&mut branch, key);
+        }
+        assert_eq!(branch.vm().memory()[0x5799], x);
+        assert_eq!(word(&branch, 0x5795), 10);
+        capture(&branch, &format!("ski-boundary-{key}"));
+    }
+    let mut jump = e.clone();
+    step(&mut jump, 20);
+    assert_eq!(jump.vm().memory()[0x5798], 1);
+    assert!(jump.vm().memory()[0x579a] < 40);
+    capture(&jump, "ski-jump");
+    for (key, x) in [(b'a', 77), (b'd', 83)] {
+        let mut branch = jump.clone();
+        step(&mut branch, key);
+        assert_eq!(branch.vm().memory()[0x5799], x);
+        assert_eq!(branch.vm().memory()[0x5798], 1);
+        capture(&branch, &format!("ski-air-control-{key}"));
+    }
+    let mut status = e.clone();
+    input_window(&mut status);
+    status.input_mut().set_keys([25]);
+    advance(&mut status, 1);
+    status.input_mut().set_keys([]);
+    for _ in 0..100 {
+        if status.run_frame().unwrap().status == FrameStatus::WaitingForInput {
+            break;
+        }
+    }
+    assert_eq!(status.vm().pc(), 0x2dd8);
+    let paused = status.display().indexed_frame().to_vec();
+    let progress = status.vm().memory()[0x578f..0x579b].to_vec();
+    advance(&mut status, 180);
+    assert_eq!(status.display().indexed_frame(), paused);
+    assert_eq!(&status.vm().memory()[0x578f..0x579b], progress);
+    capture(&status, "ski-status-paused");
+    status.input_mut().set_keys([27]);
+    advance(&mut status, 1);
+    status.input_mut().set_keys([]);
+    input_window(&mut status);
+    assert!(word(&status, 0x5793) > word(&e, 0x5793));
+    let mut loss = e.clone();
+    let mut energy = 10;
+    let mut lost = false;
+    for _ in 0..5000 {
+        let pc = loss.vm().pc();
+        let bp = loss.vm().local_bp() as usize;
+        let m = loss.vm().memory();
+        let ret = u32::from_le_bytes([m[bp], m[bp + 1], m[bp + 2], 0]);
+        let recovering = pc == 0x2ed1 && matches!(ret, 0x2fac | 0x2fb2);
+        loss.input_mut().set_keys(recovering.then_some(20));
+        let r = loss.run_frame().unwrap();
+        let next = word(&loss, 0x5795);
+        if next != energy {
+            assert_eq!(next + 1, energy);
+            energy = next;
+            capture(&loss, &format!("ski-collision-{}", 10 - energy));
+        }
+        if r.status == FrameStatus::WaitingForInput {
+            assert_eq!(loss.vm().pc(), 0x2e01);
+            lost = true;
+            break;
+        }
+    }
+    assert!(lost);
+    assert_eq!(energy, 0);
+    assert_eq!(word(&loss, 0x5793), 61);
+    capture(&loss, "ski-defeat");
+    ending(&loss, 0x32c0);
+    let mut won = false;
+    let mut milestone = 0;
+    for _ in 0..30_000 {
+        let jumping = e.vm().pc() == 0x2e9a && e.vm().memory()[0x5798] == 0;
+        e.input_mut().set_keys(jumping.then_some(20));
+        let r = e.run_frame().unwrap();
+        assert_eq!(word(&e, 0x5795), 10);
+        let distance = word(&e, 0x5793);
+        if distance / 250 > milestone
+            && (e.vm().pc() == 0x2ecd || r.status == FrameStatus::WaitingForInput)
+        {
+            milestone = distance / 250;
+            capture(&e, &format!("ski-distance-{distance}"));
+        }
+        if r.status == FrameStatus::WaitingForInput {
+            assert_eq!(e.vm().pc(), 0x2e17);
+            won = true;
+            break;
+        }
+    }
+    assert!(won);
+    assert_eq!(word(&e, 0x5793), 1000);
+    capture(&e, "ski-victory");
+    ending(&e, 0x2c80);
+    for key in [13, 21, 21, 13] {
+        e.input_mut().release_all();
+        e.input_mut().set_keys([key]);
+        advance(&mut e, 3);
+        e.input_mut().set_keys([]);
+        advance(&mut e, 57);
+    }
+    assert_eq!(e.vm().pc(), 0x2d72);
+    capture(&e, "ski-credits");
+    e.input_mut().set_keys([13]);
+    let mut exited = false;
+    for _ in 0..60 {
+        if let FrameStatus::Halted(code) = e.run_frame().unwrap().status {
+            assert_eq!(code, 0);
+            exited = true;
+            break;
+        }
+    }
+    assert!(exited);
+}

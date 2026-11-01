@@ -1443,3 +1443,28 @@ without an execution error alone does not establish playability.
   status without suppressing emulator errors. No additional core changes were
   needed. Later bosses, advanced weapon pickups and healing crystals remain
   unverified. Captures and game resources are not distributed.
+
+## Power Ski (动力滑雪)
+
+- Bug: both ending functions draw a full-screen picture to the back buffer,
+  then wait for a key without presenting it. After completing the course or
+  exhausting energy, the player sees the previous skiing or crash frame.
+  The original regression failed the visible defeat-picture assertion; local
+  buffer inspection also confirmed the hidden victory picture.
+- Match the exact release by length, CRC and the two expected drawing flags.
+  Change those flags in the loaded copy to draw the full-screen pictures to
+  the front buffer. A guard test leaves similar images with a different CRC
+  untouched. General drawing, presentation and key-wait behavior stay intact,
+  and the original content file is not modified.
+- Check Left/Right steering and both boundaries, Up jumping and A/D air control.
+  Open the status display with the Help key, verify that 180 frames preserve
+  the picture and progress, then use Escape to resume.
+- Deliberately collide ten times. Each collision consumes one energy point;
+  Up recovers from each crash. Check zero energy and the defeat picture at
+  distance 61. Separately use timed Up inputs to clear the entire course at
+  distance 1000 while retaining all ten energy points. Both ending checks
+  compare every presented pixel with the guest's corresponding picture data.
+- Acknowledge victory, return to the menu, select exit and inspect the credits;
+  confirming them exits normally with code zero. Stage captures are inspected
+  locally. The remaining air-trick poses and the menu's instruction pages are
+  not exhaustively checked. Captures and game resources are not distributed.

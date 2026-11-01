@@ -50,9 +50,10 @@ monochrome Tetris v1.3 repair initializes its name-entry buffer from the current
 name before the guest reads reused local storage. The Battle on Namek repair
 initializes round counters when starting a game and fixes the unreachable
 five-stage ending predicate. The Volley Shooting v1.5 repair pads missing record
-slots in the guest file and rewinds before updating the shooting record. These
-repairs do not modify the content file or change the VM's general stack, local
-variables or file-seek bounds.
+slots in the guest file and rewinds before updating the shooting record. The
+Power Ski repair directs its ending pictures to the front buffer before the
+guest waits for confirmation. These repairs do not modify the content file or
+change the VM's general stack, local variables or file-seek bounds.
 
 ## Bytecode Execution
 
