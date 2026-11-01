@@ -8,6 +8,7 @@ pub const ENVIRONMENT_SET_PERFORMANCE_LEVEL: u32 = 8;
 pub const ENVIRONMENT_SET_PIXEL_FORMAT: u32 = 10;
 pub const ENVIRONMENT_SET_INPUT_DESCRIPTORS: u32 = 11;
 pub const ENVIRONMENT_SET_SUPPORT_NO_GAME: u32 = 18;
+#[cfg(not(target_os = "emscripten"))]
 pub const ENVIRONMENT_GET_LOG_INTERFACE: u32 = 27;
 
 pub const LOG_DEBUG: u32 = 0;
@@ -45,8 +46,18 @@ pub type AudioSampleCallback = Option<unsafe extern "C" fn(i16, i16)>;
 pub type AudioSampleBatchCallback = Option<unsafe extern "C" fn(*const i16, usize) -> usize>;
 pub type InputPollCallback = Option<unsafe extern "C" fn()>;
 pub type InputStateCallback = Option<unsafe extern "C" fn(u32, u32, u32, u32) -> i16>;
-pub type LogCallback = Option<unsafe extern "C" fn(u32, *const c_char, ...)>;
+/// Frontend log sink obtained through `RETRO_ENVIRONMENT_GET_LOG_INTERFACE`.
+///
+/// libretro declares it C-variadic, but over wasm the callee signature carries
+/// a hidden varargs pointer, so calling it from Rust traps with "function
+/// signature mismatch". Native builds call it with the message as the format
+/// string and no arguments; Emscripten builds log to stderr instead and never
+/// touch the callback.
+#[cfg(not(target_os = "emscripten"))]
+pub type LogCallback = Option<unsafe extern "C" fn(u32, *const c_char)>;
 
+/// Sink the frontend fills in for `RETRO_ENVIRONMENT_GET_LOG_INTERFACE`.
+#[cfg(not(target_os = "emscripten"))]
 #[repr(C)]
 pub struct LogCallbackStruct {
     pub log: LogCallback,

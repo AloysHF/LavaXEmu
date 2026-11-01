@@ -77,22 +77,30 @@ fn guard<T>(fallback: T, body: impl FnOnce() -> T) -> T {
 /// Frontend log sink installed through `RETRO_ENVIRONMENT_GET_LOG_INTERFACE`.
 ///
 /// It lives outside `CORE` so logging while the core mutex is held cannot
-/// deadlock.
+/// deadlock. Native builds only: over wasm the callback cannot be called
+/// safely (see `LogCallback`) and stderr carries the message instead.
+#[cfg(not(target_os = "emscripten"))]
 static FRONTEND_LOG: Mutex<LogCallback> = Mutex::new(None);
 
 #[unsafe(no_mangle)]
 pub extern "C" fn retro_set_environment(callback: EnvironmentCallback) {
     guard((), || {
         core().callbacks.environment = callback;
-        let mut log = LogCallbackStruct { log: None };
-        call_environment(
-            callback,
-            ENVIRONMENT_GET_LOG_INTERFACE,
-            ptr::from_mut(&mut log).cast(),
-        );
-        *FRONTEND_LOG
-            .lock()
-            .unwrap_or_else(|poisoned| poisoned.into_inner()) = log.log;
+        // Queried natively only; over wasm the interface is unusable, so
+        // logging falls back to stderr.
+        #[cfg(not(target_os = "emscripten"))]
+        {
+            let mut log = LogCallbackStruct { log: None };
+            if call_environment(
+                callback,
+                ENVIRONMENT_GET_LOG_INTERFACE,
+                ptr::from_mut(&mut log).cast(),
+            ) {
+                *FRONTEND_LOG
+                    .lock()
+                    .unwrap_or_else(|poisoned| poisoned.into_inner()) = log.log;
+            }
+        }
 
         let mut support_no_game = false;
         call_environment(
@@ -147,14 +155,27 @@ impl log::Log for FrontendLogger {
             log::Level::Info => LOG_INFO,
             log::Level::Debug | log::Level::Trace => LOG_DEBUG,
         };
-        let Ok(message) = CString::new(record.args().to_string()) else {
-            return;
-        };
-        let callback = *FRONTEND_LOG
-            .lock()
-            .unwrap_or_else(|poisoned| poisoned.into_inner());
-        if let Some(callback) = callback {
-            unsafe { callback(level, c"%s".as_ptr(), message.as_ptr()) };
+
+        // EmulatorJS forwards stderr to the browser console.
+        #[cfg(target_os = "emscripten")]
+        {
+            let _ = level;
+            eprintln!("{}", record.args());
+        }
+
+        // The message itself is the format string, so percent signs in content
+        // paths have to be escaped before reaching the frontend's printf.
+        #[cfg(not(target_os = "emscripten"))]
+        {
+            let Ok(message) = CString::new(record.args().to_string().replace('%', "%%")) else {
+                return;
+            };
+            let callback = *FRONTEND_LOG
+                .lock()
+                .unwrap_or_else(|poisoned| poisoned.into_inner());
+            if let Some(callback) = callback {
+                unsafe { callback(level, message.as_ptr()) };
+            }
         }
     }
 
