@@ -74,6 +74,8 @@ pause/resume, defeat/retry and defeating the first boss to enter stage two.
 Power Ski has a workflow for steering, jumping, collision recovery, status
 pause and completing the course. A fingerprinted repair makes both ending
 pictures visible while waiting for confirmation.
+Brave Legend has a workflow completing all 40 stages, verifying key-gated
+doors, all four platform directions, stage restart and the ending.
 
 ## Usage
 

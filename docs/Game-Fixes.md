@@ -1468,3 +1468,26 @@ without an execution error alone does not establish playability.
   confirming them exits normally with code zero. Stage captures are inspected
   locally. The remaining air-trick poses and the menu's instruction pages are
   not exhaustively checked. Captures and game resources are not distributed.
+
+## Brave Legend (勇者传说)
+
+- Validation gap: the first board did not establish whether keys, locked doors,
+  moving platforms, falling, restart or campaign completion worked.
+- Collect a key and raise a platform, then press F1. Verify that restarting
+  restores the complete board, the key, platform, starting position and key
+  indicator. Confirm the new stage to resume play.
+- Replay all 40 stages with 1,125 directional and Enter inputs. Check every
+  stage index before and after its route, all 40 key pickups and removal of
+  each collected key from the board. Every successful platform move checks
+  that its original cell clears and its new cell retains the same direction;
+  the routes exercise right, left, up and down platforms.
+- Separately enter stage two's door without collecting its key and verify
+  that the stage does not advance. Campaign routes account for automatic
+  falling, including falling immediately after a suspended key is collected.
+  Progress comes entirely from actual inputs, with no guest memory writes.
+- After the final door, confirm the ending, allow the scrolling picture to
+  finish, inspect The End and confirm normal exit with code zero. All 40
+  board images and captured control states are inspected locally; the first
+  39 completion popups are identical. No additional core changes were needed.
+  Optional level selection and instruction pages remain unverified. Captures,
+  board data and game resources are not distributed.

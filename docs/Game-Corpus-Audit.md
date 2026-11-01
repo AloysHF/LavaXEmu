@@ -15,9 +15,9 @@ do not satisfy this status.
 ## Current evidence
 
 - Input update checked on 2026-10-31: full rerun of 49 workflows, followed by a corrected Dragon Kiss intro replay and the dedicated WarCraft workflow. Those 50 workflows passed with the updated input behavior; later entries have separate incremental checks.
-- 71 dedicated release workflows passed in this audit.
-- 113 of 324 entry points were loaded by those successful workflows.
-- 211 entry points still need dedicated workflow verification.
+- 72 dedicated release workflows passed in this audit.
+- 114 of 324 entry points were loaded by those successful workflows.
+- 210 entry points still need dedicated workflow verification.
 - The historical [startup gallery](Game-Compatibility.md) is a separate check
   and must not be interpreted as this workflow audit.
 
@@ -110,7 +110,7 @@ an optional screenshot directory. Keep each test's logs and captures separate.
 | 069 | `LAVA1 凌空抽射1.5/凌空抽射v1.5.lav` | Game / game package | [Workflow passed: `volley_shooting_scores_saves_records_and_drives_goalkeeper_controls`](../crates/lavaxemu/tests/game_compatibility.rs#L5443) |
 | 070 | `LAVA1 凤凰战斗机/Fighter.lav` | Game / game package | [Workflow passed: `phoenix_fighter_moves_shoots_bombs_pauses_retries_and_clears_a_stage`](../crates/lavaxemu/tests/game_compatibility.rs#L5609) |
 | 071 | `LAVA1 动力滑雪/滑雪.lav` | Game / game package | [Workflow passed: `power_ski_moves_jumps_recovers_and_presents_both_endings`](../crates/lavaxemu/tests/game_compatibility.rs#L5759) |
-| 072 | `LAVA1 勇者传说/勇者传说.lav` | Game / game package | Pending |
+| 072 | `LAVA1 勇者传说/勇者传说.lav` | Game / game package | [Workflow passed: `brave_legend_restarts_moves_platforms_and_completes_all_forty_stages`](../crates/lavaxemu/tests/game_compatibility.rs#L5926) |
 | 073 | `LAVA1 勇者斗恶龙/勇者斗恶龙.lav` | Game / game package | Pending |
 | 074 | `LAVA1 勇者斗恶龙特别版/勇者斗恶龙.lav` | Game / game package | Pending |
 | 075 | `LAVA1 勇闯地狱/勇闯地狱.lav` | Game / game package | Pending |

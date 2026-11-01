@@ -5920,3 +5920,266 @@ fn power_ski_moves_jumps_recovers_and_presents_both_endings() {
     }
     assert!(exited);
 }
+
+#[test]
+#[ignore = "requires the local game corpus via LAVAX_GAME_ROOT"]
+fn brave_legend_restarts_moves_platforms_and_completes_all_forty_stages() {
+    fn word(e: &Emulator, p: usize) -> u16 {
+        u16::from_le_bytes(e.vm().memory()[p..p + 2].try_into().unwrap())
+    }
+    fn key(e: &mut Emulator, k: u8) -> FrameStatus {
+        e.input_mut().release_all();
+        e.input_mut().set_keys([k]);
+        for f in 0..600 {
+            let status = e.run_frame().unwrap().status;
+            if f == 0 {
+                e.input_mut().set_keys([]);
+            }
+            if matches!(
+                status,
+                FrameStatus::Running | FrameStatus::WaitingForInput | FrameStatus::Halted(_)
+            ) {
+                return status;
+            }
+        }
+        panic!("the next stable interaction must be reachable");
+    }
+    let routes: &[&[u8]] = &[
+        &[22, 22, 22, 20, 22, 22, 22, 13, 22, 22, 21],
+        &[
+            13, 13, 22, 13, 13, 22, 13, 13, 13, 13, 13, 23, 13, 13, 13, 13, 22, 13, 13, 13, 13, 13,
+        ],
+        &[
+            23, 23, 23, 23, 23, 23, 23, 23, 13, 13, 22, 23, 21, 22, 22, 22, 22, 22, 22, 22, 22,
+        ],
+        &[
+            13, 13, 13, 13, 13, 13, 13, 23, 13, 13, 13, 22, 13, 13, 13, 13, 13, 13, 22, 13, 13, 13,
+            23, 13, 13, 13, 13, 13, 13, 23, 21,
+        ],
+        &[
+            13, 13, 13, 13, 13, 13, 13, 22, 13, 13, 13, 13, 13, 13, 13, 23, 13, 13, 13, 13, 13, 13,
+            22, 22, 21,
+        ],
+        &[22, 22, 13, 13, 13, 13, 13, 23, 22, 22, 13, 13, 22, 22, 22],
+        &[
+            22, 22, 22, 22, 13, 13, 22, 22, 13, 13, 23, 23, 13, 22, 21, 23, 23, 13, 23, 23, 23, 23,
+            20, 20, 20, 20, 20, 22,
+        ],
+        &[
+            13, 13, 13, 13, 23, 23, 23, 23, 23, 22, 22, 22, 22, 13, 13, 13, 13, 13, 22, 13, 22,
+        ],
+        &[
+            22, 13, 23, 13, 23, 13, 13, 13, 22, 13, 13, 13, 13, 13, 22, 13, 22, 13, 22, 13, 22, 13,
+            23,
+        ],
+        &[
+            22, 22, 21, 21, 21, 22, 22, 22, 20, 23, 20, 23, 20, 23, 20, 23, 20, 23, 23, 23, 21,
+        ],
+        &[
+            13, 23, 13, 23, 13, 13, 13, 13, 13, 13, 22, 13, 13, 13, 13, 23, 23, 23, 13, 13, 13, 13,
+            13,
+        ],
+        &[
+            22, 22, 22, 22, 13, 13, 23, 13, 13, 23, 13, 22, 13, 13, 22, 13, 13, 13, 23, 13, 13, 13,
+            13, 13, 13, 23, 21, 22, 22, 22, 22, 22,
+        ],
+        &[
+            22, 22, 13, 13, 22, 22, 22, 22, 22, 22, 13, 13, 13, 22, 21, 13, 13, 23, 23, 13, 13, 13,
+            23, 13, 13, 22, 22, 13, 13, 23, 23,
+        ],
+        &[
+            22, 22, 22, 22, 13, 13, 13, 23, 23, 23, 23, 23, 23, 20, 20, 20, 20, 22, 22, 22, 22, 22,
+            13, 13, 13, 23, 23, 23, 23, 23, 20, 20, 20, 20, 22, 22, 22, 22, 13, 13, 13, 23, 23, 23,
+            23, 20, 20, 20, 20, 22, 22, 22, 22, 22, 22, 22,
+        ],
+        &[
+            13, 13, 13, 13, 13, 13, 13, 23, 13, 13, 13, 13, 13, 13, 13, 22, 13, 13, 13, 13, 13, 22,
+            13, 13, 22, 21,
+        ],
+        &[22, 22, 13, 23, 23, 13, 22, 22, 22, 22, 21],
+        &[
+            22, 13, 23, 20, 23, 13, 13, 13, 13, 22, 22, 22, 13, 13, 13, 13, 13, 23, 23, 21,
+        ],
+        &[22, 22, 13, 13, 23, 22, 22, 20, 20, 22, 22, 22, 22, 22, 21],
+        &[
+            23, 23, 23, 23, 23, 13, 13, 13, 13, 13, 23, 23, 22, 13, 22, 13, 13, 13, 13, 13, 23, 23,
+            23, 13, 23, 21, 13, 13, 13, 13, 13, 23,
+        ],
+        &[
+            22, 13, 13, 13, 22, 13, 13, 13, 23, 13, 13, 13, 23, 13, 13, 13, 23, 13, 23, 23, 13, 13,
+            13, 13, 13, 13, 13, 22, 13, 13, 13, 13, 13,
+        ],
+        &[
+            13, 13, 23, 23, 23, 20, 20, 20, 20, 22, 22, 22, 22, 13, 13, 13, 22, 21, 23, 22, 13, 13,
+            22, 20, 20, 23, 13, 13, 13, 23, 23, 23, 13, 23, 23, 23, 23,
+        ],
+        &[
+            13, 13, 21, 13, 13, 13, 13, 13, 13, 22, 13, 13, 13, 13, 13, 22, 22, 21,
+        ],
+        &[
+            23, 13, 13, 22, 22, 13, 13, 13, 22, 22, 21, 13, 13, 13, 13, 23, 20, 20, 22, 22, 20, 22,
+            22, 22,
+        ],
+        &[
+            13, 13, 13, 23, 23, 13, 23, 13, 21, 22, 22, 22, 13, 13, 13, 13, 13, 23, 23,
+        ],
+        &[
+            22, 22, 23, 13, 13, 23, 23, 23, 20, 20, 20, 20, 20, 20, 20, 22, 13, 13, 13, 13, 23, 13,
+            13, 22, 13, 13, 13, 23, 13, 13, 13, 22, 13, 13, 22, 13, 13, 13, 13, 13, 23, 23, 23, 23,
+            23, 23,
+        ],
+        &[
+            22, 22, 13, 13, 13, 13, 13, 13, 13, 22, 13, 13, 13, 22, 22, 23, 23,
+        ],
+        &[
+            22, 13, 23, 23, 21, 23, 13, 22, 22, 22, 20, 23, 20, 23, 13, 13, 22, 23, 22, 22, 23, 23,
+            23, 20, 20, 20, 20, 20, 20, 22, 22, 22, 22, 22, 22, 23,
+        ],
+        &[
+            23, 23, 13, 22, 13, 22, 13, 13, 13, 13, 23, 23, 23, 23, 23, 23, 21, 22, 21, 13, 23, 13,
+            13, 13, 13, 13, 13, 13, 13, 23, 23, 21,
+        ],
+        &[
+            22, 22, 20, 20, 20, 20, 20, 20, 20, 23, 13, 13, 13, 13, 13, 23, 23, 13, 13, 22, 21, 23,
+            21,
+        ],
+        &[
+            13, 13, 13, 13, 23, 13, 23, 13, 13, 13, 23, 13, 13, 13, 23, 23, 23, 23, 23, 23, 22,
+        ],
+        &[
+            13, 23, 13, 13, 13, 13, 13, 22, 13, 23, 13, 23, 23, 23, 13, 13, 13, 13, 13, 13, 22, 13,
+            13, 22, 13, 22, 23, 23, 23, 23, 13, 23,
+        ],
+        &[
+            23, 23, 13, 23, 23, 13, 13, 22, 13, 13, 22, 13, 13, 13, 22, 13, 13, 13, 23, 13, 13, 23,
+            13, 13, 23,
+        ],
+        &[
+            13, 13, 13, 23, 13, 13, 22, 22, 13, 23, 23, 23, 13, 13, 13, 13, 13, 13, 22, 22, 22, 13,
+            23, 21, 13, 13, 13, 13, 23, 13, 23, 13, 22, 13, 22, 13, 13, 23,
+        ],
+        &[
+            23, 13, 13, 13, 23, 13, 13, 13, 23, 23, 13, 13, 22, 13, 13, 13, 22, 21, 13, 13, 13, 23,
+            13, 13, 22,
+        ],
+        &[
+            23, 23, 23, 13, 13, 13, 23, 13, 13, 23, 13, 13, 13, 13, 13, 13, 23, 13, 13, 23, 13, 13,
+            13, 13, 13, 13, 23, 13, 13, 23, 21, 13, 13, 13, 13, 13, 13, 23, 13, 13, 13, 23,
+        ],
+        &[
+            22, 13, 13, 13, 22, 22, 13, 13, 23, 13, 23, 13, 13, 13, 23, 23, 13, 13, 13, 13, 22, 22,
+            22, 13, 13, 13, 22, 22, 20, 20, 22, 13, 13, 13, 13, 13, 13, 22,
+        ],
+        &[
+            22, 22, 22, 22, 13, 13, 13, 13, 13, 23, 23, 23, 13, 13, 13, 13, 22, 22, 22, 13, 13, 13,
+            13, 13, 13, 23, 23, 23, 22, 22, 13, 13, 13, 13, 13, 22, 13, 13, 23, 13, 13, 13, 13, 23,
+            23, 23, 21, 22, 21,
+        ],
+        &[
+            23, 23, 13, 22, 22, 13, 22, 13, 22, 22, 13, 22, 13, 13, 13, 13, 13, 13, 13, 23, 23, 23,
+            23, 23, 13, 13, 13, 22, 21, 13, 23, 21, 13, 13, 13, 13, 23, 13, 13, 13, 13, 22, 22, 22,
+            13, 22, 22, 13, 22, 13, 13,
+        ],
+        &[13, 13, 20, 20, 22, 22, 21, 23, 23, 23, 13, 23, 23],
+        &[
+            22, 13, 13, 13, 23, 13, 13, 13, 13, 13, 13, 23, 13, 22, 13, 13, 23, 23, 13, 13, 13, 13,
+            22, 13, 13, 13, 13, 13, 22, 20, 20, 22, 13, 22, 23, 23, 23, 23, 13, 13, 13, 22,
+        ],
+    ];
+    assert_eq!(routes.len(), 40);
+    let mut e = load(&fixture_path("勇者传说.lav"));
+    for f in 0..2400 {
+        e.input_mut()
+            .set_keys((f >= 300 && (f - 300) / 60 < 10 && (f - 300) % 60 < 3).then_some(13));
+        advance(&mut e, 1);
+    }
+    e.input_mut().release_all();
+    assert_eq!(word(&e, 0x2002), 0);
+    assert_eq!((word(&e, 0x2006), word(&e, 0x2008)), (1, 8));
+    let original_board = e.vm().memory()[0x200e..0x207c].to_vec();
+    let mut retry = e.clone();
+    for k in [22, 22, 22, 20, 22, 22, 22, 13] {
+        key(&mut retry, k);
+    }
+    assert_eq!(retry.vm().memory()[0x207c], 1);
+    assert_ne!(&retry.vm().memory()[0x200e..0x207c], original_board);
+    capture(&retry, "brave-before-restart");
+    assert_eq!(key(&mut retry, 28), FrameStatus::WaitingForInput);
+    assert_eq!(word(&retry, 0x2002), 0);
+    assert_eq!(retry.vm().memory()[0x207c], 0);
+    assert_eq!(&retry.vm().memory()[0x200e..0x207c], original_board);
+    assert_eq!((word(&retry, 0x2006), word(&retry, 0x2008)), (1, 8));
+    capture(&retry, "brave-restarted");
+    assert_eq!(key(&mut retry, 13), FrameStatus::Running);
+    let mut platform_moves = [0; 4];
+    let mut pickups = 0;
+    let mut inputs = 0;
+    for (level, route) in routes.iter().enumerate() {
+        assert_eq!(word(&e, 0x2002), level as u16);
+        assert_eq!(e.vm().memory()[0x207c], 0);
+        capture(&e, &format!("brave-stage-{:02}-start", level + 1));
+        if level == 1 {
+            let mut closed = e.clone();
+            for k in [13, 13, 22, 13, 13, 13, 13, 13, 13, 22, 13, 13, 13, 13, 13] {
+                key(&mut closed, k);
+            }
+            assert_eq!(closed.vm().memory()[0x207c], 0);
+            assert_eq!(
+                word(&closed, 0x2002),
+                1,
+                "entering a door without the key must preserve the stage"
+            );
+            let p = word(&closed, 0x2008) as usize * 11 + word(&closed, 0x2006) as usize;
+            assert_eq!(closed.vm().memory()[0x200e + p], 10);
+            capture(&closed, "brave-door-without-key");
+        }
+        for &k in *route {
+            let before = e.vm().memory()[0x200e..0x207c].to_vec();
+            let old_key = e.vm().memory()[0x207c];
+            let below = (word(&e, 0x2008) as usize + 1) * 11 + word(&e, 0x2006) as usize;
+            let tile = before[below];
+            let status = key(&mut e, k);
+            assert!(!matches!(status, FrameStatus::Halted(_)));
+            inputs += 1;
+            let after = &e.vm().memory()[0x200e..0x207c];
+            if k == 13 && (3..=6).contains(&tile) && after != before {
+                let delta = [1isize, -1, -11, 11][usize::from(tile - 3)];
+                assert_eq!(after[below], 0);
+                assert_eq!(after[below.checked_add_signed(delta).unwrap()], tile);
+                if platform_moves[usize::from(tile - 3)] == 0 {
+                    capture(&e, &format!("brave-platform-{tile}"));
+                }
+                platform_moves[usize::from(tile - 3)] += 1;
+            }
+            if old_key == 0 && e.vm().memory()[0x207c] != 0 {
+                assert_eq!(
+                    before.iter().filter(|&&v| v == 11).count(),
+                    after.iter().filter(|&&v| v == 11).count() + 1
+                );
+                pickups += 1;
+                if level == 0 {
+                    capture(&e, "brave-key-collected");
+                }
+            }
+        }
+        assert_eq!(e.vm().memory()[0x207c], 1);
+        assert_eq!(
+            word(&e, 0x2002),
+            level as u16 + 1,
+            "the route must open the door and complete this stage"
+        );
+        assert_eq!(e.vm().pc(), if level < 39 { 0x34b5 } else { 0x34c9 });
+        capture(&e, &format!("brave-stage-{:02}-complete", level + 1));
+        if level < 39 {
+            assert_eq!(key(&mut e, 13), FrameStatus::WaitingForInput);
+            assert_eq!(key(&mut e, 13), FrameStatus::Running);
+        }
+    }
+    assert_eq!(inputs, 1125);
+    assert_eq!(pickups, 40);
+    assert!(platform_moves.iter().all(|&n| n > 0));
+    assert_eq!(key(&mut e, 13), FrameStatus::WaitingForInput);
+    assert_eq!(e.vm().pc(), 0x3501);
+    capture(&e, "brave-the-end");
+    assert_eq!(key(&mut e, 13), FrameStatus::Halted(0));
+}
