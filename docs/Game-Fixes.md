@@ -1491,3 +1491,29 @@ without an execution error alone does not establish playability.
   39 completion popups are identical. No additional core changes were needed.
   Optional level selection and instruction pages remain unverified. Captures,
   board data and game resources are not distributed.
+
+## Dragon Quest Monsters (勇者斗恶龙), standard and special editions
+
+- Validation gap: reaching the palace did not establish whether world travel,
+  purchases, dungeon encounters, commands, recruitment or saved progress worked.
+  The editions share an executable basename and size, so the regression locates
+  each through its distinct resource companion.
+- From a fresh game, walk to the merchant, select the first four-gold item,
+  type quantity `1` and confirm. Verify money decreases from 1000 to 996 and
+  the inventory count increases from zero to one. Quantity entry uses numeric
+  keys; directional keys select menu entries.
+- Independently travel to the first dungeon and trigger a deterministic
+  encounter. Defend for one turn and verify that the enemy remains alive and
+  no experience is awarded. In a separate branch, attack and defeat the enemy,
+  advance the party monster from level 10 to 11, verify its remaining experience
+  and increased health, and recruit the defeated monster. Confirm its name and
+  return to dungeon movement; the owned-monster count increases from one to two.
+- Save through F4, Settings, Save Progress and the default slot. Export the
+  actual 1,820-byte file and import it into a fresh emulator. Select Load Game
+  with Right at the title, then select the default slot. Check the complete
+  carried-monster record and owned-monster count. Loading returns to the palace
+  according to the game's rules, rather than recreating the random dungeon.
+- Select Settings, Exit Game and confirm normal exit with code zero. Screens
+  for both editions are inspected locally. These operations need no additional
+  core changes. Breeding, arena ranks, later dungeons, sale and item effects
+  remain unverified. Captures, save files and game resources are not distributed.

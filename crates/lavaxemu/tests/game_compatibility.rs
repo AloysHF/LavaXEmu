@@ -6183,3 +6183,154 @@ fn brave_legend_restarts_moves_platforms_and_completes_all_forty_stages() {
     capture(&e, "brave-the-end");
     assert_eq!(key(&mut e, 13), FrameStatus::Halted(0));
 }
+
+#[test]
+#[ignore = "requires the local game corpus via LAVAX_GAME_ROOT"]
+fn dragon_quest_editions_trade_defend_recruit_and_restore_progress() {
+    fn key(e: &mut Emulator, k: u8) -> FrameStatus {
+        e.input_mut().release_all();
+        e.input_mut().set_keys([k]);
+        for frame in 0..1200 {
+            let status = e.run_frame().expect("scripted input must execute").status;
+            if frame == 0 {
+                e.input_mut().set_keys([]);
+            }
+            if matches!(
+                status,
+                FrameStatus::Running | FrameStatus::WaitingForInput | FrameStatus::Halted(_)
+            ) {
+                return status;
+            }
+        }
+        panic!("input must reach an idle state");
+    }
+    fn keys(e: &mut Emulator, sequence: &[u8]) {
+        for &k in sequence {
+            assert!(!matches!(key(e, k), FrameStatus::Halted(_)));
+        }
+    }
+    fn start(e: &mut Emulator, sequence: &[u8], frames: usize) {
+        for frame in 0..frames {
+            let n = frame.saturating_sub(300);
+            e.input_mut().set_keys(
+                (frame >= 300 && n / 60 < sequence.len() && n % 60 < 3).then(|| sequence[n / 60]),
+            );
+            advance(e, 1);
+        }
+        e.input_mut().release_all();
+    }
+    fn word(e: &Emulator, address: usize) -> u16 {
+        u16::from_le_bytes(e.vm().memory()[address..address + 2].try_into().unwrap())
+    }
+    fn dword(e: &Emulator, address: usize) -> u32 {
+        u32::from_le_bytes(e.vm().memory()[address..address + 4].try_into().unwrap())
+    }
+    fn battle(e: &Emulator) -> bool {
+        let m = e.vm().memory();
+        let mut bp = e.vm().local_bp() as usize;
+        for _ in 0..20 {
+            let ret = u32::from_le_bytes([m[bp], m[bp + 1], m[bp + 2], 0]);
+            if (0x6500..0x6bf5).contains(&ret) {
+                return true;
+            }
+            let next = u16::from_le_bytes([m[bp + 3], m[bp + 4]]) as usize;
+            if next == 0 || next == bp {
+                break;
+            }
+            bp = next;
+        }
+        false
+    }
+    for (edition, companion) in [("standard", "DQM2.dat"), ("special", "HJM2.dat")] {
+        let mut path = PathBuf::from(fixture_path(companion));
+        path.set_file_name("勇者斗恶龙.lav");
+        let path = path.to_str().unwrap();
+        let mut e = load(path);
+        start(&mut e, &[13; 10], 2400);
+        assert_eq!(&e.vm().memory()[0x22a1..0x22a6], &[73, 3, 4, 2, 2]);
+        assert_eq!(dword(&e, 0x32ff), 1000);
+        assert_eq!(e.vm().memory()[0x334a], 0);
+        capture(&e, &format!("dqm-{edition}-palace"));
+
+        let mut shop = e.clone();
+        keys(
+            &mut shop,
+            &[
+                21, 21, 21, 21, 21, 21, 21, 21, 21, 21, 21, 22, 22, 21, 21, 21, 22, 22, 22, 20, 22,
+                22, 22, 22, 22, 22, 22, 22, 22, 22, 22, 22, 22, 22, 22, 22, 20, 13,
+            ],
+        );
+        assert_eq!(shop.vm().memory()[0x22a1], 20);
+        assert_eq!(shop.vm().memory()[0x22a3], 7);
+        capture(&shop, &format!("dqm-{edition}-merchant"));
+        keys(&mut shop, &[13, 13, b'1', 13]);
+        assert_eq!(dword(&shop, 0x32ff), 996);
+        assert_eq!(shop.vm().memory()[0x334a], 1);
+        capture(&shop, &format!("dqm-{edition}-purchased"));
+
+        keys(
+            &mut e,
+            &[
+                21, 21, 21, 21, 21, 21, 21, 21, 23, 23, 20, 20, 22, 22, 20, 20, 20, 23, 23, 23, 23,
+                23, 20, 23, 20, 20, 20, 22, 22, 22, 22, 22, 22, 22, 21, 21, 21, 23, 23, 23, 23, 23,
+                23, 20, 23, 20, 20, 20, 13,
+            ],
+        );
+        assert_eq!(e.vm().memory()[0x22a1], 12);
+        capture(&e, &format!("dqm-{edition}-dungeon"));
+        for n in 0..14 {
+            assert!(!battle(&e), "the encounter must occur on the recorded step");
+            keys(&mut e, &[if n % 6 < 3 { 21 } else { 20 }]);
+        }
+        assert!(battle(&e));
+        assert_eq!(word(&e, 0x3390), 12);
+        assert_eq!(word(&e, 0x3462), 41);
+        assert_eq!(e.vm().memory()[0x3460], 10);
+        assert_eq!(dword(&e, 0x3447), 545);
+        assert_eq!(e.vm().memory()[0x334e], 1);
+        capture(&e, &format!("dqm-{edition}-encounter"));
+        let mut defended = e.clone();
+        keys(&mut defended, &[22, 22, 13, 21, 13]);
+        assert!(battle(&defended));
+        assert_eq!(word(&defended, 0x3390), 12);
+        assert_eq!(word(&defended, 0x3462), 41);
+        assert_eq!(dword(&defended, 0x3447), 545);
+        capture(&defended, &format!("dqm-{edition}-defended"));
+        for n in 0..5 {
+            assert!(battle(&e));
+            keys(&mut e, &[13]);
+            if n == 0 {
+                assert_eq!(word(&e, 0x3390), 0);
+                assert_eq!(e.vm().memory()[0x3460], 11);
+                assert_eq!(dword(&e, 0x3447), 6);
+                assert_eq!(word(&e, 0x3462), 45);
+                capture(&e, &format!("dqm-{edition}-victory-level-up"));
+            }
+            if n == 1 {
+                assert_eq!(e.vm().memory()[0x334e], 2);
+                capture(&e, &format!("dqm-{edition}-recruited"));
+            }
+        }
+        assert!(!battle(&e));
+        let party = e.vm().memory()[0x3422..0x3468].to_vec();
+        capture(&e, &format!("dqm-{edition}-returned-to-dungeon"));
+        keys(&mut e, &[31, 22, 22, 22, 13, 21, 21, 13, 13]);
+        let files = e.files_mut().take_dirty_files();
+        let save = files
+            .iter()
+            .find(|(name, _)| name.ends_with("/dqm_save.dat"))
+            .expect("saving must create the selected native save slot");
+        assert_eq!(save.1.len(), 1820);
+        capture(&e, &format!("dqm-{edition}-saved"));
+        let mut restored = load(path);
+        restored.files_mut().import_file(&save.0, save.1.clone());
+        start(&mut restored, &[13, 22, 13, 13], 1800);
+        assert_eq!(&restored.vm().memory()[0x3422..0x3468], party);
+        assert_eq!(restored.vm().memory()[0x334e], 2);
+        assert_eq!(&restored.vm().memory()[0x22a1..0x22a6], &[73, 3, 4, 2, 2]);
+        capture(&restored, &format!("dqm-{edition}-restored-party"));
+        keys(&mut restored, &[31, 22, 22, 22, 13, 21, 21, 21, 13]);
+        capture(&restored, &format!("dqm-{edition}-farewell"));
+        assert_eq!(key(&mut restored, 13), FrameStatus::Halted(0));
+    }
+}
