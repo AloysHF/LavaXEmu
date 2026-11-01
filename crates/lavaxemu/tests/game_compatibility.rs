@@ -7406,3 +7406,113 @@ fn sword_versions_equip_follow_the_opening_story_and_finish_a_battle() {
         assert_eq!(e.run_frame().unwrap().status, FrameStatus::Halted(0));
     }
 }
+
+#[test]
+#[ignore = "requires the local game corpus via LAVAX_GAME_ROOT"]
+fn four_player_mahjong_selects_discards_and_restarts_after_a_draw() {
+    let mut e = load(&fixture_path("MahJong.lav"));
+    advance(&mut e, 600);
+    assert_eq!(e.vm().pc(), 0x1b79);
+    assert_eq!(e.vm().memory()[0x2145], 54);
+    assert_eq!(e.vm().memory()[0x20d8], 0);
+    let bp = e.vm().local_bp() as usize;
+    assert_eq!(e.vm().memory()[bp + 10], 14);
+    capture(&e, "four-mahjong-dealt");
+    let hand = e.vm().memory()[0x214a..0x2158].to_vec();
+    let initial_frame = e.display().indexed_frame().to_vec();
+    press(&mut e, 23);
+    assert_eq!(e.vm().memory()[bp + 10], 13);
+    assert_eq!(&e.vm().memory()[0x214a..0x2158], hand);
+    assert_ne!(e.display().indexed_frame(), initial_frame);
+    capture(&e, "four-mahjong-select-previous");
+    press(&mut e, 22);
+    assert_eq!(e.vm().memory()[bp + 10], 14);
+    assert_eq!(e.display().indexed_frame(), initial_frame);
+    let discarded = hand[13];
+    let mut empty_wall = false;
+    let mut draw_message = false;
+    let mut restarted = false;
+    let mut first_discard = false;
+    for frame in 0..6000 {
+        e.input_mut().set_keys((frame % 60 == 0).then_some(13));
+        let result = e.run_frame().unwrap();
+        let remaining = e.vm().memory()[0x2145];
+        assert!(
+            remaining <= 54,
+            "drawing from an empty wall must not wrap the remaining count"
+        );
+        if !first_discard && e.vm().memory()[0x20d8] > 0 {
+            assert_eq!(e.vm().memory()[0x206c], discarded);
+            capture(&e, "four-mahjong-discarded");
+            first_discard = true;
+        }
+        if remaining == 0 && !empty_wall {
+            capture(&e, "four-mahjong-empty-wall");
+            empty_wall = true;
+        }
+        if empty_wall
+            && !draw_message
+            && e.vm().pc() == 0x1b9
+            && matches!(result.status, FrameStatus::WaitingForInput)
+        {
+            assert_eq!(remaining, 0);
+            capture(&e, "four-mahjong-draw-message");
+            draw_message = true;
+        }
+        if draw_message && remaining == 54 && e.vm().pc() == 0x1b79 {
+            assert_eq!(e.vm().memory()[0x20d8], 0);
+            assert_ne!(&e.vm().memory()[0x214a..0x2158], hand);
+            capture(&e, "four-mahjong-redealt");
+            restarted = true;
+            break;
+        }
+    }
+    assert!(first_discard && empty_wall && draw_message && restarted);
+    let mut winning = e.clone();
+    let mut winner = None;
+    for frame in 0..36000 {
+        winning.input_mut().set_keys(if frame % 60 == 0 {
+            vec![104, 13]
+        } else {
+            vec![104]
+        });
+        let result = winning.run_frame().unwrap();
+        assert!(winning.vm().memory()[0x2145] <= 54);
+        if winning.vm().pc() == 0x1b9 && matches!(result.status, FrameStatus::WaitingForInput) {
+            let modal = winning.vm().local_bp() as usize;
+            let parent = u16::from_le_bytes(
+                winning.vm().memory()[modal + 3..modal + 5]
+                    .try_into()
+                    .unwrap(),
+            ) as usize;
+            let player = winning.vm().memory()[parent + 5];
+            if player < 4 {
+                winner = Some(player);
+                capture(&winning, "four-mahjong-win");
+                break;
+            }
+        }
+    }
+    assert!(winner.is_some(), "a native winning result must be reached");
+    winning.input_mut().release_all();
+    advance(&mut winning, 1);
+    press(&mut winning, 13);
+    assert_eq!(winning.vm().memory()[0x21ae], winner.unwrap());
+    assert!((1..=54).contains(&winning.vm().memory()[0x2145]));
+    assert_ne!(winning.vm().pc(), 0x1b9);
+    capture(&winning, "four-mahjong-after-win");
+    let mut exited = false;
+    for frame in 0..600 {
+        let exit_wait = e.vm().pc() == 0x1aba;
+        e.input_mut().set_keys(if exit_wait {
+            Some(27)
+        } else {
+            (frame % 60 == 0).then_some(13)
+        });
+        if matches!(e.run_frame().unwrap().status, FrameStatus::Halted(0)) {
+            exited = true;
+            break;
+        }
+    }
+    assert!(exited);
+}

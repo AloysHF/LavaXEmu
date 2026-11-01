@@ -1686,3 +1686,24 @@ without an execution error alone does not establish playability.
   Captures are inspected locally. Later story content, optional tasks, other
   combat commands and exhaustive item effects remain unverified. Captures,
   native saves and other game resources are not distributed.
+
+## Four-player Mahjong (四人麻将)
+
+- The program checked the remaining wall only after several turns. Exhaustion
+  between those checks allowed the next player to decrement zero, wrap the
+  count and keep drawing. A deterministic discard sequence reproduces this
+  failure before the repair.
+- A length/CRC-gated loaded-image repair checks before every normal draw and
+  follows the existing drawn-hand result and redeal path when no tile remains.
+  A kong is rejected before changing the hand when no replacement tile remains.
+  Unrecognized images are left unchanged.
+- The regression checks left/right selection, unchanged tiles while selecting,
+  the selected tile entering discard history, a remaining count within 0–54,
+  the native drawn-hand confirmation, a fresh hand with cleared history,
+  a native winning result and dealer update, and normal exit. Input is
+  scripted without modifying guest memory. Captures are
+  inspected locally; game files and captures are not distributed.
+- The winning branch holds the documented automatic-win key while discarding;
+  the game still checks its own hand rules and an AI player wins the recorded
+  sequence. Player pong/kong choices and every scoring or rule combination
+  have not been verified.

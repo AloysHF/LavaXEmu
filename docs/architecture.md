@@ -59,6 +59,8 @@ the player's party is defeated, redraws the field after closing menus and
 returns to the title after defeat or Escape from exploration.
 The Sword repair reserves both 2,000-byte native save slots before seeking,
 preserving existing bytes when the second slot is saved first.
+The Four-player Mahjong repair checks the wall before each normal draw and
+rejects a kong without a replacement tile, preventing the remaining count from wrapping.
 These repairs do not modify the content file or
 change the VM's general stack, local variables or file-seek bounds.
 

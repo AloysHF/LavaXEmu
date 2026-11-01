@@ -341,6 +341,33 @@ impl Program {
             image[0x1e71] = 0x3b;
             image[0x1e72..0x1e75].copy_from_slice(&trampoline.to_le_bytes()[..3]);
         }
+        if image.len() == 9_748
+            && crc32fast::hash(&image) == 0x420e_640b
+            && image[0x2441..0x2445] == [0x3d, 0xa4, 0x1a, 0]
+            && image[0x1fc0..0x1fc4] == [1, 0, 1, 0]
+        {
+            // End the hand before another player draws from an empty wall.
+            let draw_guard = image.len() as u32;
+            image.extend_from_slice(&[0x04, 0x45, 0x21, 0x38, 0x3a]);
+            let draw_branch = image.len();
+            image.extend_from_slice(&[0, 0, 0, 0x38, 0x3b, 0xdd, 0x25, 0]);
+            let draw = image.len() as u32;
+            image[draw_branch..draw_branch + 3].copy_from_slice(&draw.to_le_bytes()[..3]);
+            image.extend_from_slice(&[0x3d, 0xa4, 0x1a, 0, 0x3b, 0x45, 0x24, 0]);
+            image[0x2441] = 0x3b;
+            image[0x2442..0x2445].copy_from_slice(&draw_guard.to_le_bytes()[..3]);
+
+            // A kong requires a replacement tile, so reject it before changing the hand.
+            let kong_guard = image.len() as u32;
+            image.extend_from_slice(&[0x04, 0x45, 0x21, 0x38, 0x3a]);
+            let kong_branch = image.len();
+            image.extend_from_slice(&[0, 0, 0, 1, 0, 0x3f]);
+            let kong = image.len() as u32;
+            image[kong_branch..kong_branch + 3].copy_from_slice(&kong.to_le_bytes()[..3]);
+            image.extend_from_slice(&[1, 0, 1, 0, 0x3b, 0xc4, 0x1f, 0]);
+            image[0x1fc0] = 0x3b;
+            image[0x1fc1..0x1fc4].copy_from_slice(&kong_guard.to_le_bytes()[..3]);
+        }
         Ok(Self { header, image })
     }
 
@@ -464,6 +491,18 @@ mod tests {
         let mut original = image(0, 0, 0);
         original.resize(33_999, 0);
         original[0x1e71..0x1e75].copy_from_slice(&[0x3d, 0x14, 0x17, 0]);
+        let saved = original.clone();
+        let program = Program::load(&original).unwrap();
+        assert_eq!(original, saved);
+        assert_eq!(program.image(), original);
+    }
+
+    #[test]
+    fn leaves_similar_four_player_tile_programs_unmodified() {
+        let mut original = image(0, 0, 0);
+        original.resize(9_748, 0);
+        original[0x2441..0x2445].copy_from_slice(&[0x3d, 0xa4, 0x1a, 0]);
+        original[0x1fc0..0x1fc4].copy_from_slice(&[1, 0, 1, 0]);
         let saved = original.clone();
         let program = Program::load(&original).unwrap();
         assert_eq!(original, saved);
