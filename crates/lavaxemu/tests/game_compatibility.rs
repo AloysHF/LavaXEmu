@@ -7016,9 +7016,8 @@ fn tunshi_equips_explores_and_finishes_both_battle_results() {
     fn key(e: &mut Emulator, k: u8) -> FrameStatus {
         e.input_mut().release_all();
         e.input_mut().set_keys([k]);
-        let mut status = FrameStatus::Running;
         for frame in 0..4000 {
-            status = e.run_frame().unwrap().status;
+            let status = e.run_frame().unwrap().status;
             if frame == 0 {
                 e.input_mut().release_all();
             }
@@ -7029,7 +7028,7 @@ fn tunshi_equips_explores_and_finishes_both_battle_results() {
                 return status;
             }
         }
-        panic!("scripted input did not reach its next wait: {status:?}");
+        panic!("scripted input did not reach its next wait");
     }
     fn word(e: &Emulator, address: usize) -> i16 {
         i16::from_le_bytes(e.vm().memory()[address..address + 2].try_into().unwrap())
@@ -7097,13 +7096,8 @@ fn tunshi_equips_explores_and_finishes_both_battle_results() {
         &[200, 0, 0, 0, 0, 0, 0, 0]
     );
     capture(&e, "tunshi-defeat");
-    let returned = key(&mut e, 13);
-    assert_eq!(
-        e.vm().local_bp(),
-        title_bp,
-        "return status={returned:?} pc={:x}",
-        e.vm().pc()
-    );
+    assert!(matches!(key(&mut e, 13), FrameStatus::WaitingForInput));
+    assert_eq!(e.vm().local_bp(), title_bp);
     capture(&e, "tunshi-defeat-returned");
     key(&mut e, 13);
     for _ in 0..42 {
