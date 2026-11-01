@@ -6775,3 +6775,132 @@ fn pokemon_pk_configures_both_parties_replaces_fainted_members_and_finishes_both
         assert_eq!(key(&mut e, 13), FrameStatus::Halted(0));
     }
 }
+
+#[test]
+#[ignore = "requires the local game corpus via LAVAX_GAME_ROOT"]
+fn pokemon_prototype_explores_collects_an_item_and_browses_its_existing_menus() {
+    fn key(e: &mut Emulator, k: u8) -> FrameStatus {
+        e.input_mut().release_all();
+        // Wait until the guest's input debounce window accepts a fresh press.
+        for _ in 0..120 {
+            let tick = ((e.elapsed_ms() % 1000) * 256 / 1000) as u8;
+            if (120..=200).contains(&tick.wrapping_sub(e.vm().memory()[0x200c])) {
+                break;
+            }
+            advance(e, 1);
+        }
+        let mut status = FrameStatus::Running;
+        for frame in 0..120 {
+            e.input_mut().set_keys((frame < 6).then_some(k));
+            status = e.run_frame().expect("scripted input must execute").status;
+            if matches!(status, FrameStatus::Halted(_)) {
+                return status;
+            }
+        }
+        status
+    }
+    fn keys(e: &mut Emulator, sequence: &[u8]) {
+        for &k in sequence {
+            assert!(!matches!(key(e, k), FrameStatus::Halted(_)));
+        }
+    }
+    fn word(e: &Emulator, address: usize) -> u16 {
+        u16::from_le_bytes(e.vm().memory()[address..address + 2].try_into().unwrap())
+    }
+    fn location(e: &Emulator) -> (u8, u16, u16) {
+        (e.vm().memory()[0x2900], word(e, 0x2909), word(e, 0x290b))
+    }
+    let mut e = load(&fixture_path("pokemon.lav"));
+    advance(&mut e, 600);
+    assert_eq!(location(&e), (0, 22, 3));
+    assert_eq!(word(&e, 0x2907), 4);
+    let party = e.vm().memory()[0x2911..0x2a4d].to_vec();
+    let resources = e.files().file("/pokemon.dat").unwrap().to_vec();
+    capture(&e, "pokemon-prototype-start");
+    let mut room = e.clone();
+    keys(&mut room, &[20]);
+    assert_eq!(location(&room), (1, 5, 10));
+    capture(&room, "pokemon-prototype-room-entered");
+    for (sequence, expected, face) in [
+        (&[20, 20][..], (1, 5, 8), 0),
+        (&[23, 23][..], (1, 4, 8), 2),
+        (&[21, 21][..], (1, 4, 9), 1),
+        (&[22, 22][..], (1, 5, 9), 3),
+    ] {
+        keys(&mut room, sequence);
+        assert_eq!(location(&room), expected);
+        assert_eq!(word(&room, 0x280d), face);
+        capture(&room, &format!("pokemon-prototype-room-direction-{face}"));
+    }
+    keys(&mut room, &[20, 20, 20, 23, 23, 20, 13]);
+    assert_eq!(location(&room), (1, 4, 7));
+    capture(&room, "pokemon-prototype-room-dialog");
+    keys(&mut room, &[27, 22, 22, 21, 21, 21, 21, 21]);
+    assert_eq!(location(&room), (0, 22, 3));
+    capture(&room, "pokemon-prototype-room-returned");
+    assert_eq!(key(&mut room, b'q'), FrameStatus::Halted(0));
+
+    keys(&mut e, &[21, 21, 23, 23]);
+    assert_eq!(location(&e), (0, 21, 4));
+    assert_eq!(e.vm().memory()[0x5840 + 130], 1);
+    capture(&e, "pokemon-prototype-item-collected");
+    keys(&mut e, &[27, 13, 22, 22, 13]);
+    capture(&e, "pokemon-prototype-bag-general");
+    let general = e.display().indexed_frame().to_vec();
+    keys(&mut e, &[22]);
+    assert_ne!(e.display().indexed_frame(), general);
+    assert_eq!(e.vm().memory()[0x5840 + 130], 1);
+    capture(&e, "pokemon-prototype-bag-ball");
+    for page in 2..=4 {
+        keys(&mut e, &[22]);
+        capture(&e, &format!("pokemon-prototype-bag-page-{page}"));
+    }
+    keys(&mut e, &[27, 23, 23, 13]);
+    let mut expected = e.display().clone();
+    for index in 0..5 {
+        let name = &resources[index * 0x580 + 0x500..index * 0x580 + 0x50b];
+        let end = name.iter().position(|&c| c == 0).unwrap();
+        expected.draw_text(
+            lavaxemu_core::BufferTarget::Front,
+            90,
+            4 + index as i32 * 15,
+            &name[..end],
+            false,
+            lavaxemu_core::DrawOperation::Invert,
+        );
+    }
+    assert_eq!(
+        e.display().indexed_frame(),
+        expected.indexed_frame(),
+        "catalog names must retain their inverted text styling"
+    );
+    capture(&e, "pokemon-prototype-catalog-list");
+    keys(&mut e, &[21, 13]);
+    assert_eq!(
+        &e.vm().memory()[0x5724..0x572f],
+        &resources[3 * 0x580 + 0x500..3 * 0x580 + 0x50b]
+    );
+    capture(&e, "pokemon-prototype-catalog-attributes");
+    let attributes = e.display().indexed_frame().to_vec();
+    keys(&mut e, &[22]);
+    assert_ne!(e.display().indexed_frame(), attributes);
+    capture(&e, "pokemon-prototype-catalog-description");
+    keys(&mut e, &[23, 27, 27, 22, 13, 13]);
+    capture(&e, "pokemon-prototype-party-status");
+    let status = e.display().indexed_frame().to_vec();
+    keys(&mut e, &[22]);
+    assert_ne!(e.display().indexed_frame(), status);
+    capture(&e, "pokemon-prototype-party-abilities");
+    keys(&mut e, &[22]);
+    capture(&e, "pokemon-prototype-party-moves");
+    let first = e.display().indexed_frame().to_vec();
+    keys(&mut e, &[21]);
+    assert_ne!(e.display().indexed_frame(), first);
+    capture(&e, "pokemon-prototype-next-party-member");
+    keys(&mut e, &[20, 27, 27, 27]);
+    assert_eq!(location(&e), (0, 21, 4));
+    assert_eq!(&e.vm().memory()[0x2911..0x2a4d], party);
+    assert_eq!(e.vm().memory()[0x5840 + 130], 1);
+    capture(&e, "pokemon-prototype-menus-returned");
+    assert_eq!(key(&mut e, b'q'), FrameStatus::Halted(0));
+}

@@ -16,9 +16,10 @@ do not satisfy this status.
 
 - Input update checked on 2026-10-31: full rerun of 49 workflows, followed by a corrected Dragon Kiss intro replay and the dedicated WarCraft workflow. Those 50 workflows passed with the updated input behavior; later entries have separate incremental checks.
 - Shared guest text memory checked on 2026-11-01: all 75 dedicated release workflows passed after the text-buffer repair and state migration.
-- 76 dedicated release workflows passed in this audit.
-- 119 of 324 entry points were loaded by those successful workflows.
-- 205 entry points still need dedicated workflow verification.
+- Inverted TextOut checked on 2026-11-01: all 77 dedicated release workflows passed after honoring the source-inversion flag.
+- 77 dedicated release workflows passed in this audit.
+- 120 of 324 entry points were loaded by those successful workflows.
+- 204 entry points still need dedicated workflow verification.
 - The historical [startup gallery](Game-Compatibility.md) is a separate check
   and must not be interpreted as this workflow audit.
 
@@ -117,7 +118,7 @@ an optional screenshot directory. Keep each test's logs and captures separate.
 | 075 | `LAVA1 勇闯地狱/勇闯地狱.lav` | Game / game package | [Workflow passed: `hell_adventure_triggers_switches_restarts_and_clears_the_first_stage`](../crates/lavaxemu/tests/game_compatibility.rs#L6340) |
 | 076 | `LAVA1 博士失踪记/博士失踪记.lav` | Game / game package | [Workflow passed: `missing_doctor_talks_collects_an_item_and_solves_the_alarm_puzzle`](../crates/lavaxemu/tests/game_compatibility.rs#L6435) |
 | 077 | `LAVA1 口袋妖怪PK场/pmpk.pac` | Game / game package | [Workflow passed: `pokemon_pk_configures_both_parties_replaces_fainted_members_and_finishes_both_results`](../crates/lavaxemu/tests/game_compatibility.rs#L6558) |
-| 078 | `LAVA1 口袋妖怪（未完成）/pokemon.lav` | Game / game package | Pending |
+| 078 | `LAVA1 口袋妖怪（未完成）/pokemon.lav` | Game / game package | [Workflow passed: `pokemon_prototype_explores_collects_an_item_and_browses_its_existing_menus`](../crates/lavaxemu/tests/game_compatibility.rs#L6781) |
 | 079 | `LAVA1 吃月饼/吃月饼.lav` | Game / game package | Pending |
 | 080 | `LAVA1 吞食天地0.29/tunshi_V0.29.lav` | Game / game package | Pending |
 | 081 | `LAVA1 听剑/听剑.pac` | Game / game package | Pending |

@@ -1596,3 +1596,26 @@ without an execution error alone does not establish playability.
   select normal exit with code zero. Captures are inspected locally. Other
   species and moves, voluntary exchange and exhaustive status interactions
   remain unverified. Captures, move data and game resources are not distributed.
+
+## Pokemon exploration prototype (口袋妖怪)
+
+- Reproduced display problem: inverted text in the catalog and menu tabs was
+  rendered normally. TextOut mode 9 requires inversion of both foreground and
+  background pixels. Honor its `0x08` flag; a deterministic unit test first
+  reproduces the failure, then verifies every pixel in both font sizes.
+- Enter a room, move and turn in all four directions, inspect an object dialog,
+  return outdoors and exit normally with Q. In a separate branch, collect an
+  Great Ball and verify its inventory count changes from zero to one. Browse
+  all four bag categories and find that item in the ball category.
+- Browse the catalog list and compare each rendered name with its resource
+  record using the correct inverted style. Select the next entry, check its
+  detail name against the corresponding record, and open its description.
+  Browse a party member's status, abilities and moves, select the next member,
+  then return through the menus to the map. The four complete party records,
+  collected item and map position remain unchanged by browsing; Q exits with
+  code zero. Captures are inspected locally.
+- This is an unfinished program. Purchases, selling and battles are not
+  implemented in its bytecode; some statistics, labels and move text are
+  placeholders. This workflow covers its existing exploration and menus and
+  does not claim native saving, trading, combat or complete game content.
+  Captures and game resources are not distributed.

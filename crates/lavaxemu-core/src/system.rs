@@ -236,7 +236,7 @@ impl Emulator {
             y,
             &text,
             mode & 0x80 != 0,
-            if mode & 0x0f == 2 {
+            if mode & 8 != 0 || mode & 7 == 2 {
                 DrawOperation::Invert
             } else {
                 DrawOperation::Set
@@ -1390,6 +1390,29 @@ mod tests {
         emulator.input_mut().set_key(13, true);
         assert_eq!(emulator.run_frame().unwrap().status, FrameStatus::Halted(0));
         assert_eq!(emulator.vm().result(), 13);
+    }
+
+    #[test]
+    fn textout_inverts_both_font_sizes_when_the_source_inversion_bit_is_set() {
+        let mut e = emulator(&[
+            0x01, 0, 0x01, 0, 0x0d, b'A', 0, 0x01, 1, 0x8a, 0x01, 10, 0x01, 0, 0x0d, b'A', 0, 0x01,
+            9, 0x8a, 0x01, 0, 0x01, 20, 0x0d, b'A', 0, 0x01, 0x81, 0x8a, 0x01, 10, 0x01, 20, 0x0d,
+            b'A', 0, 0x01, 0x89, 0x8a, 0x89, 0x40,
+        ]);
+        assert_eq!(e.run_frame().unwrap().status, FrameStatus::Presented);
+        for (top, width, height) in [(0, 6, 12), (20, 8, 16)] {
+            for y in top..top + height {
+                for x in 0..width {
+                    assert_eq!(
+                        e.display().get_pixel(BufferTarget::Front, x, y).unwrap() ^ 255,
+                        e.display()
+                            .get_pixel(BufferTarget::Front, x + 10, y)
+                            .unwrap(),
+                        "source inversion must affect foreground and background pixels"
+                    );
+                }
+            }
+        }
     }
 
     #[test]

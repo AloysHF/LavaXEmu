@@ -72,7 +72,9 @@ execution timing.
 
 Opcode `0x1a` returns the guest text buffer at `0x1400`. Text output and
 LCD updates share those cells with direct guest writes; NUL cells render as
-blank glyphs. Save-state version 5 keeps that shared memory, while loading
+blank glyphs. TextOut mode 9 honors the source-inversion flag (`0x08`) for
+both font sizes, preserving light text on dark menu backgrounds.
+Save-state version 5 keeps that shared memory, while loading
 versions 2 through 4 migrates their separate console cells into guest RAM.
 
 ## Display
