@@ -6552,3 +6552,226 @@ fn missing_doctor_talks_collects_an_item_and_solves_the_alarm_puzzle() {
     assert_eq!(position(&e), (8, 2));
     capture(&e, "doctor-help-returned-to-street");
 }
+
+#[test]
+#[ignore = "requires the local game corpus via LAVAX_GAME_ROOT"]
+fn pokemon_pk_configures_both_parties_replaces_fainted_members_and_finishes_both_results() {
+    fn key(e: &mut Emulator, k: u8) -> FrameStatus {
+        e.input_mut().release_all();
+        e.input_mut().set_keys([k]);
+        for frame in 0..1200 {
+            let status = e.run_frame().expect("scripted input must execute").status;
+            if frame == 0 {
+                e.input_mut().set_keys([]);
+            }
+            if matches!(
+                status,
+                FrameStatus::Running | FrameStatus::WaitingForInput | FrameStatus::Halted(_)
+            ) {
+                return status;
+            }
+        }
+        panic!("input must reach the next menu or message");
+    }
+    fn keys(e: &mut Emulator, sequence: &[u8]) {
+        for &k in sequence {
+            assert!(!matches!(key(e, k), FrameStatus::Halted(_)));
+        }
+    }
+    fn word(e: &Emulator, address: usize) -> i16 {
+        i16::from_le_bytes(e.vm().memory()[address..address + 2].try_into().unwrap())
+    }
+    fn hp(e: &Emulator, player: usize, slot: usize) -> i16 {
+        word(e, [0x3297, 0x32d9][player] + slot * 22 + 16)
+    }
+    fn assert_p2_roster(e: &Emulator) {
+        use lavaxemu_core::{BufferTarget, DrawOperation};
+        let mut expected = e.display().clone();
+        for slot in 1..=3 {
+            let y = slot as i32 * 16;
+            expected.draw_rectangle(
+                BufferTarget::Front,
+                105,
+                y,
+                146,
+                y + 11,
+                true,
+                DrawOperation::Clear,
+            );
+            for (x, text) in [
+                (105, hp(e, 1, slot).to_string()),
+                (123, "/".to_owned()),
+                (129, word(e, 0x32d9 + slot * 22 + 14).to_string()),
+            ] {
+                expected.draw_text(
+                    BufferTarget::Front,
+                    x,
+                    y,
+                    text.as_bytes(),
+                    false,
+                    DrawOperation::Set,
+                );
+            }
+            if slot == word(e, 0x37ad) as usize {
+                expected.draw_rectangle(
+                    BufferTarget::Front,
+                    105,
+                    y,
+                    146,
+                    y + 11,
+                    true,
+                    DrawOperation::Invert,
+                );
+            }
+        }
+        assert_eq!(
+            e.display().indexed_frame(),
+            expected.indexed_frame(),
+            "P2's displayed HP must match its own party"
+        );
+    }
+    let path = fixture_path("pmpk.pac");
+    for winner in [2, 1] {
+        let mut e = load(&path);
+        advance(&mut e, 300);
+        assert_eq!(e.vm().pc(), 0x13756);
+        capture(&e, &format!("pokemon-pk-{winner}-title"));
+        for player in 0..2 {
+            if player == 0 {
+                keys(&mut e, &[13, 13]);
+            } else {
+                keys(&mut e, &[13]);
+            }
+            assert_eq!(e.vm().pc(), 0xf9ba);
+            let fire = player + 1 == winner;
+            if fire {
+                keys(&mut e, &[21]);
+            }
+            keys(&mut e, &[13; 3]);
+            assert_eq!(e.vm().pc(), 0xf2c7);
+            capture(
+                &e,
+                &format!("pokemon-pk-{winner}-p{}-move-list", player + 1),
+            );
+            for slot in 1..=3 {
+                let party = [0x3297, 0x32d9][player];
+                assert_eq!(word(&e, party + slot * 22 + 18), if fire { 2 } else { 1 });
+                keys(&mut e, &[13, 21, 13, 21, 13, 21, 13]);
+            }
+        }
+        keys(&mut e, &[13; 5]);
+        assert_eq!(e.vm().pc(), 0x1186b);
+        for player in 0..2 {
+            let fire = player + 1 == winner;
+            let ids = if fire { [1, 2, 3, 4] } else { [19, 20, 15, 16] };
+            let moves = [0x35df, 0x366f][player];
+            for slot in 0..3 {
+                assert_eq!(hp(&e, player, slot + 1), if fire { 360 } else { 364 });
+                for (n, id) in ids.iter().enumerate() {
+                    let record = moves + (slot * 4 + n + 1) * 12;
+                    assert_eq!(word(&e, record + 6), *id);
+                    assert_eq!(word(&e, record + 2), word(&e, record));
+                    for offset in [0, 4, 6, 8, 10] {
+                        assert_eq!(
+                            word(&e, record + offset),
+                            word(&e, 0x6000 + *id as usize * 12 + offset)
+                        );
+                    }
+                }
+            }
+            if fire {
+                assert_eq!(word(&e, moves + 12), 15);
+                assert_eq!(word(&e, moves + 12 + 10), 75);
+            }
+        }
+        capture(&e, &format!("pokemon-pk-{winner}-battle-ready"));
+        let mut damaged = [false; 2];
+        let mut rejected = [false; 2];
+        let mut confirmed_p2 = false;
+        let mut fainted = [0; 2];
+        let win_pc = if winner == 1 { 0x10b72 } else { 0x10b91 };
+        for _ in 0..180 {
+            let pc = e.vm().pc();
+            if pc == win_pc {
+                break;
+            }
+            let active = [word(&e, 0x37a1) as usize, word(&e, 0x37ad) as usize];
+            assert!(active.iter().all(|&slot| (1..=3).contains(&slot)));
+            if pc == 0x11050 {
+                assert_p2_roster(&e);
+            }
+            let k = match pc {
+                0xff4a | 0x10326 => {
+                    let player = usize::from(pc == 0x10326);
+                    let fire = player + 1 == winner;
+                    let column = if fire { 1 } else { 2 };
+                    if word(&e, 0x379d) != column {
+                        22
+                    } else if word(&e, 0x379f) != 2 {
+                        21
+                    } else {
+                        13
+                    }
+                }
+                0x10d83 | 0x11050 => {
+                    let player = usize::from(pc == 0x11050);
+                    if hp(&e, player, active[player]) <= 0 {
+                        if !rejected[player] {
+                            let mut invalid = e.clone();
+                            keys(&mut invalid, &[13]);
+                            assert_eq!(invalid.vm().pc(), pc, "a defeated member must be rejected");
+                            capture(
+                                &invalid,
+                                &format!("pokemon-pk-{winner}-p{}-fainted-rejected", player + 1),
+                            );
+                            rejected[player] = true;
+                        }
+                        21
+                    } else {
+                        13
+                    }
+                }
+                _ => 13,
+            };
+            keys(&mut e, &[k]);
+            if pc == 0x11050 && k == 13 {
+                assert_ne!(
+                    e.vm().pc(),
+                    pc,
+                    "P2 must be able to confirm its own living member"
+                );
+                confirmed_p2 = true;
+                capture(&e, &format!("pokemon-pk-{winner}-p2-confirmed"));
+            }
+            for player in 0..2 {
+                let max_hp = if player + 1 == winner { 360 } else { 364 };
+                if !damaged[player] && (1..=3).any(|slot| hp(&e, player, slot) < max_hp) {
+                    damaged[player] = true;
+                    capture(&e, &format!("pokemon-pk-{winner}-p{}-damaged", player + 1));
+                }
+                let count = (1..=3).filter(|&slot| hp(&e, player, slot) == 0).count();
+                if count > fainted[player] {
+                    fainted[player] = count;
+                    capture(
+                        &e,
+                        &format!("pokemon-pk-{winner}-p{}-fainted-{count}", player + 1),
+                    );
+                }
+            }
+        }
+        assert_eq!(e.vm().pc(), win_pc);
+        assert!(damaged.into_iter().all(|value| value));
+        assert!(rejected[2 - winner]);
+        assert!(confirmed_p2);
+        assert_eq!(fainted[2 - winner], 3);
+        assert!((1..=3).any(|slot| hp(&e, winner - 1, slot) > 0));
+        capture(&e, &format!("pokemon-pk-{winner}-victory"));
+        keys(&mut e, &[13, 13]);
+        assert_eq!(e.vm().pc(), 0x13756);
+        keys(&mut e, &[22, 13]);
+        assert_eq!(e.vm().pc(), 0x138b2);
+        capture(&e, &format!("pokemon-pk-{winner}-credits"));
+        keys(&mut e, &[13, 22, 22]);
+        assert_eq!(key(&mut e, 13), FrameStatus::Halted(0));
+    }
+}

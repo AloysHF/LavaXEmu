@@ -197,6 +197,68 @@ impl Program {
             image[0x2dfb] = 0x41;
             image[0x2e11] = 0x41;
         }
+        if image.len() == 80_098
+            && crc32fast::hash(&image) == 0x1d36_19b1
+            && image[0x11116..0x11119] == [0x08, 0x97, 0x32]
+            && image[0x113b3..0x113b8] == [0x03, 0xa1, 0x37, 0x02, 0x00]
+            && image[0x112a8..0x112ad] == [0x01, 0x01, 0x05, 0xad, 0x37]
+            && image[0x1133e..0x11343] == [0x01, 0x01, 0x05, 0xa1, 0x37]
+        {
+            // Read the second player's own HP for its roster and replacement check.
+            for site in [0x10ff5, 0x1101b, 0x11116] {
+                image[site + 1..site + 3].copy_from_slice(&0x32d9u16.to_le_bytes());
+            }
+            // Count defeated party members instead of changing the active slot.
+            image[0x113b3..0x113b8].copy_from_slice(&[0x03, 0x05, 0x00, 0x82, 0x00]);
+            // Preserve the move catalog before party setup overlaps its first entry.
+            let catalog_reads = [
+                0xf4c3, 0xf4fa, 0xf531, 0xf568, 0xf59f, 0xf64b, 0xf682, 0xf6b9, 0xf6f0, 0xf727,
+            ];
+            for site in catalog_reads {
+                image[site + 1..site + 3].copy_from_slice(&0x6000u16.to_le_bytes());
+            }
+            let trampoline = image.len() as u32;
+            let original = image[0x1362c..0x13631].to_vec();
+            image.extend_from_slice(&[0x02, 0, 0x60, 0x02, 0x1b, 0x33, 0x02, 0xd0, 0x02, 0xad]);
+            image.extend_from_slice(&original);
+            image.extend_from_slice(&[0x3b, 0x31, 0x36, 0x01]);
+            image[0x1362c] = 0x3b;
+            image[0x1362d..0x13630].copy_from_slice(&trampoline.to_le_bytes()[..3]);
+            image[0x13630] = 0;
+            // Keep defeated party members at zero HP in both replacement menus.
+            for (entry, active, party) in
+                [(0x112a8, 0x37adu16, 0x32d9u16), (0x1133e, 0x37a1, 0x3297)]
+            {
+                let trampoline = image.len() as u32;
+                let original = image[entry..entry + 5].to_vec();
+                let [active_low, active_high] = active.to_le_bytes();
+                let [party_low, party_high] = party.to_le_bytes();
+                image.extend_from_slice(&[
+                    0x05,
+                    active_low,
+                    active_high,
+                    0x47,
+                    0x16,
+                    0,
+                    0x45,
+                    0x10,
+                    0,
+                    0x0b,
+                    party_low,
+                    party_high,
+                    0x01,
+                    0,
+                    0x35,
+                    0x38,
+                ]);
+                image.extend_from_slice(&original);
+                image.push(0x3b);
+                image.extend_from_slice(&((entry + 5) as u32).to_le_bytes()[..3]);
+                image[entry] = 0x3b;
+                image[entry + 1..entry + 4].copy_from_slice(&trampoline.to_le_bytes()[..3]);
+                image[entry + 4] = 0;
+            }
+        }
         Ok(Self { header, image })
     }
 
@@ -282,6 +344,20 @@ mod tests {
         original.resize(12_883, 0);
         original[0x2dfb] = 0x01;
         original[0x2e11] = 0x01;
+        let saved = original.clone();
+        let program = Program::load(&original).unwrap();
+        assert_eq!(original, saved);
+        assert_eq!(program.image(), original);
+    }
+
+    #[test]
+    fn leaves_similar_party_selection_programs_unmodified() {
+        let mut original = image(0, 0, 0);
+        original.resize(80_098, 0);
+        original[0x11116..0x11119].copy_from_slice(&[0x08, 0x97, 0x32]);
+        original[0x113b3..0x113b8].copy_from_slice(&[0x03, 0xa1, 0x37, 0x02, 0x00]);
+        original[0x112a8..0x112ad].copy_from_slice(&[0x01, 0x01, 0x05, 0xad, 0x37]);
+        original[0x1133e..0x11343].copy_from_slice(&[0x01, 0x01, 0x05, 0xa1, 0x37]);
         let saved = original.clone();
         let program = Program::load(&original).unwrap();
         assert_eq!(original, saved);

@@ -52,7 +52,9 @@ initializes round counters when starting a game and fixes the unreachable
 five-stage ending predicate. The Volley Shooting v1.5 repair pads missing record
 slots in the guest file and rewinds before updating the shooting record. The
 Power Ski repair directs its ending pictures to the front buffer before the
-guest waits for confirmation. These repairs do not modify the content file or
+guest waits for confirmation. The Pokemon PK repair separates move metadata
+from party setup, reads P2's own roster values, counts P1 defeats correctly and
+clears defeated members' HP. These repairs do not modify the content file or
 change the VM's general stack, local variables or file-seek bounds.
 
 ## Bytecode Execution

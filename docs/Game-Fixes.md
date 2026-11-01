@@ -1569,3 +1569,30 @@ without an execution error alone does not establish playability.
   inspected locally. Later puzzles, the ending and complete campaign remain
   unverified; this workflow does not claim
   a native save or exit command. Captures and game resources are not distributed.
+
+## Pokemon PK (口袋妖怪 PK 场)
+
+- Reproduced problems: after P1's first defeat, P2 could not confirm a living
+  replacement because the check read P1's party. P2's displayed HP numbers also
+  came from P1, while names and bars came from P2. After all three P1 members
+  fell, an increment of the active slot left the defeat counter unchanged,
+  preventing P2's victory. Defeated members could retain negative HP.
+- Party setup also overwrote the first move's metadata: choosing Fire Punch
+  could produce Fire Kick with invalid PP. Preserve the initialized move catalog
+  before selecting parties and read move metadata from that copy. This leaves
+  party records and move definitions in separate guest-memory regions.
+- Repair only the identified program's loaded copy, guarded by its 80,098-byte
+  length, CRC32 and expected instructions. Correct P2's numeric display and
+  replacement check, increment P1's defeat counter, and clear defeated HP before
+  the replacement menu. Similar images with a different CRC remain unchanged.
+- Configure three Venusaur and three Charizard, then choose four distinct moves
+  for each member. Check move IDs, initial/current PP, accuracy, type and power
+  against the preserved catalog. Replay two matches with the teams reversed:
+  both sides take damage, all three losing members fall to zero HP, defeated
+  replacements are rejected, living P2 members are accepted and the correct
+  player wins. P2's roster HP numbers are checked against its own party by
+  comparing the rendered digits, including the selected-row highlight.
+- Acknowledge each result, return to the title, open and close the credits and
+  select normal exit with code zero. Captures are inspected locally. Other
+  species and moves, voluntary exchange and exhaustive status interactions
+  remain unverified. Captures, move data and game resources are not distributed.

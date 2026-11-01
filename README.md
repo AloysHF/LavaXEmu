@@ -83,6 +83,8 @@ board restart, the first stage, help pages and normal exit.
 The Missing Doctor has a workflow covering conversations, scene changes,
 item collection and solving the first alarm diversion puzzle. Shared guest
 text memory restores its instruction and credit pages.
+Pokemon PK has a workflow configuring both teams and moves, replacing fainted
+party members, resolving wins for either player and returning to the title.
 
 ## Usage
 
