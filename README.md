@@ -99,6 +99,8 @@ the opening story, a wild battle and native save restoration. Saving the second
 slot first now preserves its correct offset and keeps both slots independent.
 Four-player Mahjong has a workflow for tile selection, discarding, drawn and
 winning hands, redealing and exit. An empty wall now ends the hand before another draw.
+Trapped Spider packaged and loose versions have a workflow for collision recovery,
+four territory captures, victory, and native ranking save and reload.
 
 ## Usage
 

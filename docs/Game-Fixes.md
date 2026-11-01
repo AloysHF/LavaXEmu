@@ -1707,3 +1707,22 @@ without an execution error alone does not establish playability.
   the game still checks its own hand rules and an AI player wins the recorded
   sequence. Player pong/kong choices and every scoring or rule combination
   have not been verified.
+
+## Trapped Spider v1.1 (困虫斗)
+
+- Both packaged and loose releases have a deterministic workflow using the
+  original movement and net keys. A separate collision branch verifies the
+  first hit consumes the remaining protection, cancels the net and returns
+  the player to the starting point without awarding territory.
+- The successful branch captures four regions, checking the remaining cells
+  decrease from 252 to 154, 77, 35 and 20. Check four net attempts, intact
+  protection and the native victory confirmation; the final board reports
+  92.0 percent coverage. Finish the original result flow with 288 points.
+- Enter `EMU` through the original name prompt and verify the 193-byte native
+  ranking file contains the name and score. Import that file into a fresh
+  emulator, open the ranking from the title and check both values are loaded
+  without altering the file. Return to the title and exit normally.
+- Captures are inspected locally. This adds reproducible coverage without an
+  emulator behavior change. Higher difficulties, custom controls, every
+  background and the second-hit defeat result remain unverified. Game files,
+  native rankings and captures are not distributed.

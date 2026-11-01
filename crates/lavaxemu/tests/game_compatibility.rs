@@ -7516,3 +7516,137 @@ fn four_player_mahjong_selects_discards_and_restarts_after_a_draw() {
     }
     assert!(exited);
 }
+
+#[test]
+#[ignore = "requires the local game corpus via LAVAX_GAME_ROOT"]
+fn trapped_spider_versions_capture_territory_win_and_restore_the_ranking() {
+    fn key(e: &mut Emulator, k: u8, frames: usize) {
+        e.input_mut().release_all();
+        for frame in 0..frames {
+            e.input_mut().set_keys((frame == 0 && k != 0).then_some(k));
+            if matches!(e.run_frame().unwrap().status, FrameStatus::Halted(_)) {
+                return;
+            }
+        }
+    }
+    fn route(e: &mut Emulator, keys: impl IntoIterator<Item = u8>) {
+        for k in keys {
+            key(e, k, 12);
+        }
+    }
+    fn word(e: &Emulator, a: usize) -> u16 {
+        u16::from_le_bytes(e.vm().memory()[a..a + 2].try_into().unwrap())
+    }
+    for (variant, name) in [("package", "kcd.pac"), ("loose", "困虫斗.lav")] {
+        let mut e = load(&fixture_path(name));
+        advance(&mut e, 1200);
+        capture(&e, &format!("spider-{variant}-title"));
+        key(&mut e, 13, 1200);
+        assert_eq!(e.vm().pc(), 0x2d64);
+        assert_eq!(word(&e, 0x28c3), 1);
+        capture(&e, &format!("spider-{variant}-difficulty"));
+        key(&mut e, 13, 1800);
+        assert_eq!(word(&e, 0x28b9), 252);
+        assert_eq!(word(&e, 0x28cb), 1);
+        let mut collision = e.clone();
+        route(
+            &mut collision,
+            [22; 9]
+                .into_iter()
+                .chain([97])
+                .chain([21; 14])
+                .chain([0; 3]),
+        );
+        assert_eq!(word(&collision, 0x28cb), 0);
+        assert_eq!(word(&collision, 0x28b9), 252);
+        assert_eq!(word(&collision, 0x289b), 0);
+        assert_eq!(
+            [word(&collision, 0x2893), word(&collision, 0x2895)],
+            [10, 1]
+        );
+        capture(&collision, &format!("spider-{variant}-collision-retreat"));
+        route(
+            &mut e,
+            [22; 7]
+                .into_iter()
+                .chain([97])
+                .chain([21; 14])
+                .chain([0; 3]),
+        );
+        assert_eq!(word(&e, 0x28b9), 154);
+        assert_eq!(word(&e, 0x289b), 0);
+        capture(&e, &format!("spider-{variant}-first-capture"));
+        route(
+            &mut e,
+            [20; 7]
+                .into_iter()
+                .chain([97])
+                .chain([22; 11])
+                .chain([0; 3]),
+        );
+        assert_eq!(word(&e, 0x28b9), 77);
+        capture(&e, &format!("spider-{variant}-second-capture"));
+        route(
+            &mut e,
+            [23; 6].into_iter().chain([97]).chain([21; 7]).chain([0; 3]),
+        );
+        assert_eq!(word(&e, 0x28b9), 35);
+        capture(&e, &format!("spider-{variant}-third-capture"));
+        route(
+            &mut e,
+            [23; 5]
+                .into_iter()
+                .chain([20; 4])
+                .chain([0; 9])
+                .chain([97])
+                .chain([22; 5])
+                .chain([0; 2]),
+        );
+        assert_eq!(word(&e, 0x28b9), 20);
+        assert_eq!(word(&e, 0x28b7), 4);
+        assert_eq!(word(&e, 0x28cb), 1);
+        key(&mut e, 0, 72);
+        assert_eq!(e.vm().pc(), 0x457);
+        assert_eq!(word(&e, 0x28bd), 20);
+        capture(&e, &format!("spider-{variant}-victory"));
+        for _ in 0..3 {
+            key(&mut e, 13, 24);
+        }
+        assert_eq!(word(&e, 0x28b9), 288);
+        assert_eq!(e.vm().pc(), 0x26e2);
+        for k in [69, 77, 85, 13] {
+            key(&mut e, k, 24);
+        }
+        assert_eq!(e.vm().pc(), 0x243d);
+        let saved = e.files().file("/lavadata/kcd_data.dat").unwrap().to_vec();
+        assert_eq!(saved.len(), 193);
+        assert!(saved.windows(3).any(|v| v == b"EMU"));
+        assert!(saved.windows(3).any(|v| v == b"288"));
+        capture(&e, &format!("spider-{variant}-ranking-saved"));
+        let mut restored = load(&fixture_path(name));
+        restored
+            .files_mut()
+            .import_file("/lavadata/kcd_data.dat", saved.clone());
+        advance(&mut restored, 1200);
+        for k in [21, 21, 13] {
+            key(&mut restored, k, 24);
+        }
+        assert_eq!(restored.vm().pc(), 0x243d);
+        assert!(restored.vm().memory().windows(3).any(|v| v == b"EMU"));
+        assert!(restored.vm().memory().windows(3).any(|v| v == b"288"));
+        assert_eq!(
+            restored.files().file("/lavadata/kcd_data.dat").unwrap(),
+            saved
+        );
+        capture(&restored, &format!("spider-{variant}-ranking-restored"));
+        key(&mut restored, 13, 24);
+        key(&mut restored, 13, 1200);
+        assert_eq!(restored.vm().pc(), 0x227e);
+        key(&mut restored, 20, 24);
+        key(&mut restored, 13, 24);
+        capture(&restored, &format!("spider-{variant}-farewell"));
+        key(&mut restored, 13, 24);
+        key(&mut restored, 13, 24);
+        assert_eq!(restored.run_frame().unwrap().status, FrameStatus::Halted(0));
+    }
+}
