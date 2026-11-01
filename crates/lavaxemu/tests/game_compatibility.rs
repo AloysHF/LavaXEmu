@@ -7765,3 +7765,130 @@ fn territory_game_finishes_two_player_and_computer_boards() {
         assert_eq!(e.run_frame().unwrap().status, FrameStatus::Halted(0));
     }
 }
+
+#[test]
+#[ignore = "requires the local game corpus via LAVAX_GAME_ROOT"]
+fn saints_vs_gold_completes_training_and_an_eight_member_battle() {
+    fn key(e: &mut Emulator, k: u8) {
+        e.input_mut().release_all();
+        for f in 0..24 {
+            e.input_mut().set_keys((f == 0).then_some(k));
+            e.run_frame().unwrap();
+        }
+    }
+    fn reach(e: &mut Emulator, pc: usize) {
+        for _ in 0..10000 {
+            if e.vm().pc() == pc {
+                return;
+            }
+            e.input_mut().release_all();
+            let result = e.run_frame().unwrap();
+            if matches!(result.status, FrameStatus::WaitingForInput) && e.vm().pc() != pc {
+                key(e, 13);
+            }
+        }
+        assert_eq!(
+            e.vm().pc(),
+            pc,
+            "the original flow must reach its next input prompt"
+        );
+    }
+    fn actor(e: &Emulator, player: usize, field: usize) -> u8 {
+        e.vm().memory()[0x2f37 + player * 89 + field]
+    }
+    let mut e = load(&fixture_path("Shengjin2.lav"));
+    advance(&mut e, 1200);
+    assert_eq!(e.vm().pc(), 0x5e1c);
+    capture(&e, "saints-title");
+    for k in [13, 21, 21, 21, 13] {
+        key(&mut e, k);
+    }
+    assert_eq!(e.vm().pc(), 0x5256);
+    capture(&e, "saints-training-intro");
+    reach(&mut e, 0x198f);
+    for player in [0, 1, 4, 5] {
+        assert_eq!(actor(&e, player, 0x37), 5);
+        assert_eq!(actor(&e, player, 0x38), 1);
+    }
+    key(&mut e, 98);
+    reach(&mut e, 0x198f);
+    for player in [0, 1, 4, 5] {
+        assert_eq!(actor(&e, player, 0x38), 2);
+    }
+    capture(&e, "saints-first-charge");
+    key(&mut e, 98);
+    reach(&mut e, 0x198f);
+    assert_eq!(actor(&e, 0, 0x38), 3);
+    capture(&e, "saints-second-charge");
+    key(&mut e, 104);
+    assert_eq!(e.vm().pc(), 0x15d5);
+    key(&mut e, 21);
+    capture(&e, "saints-move-selection");
+    key(&mut e, 13);
+    assert_eq!(e.vm().pc(), 0x17b1);
+    capture(&e, "saints-target-selection");
+    key(&mut e, 13);
+    reach(&mut e, 0x198f);
+    assert_eq!(actor(&e, 0, 0x39), 6);
+    assert_eq!(actor(&e, 0, 0x38), 2);
+    assert_eq!(actor(&e, 4, 0x37), 2);
+    capture(&e, "saints-attack-landed");
+    key(&mut e, 109);
+    reach(&mut e, 0x198f);
+    assert_eq!(actor(&e, 0, 0x37), 5);
+    assert_eq!(actor(&e, 0, 0x39), 3);
+    assert_eq!(actor(&e, 0, 0x3d), 8);
+    capture(&e, "saints-flight-avoids-damage");
+    key(&mut e, 103);
+    reach(&mut e, 0x5d48);
+    assert_eq!(actor(&e, 0, 0x37), 5);
+    assert_eq!(actor(&e, 0, 0x3d), 3);
+    capture(&e, "saints-shield-absorbs-damage");
+    reach(&mut e, 0x5e04);
+    capture(&e, "saints-training-complete");
+    key(&mut e, 13);
+    assert_eq!(e.vm().pc(), 0x6f2);
+    for k in [13, 13, 13, 20, 13] {
+        key(&mut e, k);
+    }
+    assert_eq!(e.vm().pc(), 0xb12);
+    for player in 0..8 {
+        assert_eq!(actor(&e, player, 0x3c), 0);
+    }
+    for k in [13, 20, 13] {
+        key(&mut e, k);
+    }
+    let mut damaged = [false; 2];
+    let mut defeated = false;
+    e.input_mut().release_all();
+    for _ in 0..60000 {
+        e.run_frame().unwrap();
+        for (side, hit) in damaged.iter_mut().enumerate() {
+            if !*hit && (side * 4..side * 4 + 4).any(|p| actor(&e, p, 0x37) < 5) {
+                *hit = true;
+                capture(&e, &format!("saints-battle-side-{side}-damaged"));
+            }
+        }
+        defeated |= (0..8).any(|p| actor(&e, p, 0x3c) == 2 && actor(&e, p, 0x37) == 0);
+        if e.vm().pc() == 0x3a9e {
+            break;
+        }
+    }
+    assert_eq!(e.vm().pc(), 0x3a9e);
+    assert!(damaged.into_iter().all(|hit| hit) && defeated);
+    let alive = |side: usize| {
+        (side * 4..side * 4 + 4)
+            .filter(|&p| actor(&e, p, 0x3c) != 2 && actor(&e, p, 0x37) > 0)
+            .count()
+    };
+    assert!((alive(0) == 0) != (alive(1) == 0));
+    capture(&e, "saints-battle-victory");
+    key(&mut e, 13);
+    assert_eq!(e.vm().pc(), 0x41b5);
+    capture(&e, "saints-ratings");
+    key(&mut e, 21);
+    assert_eq!(e.vm().pc(), 0x41b5);
+    capture(&e, "saints-ratings-next");
+    key(&mut e, 13);
+    assert_eq!(e.vm().pc(), 0x6f2);
+}

@@ -103,6 +103,8 @@ Trapped Spider packaged and loose versions have a workflow for collision recover
 four territory captures, victory, and native ranking save and reload.
 Territory Game has a workflow completing the small board in two-player and
 computer modes, including territory scores, extra turns, results and exit.
+Saints vs Gold has a workflow for its complete tutorial, an eight-member AI
+battle, victory and rating pages, and returning to mode selection.
 
 ## Usage
 

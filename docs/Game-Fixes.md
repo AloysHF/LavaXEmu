@@ -1742,3 +1742,22 @@ without an execution error alone does not establish playability.
   workflow coverage without an emulator behavior change.
 - Larger boards and exhaustive strategies remain unverified. Game files and
   captures are not distributed.
+
+## Saints vs Gold (圣金)
+
+- Complete the original training mode with native keyboard input: charge twice
+  from one to three, choose the second attack and its target, verify the attack
+  costs one charge and reduces the enemy's HP from five to two. Use flight to
+  avoid the demonstrated ground attack, then use the shield against the two
+  tutorial attacks. Player HP stays at five while shield HP drops from eight
+  to three. Finish the tutorial and return to mode selection.
+- Configure all eight slots as computer players through the original menus,
+  select a character and let the original AI resolve an actual battle. Check
+  damage on both sides, defeated members with zero HP, and exactly one side
+  with surviving members when the native victory prompt appears. Open the
+  rating table, switch its page and return to mode selection.
+- Captures are reviewed locally. This adds reproducible workflow coverage
+  without an emulator behavior change. The original mode menu has no exit
+  command; the workflow ends after returning to it. Other modes, every skill
+  interaction and every team composition remain unverified. Game files and
+  captures are not distributed.
