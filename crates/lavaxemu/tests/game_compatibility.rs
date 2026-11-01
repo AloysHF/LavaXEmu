@@ -6904,3 +6904,108 @@ fn pokemon_prototype_explores_collects_an_item_and_browses_its_existing_menus() 
     capture(&e, "pokemon-prototype-menus-returned");
     assert_eq!(key(&mut e, b'q'), FrameStatus::Halted(0));
 }
+
+#[test]
+#[ignore = "requires the local game corpus via LAVAX_GAME_ROOT"]
+fn mooncake_opens_help_sets_speed_moves_and_reacts_to_all_five_items() {
+    const BASE: usize = 0x2bd7;
+    fn key(e: &mut Emulator, k: u8) -> FrameStatus {
+        e.input_mut().release_all();
+        let mut status = FrameStatus::Running;
+        for frame in 0..60 {
+            e.input_mut().set_keys((frame == 0).then_some(k));
+            status = e.run_frame().unwrap().status;
+            if matches!(status, FrameStatus::Halted(_)) {
+                break;
+            }
+        }
+        status
+    }
+    let mut e = load(&fixture_path("吃月饼.lav"));
+    advance(&mut e, 300);
+    assert_eq!(e.vm().pc(), 0xdf5);
+    capture(&e, "mooncake-title");
+    key(&mut e, b'm');
+    assert_eq!(e.vm().pc(), 0xed2);
+    capture(&e, "mooncake-help");
+    key(&mut e, 13);
+    assert_eq!(e.vm().pc(), 0xdf5);
+    key(&mut e, b'n');
+    assert_eq!(e.vm().memory()[BASE + 9], 10);
+    for _ in 0..12 {
+        key(&mut e, 20);
+    }
+    assert_eq!(e.vm().memory()[BASE + 9], 100);
+    capture(&e, "mooncake-speed-maximum");
+    for _ in 0..12 {
+        key(&mut e, 21);
+    }
+    assert_eq!(e.vm().memory()[BASE + 9], 0);
+    capture(&e, "mooncake-speed-minimum");
+    key(&mut e, 20);
+    key(&mut e, 13);
+    assert_eq!(e.vm().memory()[BASE + 9], 10);
+    key(&mut e, b'b');
+    capture(&e, "mooncake-started");
+    let initial = e.clone();
+    for (k, expected) in [(b'a', 5), (b'd', 126)] {
+        let mut branch = initial.clone();
+        branch.input_mut().set_keys([k]);
+        advance(&mut branch, 400);
+        assert_eq!(branch.vm().memory()[BASE + 6], expected);
+        capture(&branch, &format!("mooncake-boundary-{expected}"));
+    }
+    let mut caught = [false; 5];
+    let mut recovered = [false; 5];
+    for _ in 0..12000 {
+        let m = e.vm().memory();
+        let x = i16::from(m[BASE + 6]);
+        let object_x = m[BASE + 0xb];
+        let object_y = m[BASE + 0x15];
+        let kind = usize::from(m[BASE + 0x1f]);
+        let stun = m[BASE + 0x2b];
+        let face_before = m[BASE + 5];
+        let target = i16::from(object_x) - 8;
+        let k = if stun > 0 {
+            None
+        } else if x < target - 3 || (x <= target + 3 && m[BASE + 10] < 11) {
+            Some(b'd')
+        } else if x > target + 3 || m[BASE + 10] > 11 {
+            Some(b'a')
+        } else {
+            None
+        };
+        e.input_mut().set_keys(k);
+        advance(&mut e, 1);
+        let m = e.vm().memory();
+        if stun == 0 && (40..=65).contains(&object_y) && m[BASE + 0x15] == 0 {
+            let (face, duration) = [(3, 50), (0, 0), (2, 20), (1, 30), (4, 40)][kind];
+            assert_eq!(m[BASE + 5], face);
+            assert_eq!(m[BASE + 0x2b], duration);
+            assert!((i16::from(m[BASE + 6]) - i16::from(object_x) + 8).abs() < 8);
+            caught[kind] = true;
+            recovered[kind] |= duration == 0;
+            capture(&e, &format!("mooncake-item-{kind}"));
+        }
+        if stun == 1 && m[BASE + 0x2b] == 0 {
+            assert_eq!(m[BASE + 5], face_before);
+        }
+        if stun == 0 && face_before != 0 && m[BASE + 5] == 0 {
+            let kind = [1, 3, 2, 0, 4][usize::from(face_before)];
+            assert!(caught[kind]);
+            recovered[kind] = true;
+        }
+        if caught.into_iter().all(|v| v) && recovered.into_iter().all(|v| v) {
+            break;
+        }
+    }
+    assert!(caught.into_iter().all(|v| v));
+    assert!(recovered.into_iter().all(|v| v));
+    capture(&e, "mooncake-recovered");
+    key(&mut e, 27);
+    assert_eq!(e.vm().pc(), 0xdf5);
+    capture(&e, "mooncake-returned");
+    key(&mut e, 27);
+    capture(&e, "mooncake-credits");
+    assert_eq!(key(&mut e, 13), FrameStatus::Halted(0));
+}

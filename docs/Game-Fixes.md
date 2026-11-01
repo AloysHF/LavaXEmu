@@ -1321,6 +1321,20 @@ without an execution error alone does not establish playability.
   sequence; it does not exhaustively validate every card combination or level.
   Captures and game resources are not distributed.
 
+## Mooncake (吃月饼)
+
+- Open and close help, set speed to both limits (0 and 100), restore the
+  default delay and start playing. Hold A or D in separate branches and
+  verify the player reaches the left and right boundaries at x=5 and x=126.
+- Steer toward falling items using deterministic input without changing
+  guest memory. Catch all five item types, assert each resulting expression
+  and its exact stun duration (0, 20, 30, 40 or 50 updates), then verify the
+  affected expressions return to normal after their counters expire.
+- Escape returns to the menu; Escape again opens the credits and confirmation
+  exits with code zero. All 15 captures are inspected locally. This workflow
+  requires no additional core changes and does not claim a score or ending
+  that the program does not implement. Captures and game data are not distributed.
+
 ## Tetris v1.3 (俄罗斯方块 1.3)
 
 - Bug: after ordinary play, the monochrome release reads an uninitialized

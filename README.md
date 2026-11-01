@@ -88,6 +88,8 @@ party members, resolving wins for either player and returning to the title.
 The Pokemon exploration prototype has a workflow for room transitions, item
 collection, bag categories, the catalog and party pages. Inverted TextOut
 styles now preserve its menu and catalog contrast.
+Mooncake has a workflow for help, speed limits, movement boundaries, all five
+item reactions, recovery, returning to the menu and normal exit.
 
 ## Usage
 
