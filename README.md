@@ -140,6 +140,10 @@ The binary is produced at `target/release/lavaxemu.dll`
 `lavaxemu_libretro.<ext>` before placing it in RetroArch's `cores/`
 directory.
 
+Libretro frontends must provide a real `.lav` or `.pac` file path. The core
+opens that path and imports companion resources; in-memory content is ignored.
+The [Android core](docs/Android-Libretro-Core.md) uses the same loading rules.
+
 ### EmulatorJS Core (for the browser)
 
 The browser core links the libretro core into EmulatorJS's RetroArch fork. It
