@@ -4,6 +4,7 @@ use serde::{Deserialize, Serialize};
 pub const GUEST_MEMORY_SIZE: usize = 0x0100_0000;
 pub const EVALUATION_STACK_ADDRESS: usize = 0x1b00;
 const EVALUATION_STACK_SIZE: usize = 0x100;
+pub(crate) const TEXT_BUFFER_ADDRESS: usize = 0x1400;
 const STRING_STACK_ADDRESS: u32 = 0x1c00;
 const STRING_STACK_SIZE: u32 = 0x300;
 const MAX_SYSTEM_OPCODE: u8 = 0xd6;
@@ -199,7 +200,7 @@ impl Vm {
             0x04..=0x0c => self.execute_global_push(opcode)?,
             0x0d => self.push_string()?,
             0x0e..=0x19 => self.execute_local_push(opcode)?,
-            0x1a => self.push_value(0)?,
+            0x1a => self.push_value(TEXT_BUFFER_ADDRESS as i32)?,
             0x1b => return Ok(StepOutcome::GraphicsBuffer { back: false }),
             0x1c => {
                 let value = self.pop_value()?.wrapping_neg();
@@ -940,7 +941,7 @@ mod tests {
             vm.run(10).unwrap(),
             RunOutcome::GraphicsBuffer { back: false }
         );
-        assert_eq!(vm.pop_value().unwrap(), 0);
+        assert_eq!(vm.pop_value().unwrap(), TEXT_BUFFER_ADDRESS as i32);
         assert_eq!(
             vm.run(10).unwrap(),
             RunOutcome::GraphicsBuffer { back: true }

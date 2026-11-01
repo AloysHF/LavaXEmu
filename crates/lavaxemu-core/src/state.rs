@@ -3,7 +3,7 @@ use crc32fast::hash;
 use crate::{Emulator, Error, GUEST_MEMORY_SIZE, Result};
 
 const STATE_MAGIC: [u8; 4] = *b"LXST";
-const STATE_VERSION: u16 = 4;
+const STATE_VERSION: u16 = 5;
 const STATE_HEADER_SIZE: usize = 14;
 const MAX_STATE_SIZE: usize = 64 * 1024 * 1024;
 
@@ -53,7 +53,7 @@ impl Emulator {
         }
 
         let mut upgraded = Vec::new();
-        let payload = if version < STATE_VERSION {
+        let payload = if version < 4 {
             upgraded.extend_from_slice(payload);
             if version == 2 {
                 let defaults = bincode::serialize(&crate::filelist::FileListState::default())
@@ -99,6 +99,9 @@ impl Emulator {
             ));
         }
 
+        if version < 5 {
+            restored.console.write_memory(restored.vm.memory_mut());
+        }
         restored.vm.graphics_memory_dirty = restored.legacy_graphics_memory;
         *self = restored;
         Ok(())
@@ -168,6 +171,23 @@ mod tests {
         assert!(emulator.file_list.destination.is_none());
         assert_eq!(emulator.file_list.flags, 0);
         assert!(!emulator.legacy_graphics_memory);
+    }
+
+    #[test]
+    fn upgrades_version_four_console_cells_and_preserves_new_guest_text() {
+        let mut e = Emulator::new(program(0x40));
+        e.console.write(b'Q');
+        e.vm_mut().memory_mut()[0x1400] = b'R';
+        let state = e.save_state().unwrap();
+        e.load_state(&state).unwrap();
+        assert_eq!(e.vm().memory()[0x1400], b'R');
+        let mut legacy = state;
+        legacy[4..6].copy_from_slice(&4_u16.to_le_bytes());
+        e.load_state(&legacy).unwrap();
+        assert_eq!(e.vm().memory()[0x1400], b'Q');
+        e.console.read_memory(e.vm.memory());
+        e.console.render(&mut e.display);
+        assert!(e.display().indexed_frame().iter().any(|&p| p != 0));
     }
 
     #[test]

@@ -6429,3 +6429,126 @@ fn hell_adventure_triggers_switches_restarts_and_clears_the_first_stage() {
     capture(&e, "hell-farewell");
     assert_eq!(key(&mut e, 13), FrameStatus::Halted(0));
 }
+
+#[test]
+#[ignore = "requires the local game corpus via LAVAX_GAME_ROOT"]
+fn missing_doctor_talks_collects_an_item_and_solves_the_alarm_puzzle() {
+    fn key(e: &mut Emulator, k: u8) -> FrameStatus {
+        e.input_mut().release_all();
+        e.input_mut().set_keys([k]);
+        for frame in 0..1200 {
+            let status = e.run_frame().expect("scripted input must execute").status;
+            if frame == 0 {
+                e.input_mut().set_keys([]);
+            }
+            if matches!(
+                status,
+                FrameStatus::Running | FrameStatus::WaitingForInput | FrameStatus::Halted(_)
+            ) {
+                assert!(!matches!(status, FrameStatus::Halted(_)));
+                return status;
+            }
+        }
+        panic!("input must reach a dialog or the movement loop");
+    }
+    fn keys(e: &mut Emulator, sequence: &[u8]) {
+        for &k in sequence {
+            key(e, k);
+        }
+    }
+    fn word(e: &Emulator, address: usize) -> u16 {
+        u16::from_le_bytes(e.vm().memory()[address..address + 2].try_into().unwrap())
+    }
+    fn position(e: &Emulator) -> (u16, u16) {
+        (
+            word(e, 0x30e9) + word(e, 0x30ed),
+            word(e, 0x30eb) + word(e, 0x30ef),
+        )
+    }
+    fn dialogs(e: &mut Emulator, phase: &str) {
+        capture(e, &format!("doctor-{phase}-dialog"));
+        for _ in 0..64 {
+            if e.vm().pc() == 0x398a {
+                return;
+            }
+            key(e, 13);
+        }
+        panic!("dialog pages must return to movement");
+    }
+    let mut e = load(&fixture_path("博士失踪记.lav"));
+    advance(&mut e, 300);
+    assert_eq!(e.vm().pc(), 0x398a);
+    assert_eq!(position(&e), (11, 2));
+    assert_eq!(word(&e, 0x30e7), 0);
+    assert_eq!(word(&e, 0x304a), 2);
+    capture(&e, "doctor-opening-street");
+    key(&mut e, 21);
+    assert_eq!(position(&e), (11, 3));
+    key(&mut e, 20);
+    assert_eq!(position(&e), (11, 2));
+    key(&mut e, 20);
+    assert_eq!(position(&e), (11, 1));
+    key(&mut e, 20);
+    assert_eq!(position(&e), (11, 1), "the tree must block movement");
+    keys(&mut e, &[21, 21]);
+    keys(&mut e, &[23; 10]);
+    assert_eq!(position(&e), (1, 3));
+    keys(&mut e, &[13, 13]);
+    dialogs(&mut e, "doctor-conversation");
+    assert_eq!(word(&e, 0x30e7), 10);
+    capture(&e, "doctor-first-conversation-complete");
+    keys(
+        &mut e,
+        &[
+            22, 22, 22, 22, 22, 22, 22, 22, 22, 20, 22, 22, 22, 22, 22, 22, 22, 20, 22,
+        ],
+    );
+    assert_eq!(position(&e), (18, 17));
+    capture(&e, "doctor-home-cabinet");
+    keys(&mut e, &[13, 21, 13]);
+    dialogs(&mut e, "slingshot-found");
+    assert_eq!(word(&e, 0x304a), 3);
+    assert_eq!(&e.vm().memory()[0x304c..0x304f], &[0x3e, 0x40, 0x3c]);
+    assert_eq!(e.vm().memory()[0x2000 + 16 * 31 + 18], 0x46);
+    capture(&e, "doctor-slingshot-in-inventory");
+    key(&mut e, 22);
+    dialogs(&mut e, "next-morning");
+    assert_eq!(word(&e, 0x30e7), 15);
+    assert_eq!(position(&e), (18, 17));
+    assert_eq!(e.vm().memory()[0x2000 + 18 * 31 + 12], 0x3b);
+    keys(&mut e, &[21, 23, 23, 23, 23, 23]);
+    assert_eq!(position(&e), (13, 18));
+    keys(&mut e, &[13, 13]);
+    dialogs(&mut e, "police-questioning");
+    assert_eq!(word(&e, 0x30e7), 20);
+    assert_eq!(e.vm().memory()[0x2000 + 18 * 31 + 12], 0);
+    assert_eq!(e.vm().memory()[0x203f], 0x3b);
+    capture(&e, "doctor-police-moved-to-door");
+    keys(&mut e, &[23, 23, 21, 23, 23, 23, 20]);
+    assert_eq!(position(&e), (8, 2));
+    keys(&mut e, &[13, 21, 21, 13, 21, 13]);
+    dialogs(&mut e, "phone-has-no-signal");
+    assert_eq!(word(&e, 0x30e7), 20);
+    assert_eq!(e.vm().memory()[0x203f], 0x3b);
+    keys(&mut e, &[13, 21, 21, 13, 21, 21, 13]);
+    dialogs(&mut e, "alarm-diversion");
+    assert_eq!(word(&e, 0x30e7), 30);
+    assert_eq!(e.vm().memory()[0x203f], 0x12);
+    assert_eq!(position(&e), (8, 2));
+    assert_eq!(&e.vm().memory()[0x304c..0x304f], &[0x3e, 0x40, 0x3c]);
+    capture(&e, "doctor-alarm-puzzle-solved");
+    key(&mut e, 25);
+    for page in 0..3 {
+        let pixels = e.display().indexed_frame();
+        assert!(
+            pixels.iter().any(|&p| p != pixels[0]),
+            "help pages must show text"
+        );
+        capture(&e, &format!("doctor-help-page-{page}"));
+        key(&mut e, 13);
+    }
+    assert_eq!(e.vm().pc(), 0x398a);
+    assert_eq!(word(&e, 0x30e7), 30);
+    assert_eq!(position(&e), (8, 2));
+    capture(&e, "doctor-help-returned-to-street");
+}

@@ -68,6 +68,11 @@ The LavaX VM uses a stack-based bytecode architecture with 117 opcodes:
 The interpreter processes one instruction per step and maintains deterministic
 execution timing.
 
+Opcode `0x1a` returns the guest text buffer at `0x1400`. Text output and
+LCD updates share those cells with direct guest writes; NUL cells render as
+blank glyphs. Save-state version 5 keeps that shared memory, while loading
+versions 2 through 4 migrates their separate console cells into guest RAM.
+
 ## Display
 
 The guest owns a 160×240 indexed-color screen with a 256-color palette. The

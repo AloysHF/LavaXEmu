@@ -80,6 +80,9 @@ Dragon Quest Monsters standard and special editions have a workflow for
 map travel, purchases, combat, recruitment and native save restoration.
 Hell Adventure has a workflow covering paired switches, forced movement,
 board restart, the first stage, help pages and normal exit.
+The Missing Doctor has a workflow covering conversations, scene changes,
+item collection and solving the first alarm diversion puzzle. Shared guest
+text memory restores its instruction and credit pages.
 
 ## Usage
 

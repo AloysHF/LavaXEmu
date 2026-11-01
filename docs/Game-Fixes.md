@@ -1539,3 +1539,33 @@ without an execution error alone does not establish playability.
   Captures are inspected locally. No additional core changes were needed.
   Later stages, the level selector and the editor remain unverified. Captures,
   map data and game resources are not distributed.
+
+## The Missing Doctor (博士失踪记)
+
+- Validation gap: the opening street did not establish whether dialog pages,
+  movement, scene transitions, inventory or story events worked.
+- Move down and back up, verify the tree blocks further movement, then walk to
+  the doctor. Choose Talk and acknowledge all dialog pages. Check the first
+  conversation advances the story without editing guest memory.
+- Return home, examine the cabinet and collect the slingshot. Verify the full
+  three-item inventory and the cabinet's changed map tile. Go to bed, advance
+  to the next morning and talk to the police officer. Verify the officer leaves
+  the home's entrance and appears at the doctor's door, reopening the route out.
+- At the neighboring house, use the phone and check that its failed call leaves
+  the story and officer unchanged. Select the slingshot instead, acknowledge the
+  alarm sequence and verify the officer's door tile changes to clear passage.
+  The story progresses through states 0, 10, 15, 20 and 30 while collected items
+  remain intact. This completes the first diversion puzzle.
+- F5 help originally produced three blank pages: the text-buffer opcode
+  returned address zero, while LCD updates rendered a separate console buffer.
+  It now returns `0x1400`; direct guest writes, character output and formatted
+  output share that memory. NUL cells render as spaces without truncating a row.
+  Deterministic unit tests cover guest writes, refresh, mixed output, clearing
+  and migration of version 4 console cells. State version 5 preserves new guest
+  text and continues to load versions 2 through 4.
+- Open F5 help and verify all three instruction/credit pages contain visible
+  text, then return to the same street position and story state. All 75 existing
+  dedicated release workflows pass after the shared-memory change. Captures are
+  inspected locally. Later puzzles, the ending and complete campaign remain
+  unverified; this workflow does not claim
+  a native save or exit command. Captures and game resources are not distributed.

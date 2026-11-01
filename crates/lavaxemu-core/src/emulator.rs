@@ -85,6 +85,17 @@ impl TextConsole {
         self.y = 0;
     }
 
+    pub(crate) fn read_memory(&mut self, memory: &[u8]) {
+        let start = crate::vm::TEXT_BUFFER_ADDRESS;
+        let length = self.cells.len();
+        self.cells.copy_from_slice(&memory[start..start + length]);
+    }
+
+    pub(crate) fn write_memory(&self, memory: &mut [u8]) {
+        let start = crate::vm::TEXT_BUFFER_ADDRESS;
+        memory[start..start + self.cells.len()].copy_from_slice(&self.cells);
+    }
+
     pub(crate) fn locate(&mut self, x: usize, y: usize) {
         self.x = x.min(self.columns - 1);
         self.y = y.min(self.rows - 1);
@@ -124,6 +135,12 @@ impl TextConsole {
     }
 
     pub(crate) fn render(&self, display: &mut Display) {
+        // NUL cells are blank glyphs, not row terminators.
+        let cells: Vec<u8> = self
+            .cells
+            .iter()
+            .map(|&c| if c == 0 { b' ' } else { c })
+            .collect();
         if self.small {
             let background = if display.graphics_mode() == GraphicsMode::Mono {
                 0
@@ -172,7 +189,7 @@ impl TextConsole {
                     BufferTarget::Front,
                     self.small_left as i32,
                     (row * 13 + self.small_up) as i32,
-                    &self.cells[start..end],
+                    &cells[start..end],
                     false,
                     DrawOperation::Set,
                 );
@@ -185,7 +202,7 @@ impl TextConsole {
                     BufferTarget::Front,
                     0,
                     (row * 16) as i32,
-                    &self.cells[start..end],
+                    &cells[start..end],
                     true,
                     DrawOperation::Set,
                 );
@@ -217,7 +234,7 @@ pub struct Emulator {
 impl Emulator {
     pub fn new(program: Program) -> Self {
         let header = program.header().clone();
-        Self {
+        let mut emulator = Self {
             vm: Vm::new(program),
             display: Display::new(header.width, header.height, header.graphics_mode),
             input: InputState::default(),
@@ -234,7 +251,9 @@ impl Emulator {
             command_line: Vec::new(),
             file_list: FileListState::default(),
             legacy_graphics_memory: false,
-        }
+        };
+        emulator.console.write_memory(emulator.vm.memory_mut());
+        emulator
     }
 
     pub fn reset(&mut self) {
@@ -242,6 +261,7 @@ impl Emulator {
         self.display.reset();
         self.console
             .set_mode(self.display.width(), self.display.height(), false);
+        self.console.write_memory(self.vm.memory_mut());
         self.input.release_all();
         self.elapsed_ms = 0;
         self.time_remainder = 0;

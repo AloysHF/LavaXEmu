@@ -128,7 +128,9 @@ impl Emulator {
 
     fn system_putchar(&mut self) -> Result<HostAction> {
         let value = self.vm.pop_value()? as u8;
+        self.console.read_memory(self.vm.memory());
         self.console.write(value);
+        self.console.write_memory(self.vm.memory_mut());
         self.console.render(&mut self.display);
         Ok(HostAction::Continue)
     }
@@ -149,9 +151,11 @@ impl Emulator {
             return Ok(HostAction::Continue);
         }
         let output = self.format_arguments(&arguments)?;
+        self.console.read_memory(self.vm.memory());
         for byte in output {
             self.console.write(byte);
         }
+        self.console.write_memory(self.vm.memory_mut());
         self.console.render(&mut self.display);
         Ok(HostAction::Present)
     }
@@ -176,11 +180,13 @@ impl Emulator {
         let small = self.vm.pop_value()? & 0xff != 0;
         self.console
             .set_mode(self.display.width(), self.display.height(), small);
+        self.console.write_memory(self.vm.memory_mut());
         Ok(HostAction::Continue)
     }
 
     fn system_update_lcd(&mut self) -> Result<HostAction> {
         self.vm.pop_value()?;
+        self.console.read_memory(self.vm.memory());
         self.console.render(&mut self.display);
         Ok(HostAction::Present)
     }
@@ -1384,6 +1390,38 @@ mod tests {
         emulator.input_mut().set_key(13, true);
         assert_eq!(emulator.run_frame().unwrap().status, FrameStatus::Halted(0));
         assert_eq!(emulator.vm().result(), 13);
+    }
+
+    #[test]
+    fn guest_text_buffer_refresh_and_console_output_share_memory() {
+        let mut e = emulator(&[
+            0x01, 1, 0x85, // small text mode
+            0x1a, 0x0d, b'A', b'B', b'C', b'D', 0, 0x83, 0x03, 0x01, 0x14, 0, 0x01, 0x01, 0, 0x35,
+            0x38, // blank the second cell
+            0x01, 0, 0x86, 0x01, b'b', 0x80, 0x0d, b'E', 0, 0x01, 1, 0x82, 0x01, 0, 0x86, 0x01, 0,
+            0x85, 0x01, 0, 0x86, 0x40,
+        ]);
+        assert_eq!(e.run_frame().unwrap().status, FrameStatus::Presented);
+        assert_eq!(&e.vm().memory()[0x1400..0x1404], b"A\0CD");
+        let mut expected = e.display().clone();
+        expected.clear(BufferTarget::Front);
+        expected.draw_text(
+            BufferTarget::Front,
+            6,
+            2,
+            b"A CD",
+            false,
+            DrawOperation::Set,
+        );
+        assert_eq!(e.display().indexed_frame(), expected.indexed_frame());
+        assert_eq!(e.run_frame().unwrap().status, FrameStatus::Presented);
+        assert_eq!(&e.vm().memory()[0x1400..0x1404], b"bECD");
+        let printed = e.display().indexed_frame().to_vec();
+        assert_eq!(e.run_frame().unwrap().status, FrameStatus::Presented);
+        assert_eq!(e.display().indexed_frame(), printed);
+        assert_eq!(e.run_frame().unwrap().status, FrameStatus::Presented);
+        assert!(e.vm().memory()[0x1400..0x1404].iter().all(|&c| c == b' '));
+        assert!(e.display().indexed_frame().iter().all(|&p| p == 0));
     }
 
     #[test]
