@@ -8367,3 +8367,141 @@ fn sky_fighting_art_configures_moves_fires_pauses_and_finishes_a_battle() {
     title.input_mut().set_keys([27]);
     assert_eq!(title.run_frame().unwrap().status, FrameStatus::Halted(0));
 }
+
+#[test]
+#[ignore = "requires the local game corpus via LAVAX_GAME_ROOT"]
+fn eagle_versions_aim_fire_pause_finish_and_restore_the_ranking() {
+    fn key(e: &mut Emulator, key: u8) {
+        e.input_mut().release_all();
+        for frame in 0..60 {
+            e.input_mut().set_keys((frame < 18).then_some(key));
+            advance(e, 1);
+        }
+    }
+    fn word(e: &Emulator, address: usize) -> i16 {
+        i16::from_le_bytes(e.vm().memory()[address..address + 2].try_into().unwrap())
+    }
+    let standard = fixture_path("Eagle.lav");
+    let directory = std::path::Path::new(&standard).parent().unwrap();
+    for (name, boot, menu, loss, pause, rank, bp) in [
+        ("Eagle.lav", 0x14dd, 0x150c, 0x9cd, 0x10ac, 0x90f, 0x6f07),
+        ("NC2600.lav", 0x20cd, 0x20fc, 0xd5b, 0x1459, 0xc4e, 0x5c47),
+        ("NC3000.lav", 0x2117, 0x2146, 0xda5, 0x14a3, 0xc98, 0x5c47),
+        ("TC1000.lav", 0x2117, 0x2146, 0xda5, 0x14a3, 0xc98, 0x5c47),
+        ("TC1000S.lav", 0x2117, 0x2146, 0xda5, 0x14a3, 0xc98, 0x5c47),
+        ("TC808.lav", 0x1fc0, 0x1fef, 0xc51, 0x134f, 0xb44, 0x5c47),
+    ] {
+        let path = if name == "Eagle.lav" {
+            directory.join(name)
+        } else {
+            directory.join("VS版").join(name)
+        };
+        let path = path.to_str().unwrap();
+        let label = name.trim_end_matches(".lav");
+        let mut e = load(path);
+        advance(&mut e, 1200);
+        assert_eq!(e.vm().pc(), boot);
+        key(&mut e, 13);
+        assert_eq!(e.vm().pc(), menu);
+        capture(&e, &format!("eagle-{label}-menu"));
+        key(&mut e, 13);
+        advance(&mut e, 600);
+        assert_eq!(e.vm().local_bp() as usize, bp);
+        assert!(word(&e, bp + 0x28) > 0);
+        capture(&e, &format!("eagle-{label}-battle"));
+
+        let mut controls = e.clone();
+        let altitude = controls.vm().memory()[bp + 0x24];
+        key(&mut controls, b'w');
+        assert!(controls.vm().memory()[bp + 0x24] > altitude);
+        let heading = word(&controls, bp + 0x2c);
+        key(&mut controls, b'd');
+        assert_ne!(word(&controls, bp + 0x2c), heading);
+        key(&mut controls, b'p');
+        assert_eq!(controls.vm().pc(), pause);
+        let state = controls.vm().memory()[bp..bp + 0x47].to_vec();
+        let frame = controls.display().indexed_frame().to_vec();
+        advance(&mut controls, 300);
+        assert_eq!(&controls.vm().memory()[bp..bp + 0x47], state.as_slice());
+        assert_eq!(controls.display().indexed_frame(), frame.as_slice());
+        capture(&controls, &format!("eagle-{label}-paused"));
+        key(&mut controls, b'y');
+        assert_ne!(controls.vm().pc(), pause);
+
+        for _ in 0..12000 {
+            if word(&e, bp + 0x2a) > 0 || word(&e, bp + 0x28) <= 0 {
+                break;
+            }
+            let target = (0..5)
+                .filter(|&i| e.vm().memory()[bp + 0x38 + i] >= 50)
+                .min_by_key(|&i| {
+                    i32::from(word(&e, bp + 0x10 + i * 2)).abs()
+                        + i32::from(word(&e, bp + 0x1a + i * 2)).abs()
+                });
+            let aim = target.map(|i| (word(&e, bp + 0x10 + i * 2), word(&e, bp + 0x1a + i * 2)));
+            let key = match aim {
+                Some((x, _)) if x > 16 => b'd',
+                Some((x, _)) if x < -16 => b'a',
+                Some((_, y)) if y > 5 => b'w',
+                Some((_, y)) if y < -5 => b's',
+                _ => b'l',
+            };
+            e.input_mut().set_keys([key]);
+            advance(&mut e, 1);
+        }
+        e.input_mut().release_all();
+        assert_eq!(word(&e, bp + 0x2a), 1);
+        assert!(word(&e, bp + 0x28) > 0);
+        capture(&e, &format!("eagle-{label}-enemy-destroyed"));
+        advance(&mut e, 6000);
+        assert_eq!(e.vm().pc(), loss);
+        assert!(word(&e, bp + 0x28) <= 0);
+        capture(&e, &format!("eagle-{label}-game-over"));
+        key(&mut e, 13);
+        for k in *b"ABC" {
+            key(&mut e, k);
+        }
+        key(&mut e, 13);
+        assert_eq!(e.vm().pc(), rank);
+        capture(&e, &format!("eagle-{label}-ranking"));
+        let files = e.files_mut().take_dirty_files();
+        let save_name = if name == "Eagle.lav" {
+            "/lavadata/eagle.cfg"
+        } else {
+            "/lavadata/eagle_vs.cfg"
+        };
+        let saved = files.iter().find(|(name, _)| name == save_name).unwrap();
+        assert_eq!(saved.1.len(), 55);
+        assert_eq!(&saved.1[..4], b"ABC\0");
+        assert_eq!(&saved.1[9..11], &[1, 0]);
+
+        let mut restored = load(path);
+        restored.files_mut().import_file(&saved.0, saved.1.clone());
+        advance(&mut restored, 1200);
+        assert_eq!(restored.vm().pc(), boot);
+        for k in [13, 21, 21, 21, 13] {
+            key(&mut restored, k);
+        }
+        assert_eq!(restored.vm().pc(), rank);
+        assert!(restored.files_mut().take_dirty_files().is_empty());
+        assert_eq!(
+            restored.display().indexed_frame(),
+            e.display().indexed_frame()
+        );
+        capture(&restored, &format!("eagle-{label}-ranking-restored"));
+        key(&mut restored, 13);
+        assert_eq!(restored.vm().pc(), menu);
+        key(&mut restored, 27);
+        capture(&restored, &format!("eagle-{label}-farewell"));
+        restored.input_mut().set_keys([13]);
+        let mut exited = false;
+        for _ in 0..300 {
+            if let FrameStatus::Halted(code) = restored.run_frame().unwrap().status {
+                assert_eq!(code, 0);
+                exited = true;
+                break;
+            }
+        }
+        assert!(exited);
+    }
+}

@@ -1839,3 +1839,22 @@ without an execution error alone does not establish playability.
   behavior. Captures are reviewed locally. Complete campaigns, map editing,
   every unit action and every scenario remain unverified. Game files, saves
   and captures are not distributed.
+
+## Eagle (天鹰战机·血战)
+
+- The standard release and all five VS builds enter their single-player
+  battlefield. Check altitude and heading changes with the native controls.
+  Pause, verify that the battle state and presented image remain unchanged
+  for 300 frames, then choose the original resume option.
+- Use read-only enemy positions to choose turn, climb, descend and fire keys.
+  Check that an actual enemy is destroyed, the score becomes one and the player
+  remains alive. Let the remaining enemies finish the battle and check its
+  native loss and score page.
+- Enter a name through the original ranking dialog. Check the native 55-byte
+  ranking file contains the name and score. Import it into a fresh emulator,
+  open the ranking from the menu and compare the displayed table. Check the
+  farewell screen and normal exit after acknowledgement.
+- This adds deterministic compatibility coverage without changing emulator
+  behavior. Captures are reviewed locally. Serial multiplayer and extended
+  survival remain unverified; these workflows cover single-player operation
+  in the VS builds. Game files, saves and captures are not distributed.

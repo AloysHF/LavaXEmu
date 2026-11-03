@@ -17,9 +17,9 @@ do not satisfy this status.
 - Input update checked on 2026-10-31: full rerun of 49 workflows, followed by a corrected Dragon Kiss intro replay and the dedicated WarCraft workflow. Those 50 workflows passed with the updated input behavior; later entries have separate incremental checks.
 - Shared guest text memory checked on 2026-11-01: all 75 dedicated release workflows passed after the text-buffer repair and state migration.
 - Inverted TextOut checked on 2026-11-01: all 77 dedicated release workflows passed after honoring the source-inversion flag.
-- 89 dedicated release workflows passed in this audit.
-- 135 of 324 entry points were loaded by those successful workflows.
-- 189 entry points still need dedicated workflow verification.
+- 90 dedicated release workflows passed in this audit.
+- 141 of 324 entry points were loaded by those successful workflows.
+- 183 entry points still need dedicated workflow verification.
 - The historical [startup gallery](Game-Compatibility.md) is a separate check
   and must not be interpreted as this workflow audit.
 
@@ -134,12 +134,12 @@ an optional screenshot directory. Keep each test's logs and captures separate.
 | 091 | `LAVA1 大战略/大战略.pac` | Game / game package | [Workflow passed: `strategy_versions_move_attack_change_turns_and_restore_a_campaign`](../crates/lavaxemu/tests/game_compatibility.rs#L8177) |
 | 092 | `LAVA1 大战略/非pac/dzl.lav` | Game / game package | [Workflow passed: `strategy_versions_move_attack_change_turns_and_restore_a_campaign`](../crates/lavaxemu/tests/game_compatibility.rs#L8177) |
 | 093 | `LAVA1 天空格斗艺术正式版/HFAcs.lav` | Game / game package | [Workflow passed: `sky_fighting_art_configures_moves_fires_pauses_and_finishes_a_battle`](../crates/lavaxemu/tests/game_compatibility.rs#L8251) |
-| 094 | `LAVA1 天鹰战机·血战/Eagle.lav` | Game / game package | Pending |
-| 095 | `LAVA1 天鹰战机·血战/VS版/NC2600.lav` | Game / game package | Pending |
-| 096 | `LAVA1 天鹰战机·血战/VS版/NC3000.lav` | Game / game package | Pending |
-| 097 | `LAVA1 天鹰战机·血战/VS版/TC1000.lav` | Game / game package | Pending |
-| 098 | `LAVA1 天鹰战机·血战/VS版/TC1000S.lav` | Game / game package | Pending |
-| 099 | `LAVA1 天鹰战机·血战/VS版/TC808.lav` | Game / game package | Pending |
+| 094 | `LAVA1 天鹰战机·血战/Eagle.lav` | Game / game package | [Workflow passed: `eagle_versions_aim_fire_pause_finish_and_restore_the_ranking`](../crates/lavaxemu/tests/game_compatibility.rs#L8373) |
+| 095 | `LAVA1 天鹰战机·血战/VS版/NC2600.lav` | Game / game package | [Workflow passed: `eagle_versions_aim_fire_pause_finish_and_restore_the_ranking`](../crates/lavaxemu/tests/game_compatibility.rs#L8373) |
+| 096 | `LAVA1 天鹰战机·血战/VS版/NC3000.lav` | Game / game package | [Workflow passed: `eagle_versions_aim_fire_pause_finish_and_restore_the_ranking`](../crates/lavaxemu/tests/game_compatibility.rs#L8373) |
+| 097 | `LAVA1 天鹰战机·血战/VS版/TC1000.lav` | Game / game package | [Workflow passed: `eagle_versions_aim_fire_pause_finish_and_restore_the_ranking`](../crates/lavaxemu/tests/game_compatibility.rs#L8373) |
+| 098 | `LAVA1 天鹰战机·血战/VS版/TC1000S.lav` | Game / game package | [Workflow passed: `eagle_versions_aim_fire_pause_finish_and_restore_the_ranking`](../crates/lavaxemu/tests/game_compatibility.rs#L8373) |
+| 099 | `LAVA1 天鹰战机·血战/VS版/TC808.lav` | Game / game package | [Workflow passed: `eagle_versions_aim_fire_pause_finish_and_restore_the_ranking`](../crates/lavaxemu/tests/game_compatibility.rs#L8373) |
 | 100 | `LAVA1 天龙八步/Liuye.lav` | Game / game package | Pending |
 | 101 | `LAVA1 太空寻宝/太空寻宝.lav` | Game / game package | Pending |
 | 102 | `LAVA1 太空战舰/太空战舰.lav` | Game / game package | Pending |
