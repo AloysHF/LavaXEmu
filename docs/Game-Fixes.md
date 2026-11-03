@@ -1778,3 +1778,26 @@ without an execution error alone does not establish playability.
   without an emulator behavior change. Level completion, every enemy type,
   all power-ups and custom maps remain unverified. Game files, native saves
   and captures are not distributed.
+
+## Zelda Minigames (塞尔达小游戏)
+
+- The chest timer previously ended only when the remaining time was exactly
+  zero. In power-saving input mode, resuming after the deadline skipped the
+  timeout and kept the game running. The regression reproduces this by waiting
+  40 seconds before confirming. A length/CRC-gated loaded-image repair accepts
+  zero or negative remaining time; unknown images remain unchanged.
+
+- The lizard workflow uses read-only guest state to plan native direction and
+  throw keys. Pick up the projectile, carry it to the boundary and throw it
+  outward at falling targets. Check the first two difficulties complete with
+  five and ten hits, acknowledge each result and its next-difficulty prompt,
+  then check the third difficulty's native failure and return to the title.
+- In the chest game, plan a route through the original walkable tiles, face
+  the chest and open it with the native confirmation key. Check the reward
+  prompt and return to the title. A separate clone waits for the timer to
+  expire and verifies the original timeout result.
+- Check decreasing and restoring movement speed, both instruction/credit
+  pages, returning from settings and normal exit. Captures are reviewed
+  locally. Guest memory is never edited to produce an outcome.
+- Completing the final two lizard difficulties and every random chest layout
+  remain unverified. Game files and captures are not distributed.

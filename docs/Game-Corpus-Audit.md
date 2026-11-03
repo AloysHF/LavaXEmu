@@ -17,9 +17,9 @@ do not satisfy this status.
 - Input update checked on 2026-10-31: full rerun of 49 workflows, followed by a corrected Dragon Kiss intro replay and the dedicated WarCraft workflow. Those 50 workflows passed with the updated input behavior; later entries have separate incremental checks.
 - Shared guest text memory checked on 2026-11-01: all 75 dedicated release workflows passed after the text-buffer repair and state migration.
 - Inverted TextOut checked on 2026-11-01: all 77 dedicated release workflows passed after honoring the source-inversion flag.
-- 86 dedicated release workflows passed in this audit.
-- 131 of 324 entry points were loaded by those successful workflows.
-- 193 entry points still need dedicated workflow verification.
+- 87 dedicated release workflows passed in this audit.
+- 132 of 324 entry points were loaded by those successful workflows.
+- 192 entry points still need dedicated workflow verification.
 - The historical [startup gallery](Game-Compatibility.md) is a separate check
   and must not be interpreted as this workflow audit.
 
@@ -130,7 +130,7 @@ an optional screenshot directory. Keep each test's logs and captures separate.
 | 087 | `LAVA1 圣金/Shengjin2.lav` | Game / game package | [Workflow passed: `saints_vs_gold_completes_training_and_an_eight_member_battle`](../crates/lavaxemu/tests/game_compatibility.rs#L7771) |
 | 088 | `LAVA1 坦克2004/坦克2004.pac` | Game / game package | [Workflow passed: `tank_2004_versions_move_fire_pause_and_restore_a_native_save`](../crates/lavaxemu/tests/game_compatibility.rs#L7898) |
 | 089 | `LAVA1 坦克2004/非PAC/坦克2004.lav` | Game / game package | [Workflow passed: `tank_2004_versions_move_fire_pause_and_restore_a_native_save`](../crates/lavaxemu/tests/game_compatibility.rs#L7898) |
-| 090 | `LAVA1 塞尔达小游戏/文曲星版Zelda.lav` | Game / game package | Pending |
+| 090 | `LAVA1 塞尔达小游戏/文曲星版Zelda.lav` | Game / game package | [Workflow passed: `zelda_minigames_hit_lizards_open_a_chest_time_out_and_configure_controls`](../crates/lavaxemu/tests/game_compatibility.rs#L8000) |
 | 091 | `LAVA1 大战略/大战略.pac` | Game / game package | Pending |
 | 092 | `LAVA1 大战略/非pac/dzl.lav` | Game / game package | Pending |
 | 093 | `LAVA1 天空格斗艺术正式版/HFAcs.lav` | Game / game package | Pending |

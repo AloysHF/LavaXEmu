@@ -61,6 +61,8 @@ The Sword repair reserves both 2,000-byte native save slots before seeking,
 preserving existing bytes when the second slot is saved first.
 The Four-player Mahjong repair checks the wall before each normal draw and
 rejects a kong without a replacement tile, preventing the remaining count from wrapping.
+The Zelda Minigames chest timer repair expires elapsed deadlines when an input
+wait resumes after the remaining time has become negative.
 These repairs do not modify the content file or
 change the VM's general stack, local variables or file-seek bounds.
 

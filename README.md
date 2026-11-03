@@ -107,6 +107,9 @@ Saints vs Gold has a workflow for its complete tutorial, an eight-member AI
 battle, victory and rating pages, and returning to mode selection.
 Tank 2004 packaged and loose versions have a workflow for movement, shooting,
 pause, native save restoration, an enemy kill, battle loss and normal exit.
+Zelda Minigames has a workflow for lizard hits and results, chest opening and
+timeout, speed settings, instructions, credits and normal exit.
+Expired chest timers now finish when input resumes after the deadline.
 
 ## Usage
 

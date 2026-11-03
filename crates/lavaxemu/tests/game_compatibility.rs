@@ -7994,3 +7994,180 @@ fn tank_2004_versions_move_fire_pause_and_restore_a_native_save() {
         assert_eq!(fresh.run_frame().unwrap().status, FrameStatus::Halted(0));
     }
 }
+
+#[test]
+#[ignore = "requires the local game corpus via LAVAX_GAME_ROOT"]
+fn zelda_minigames_hit_lizards_open_a_chest_time_out_and_configure_controls() {
+    fn key(e: &mut Emulator, k: u8) {
+        e.input_mut().release_all();
+        for f in 0..24 {
+            e.input_mut().set_keys((f == 0).then_some(k));
+            e.run_frame().unwrap();
+        }
+    }
+    fn w(e: &Emulator, a: usize) -> i32 {
+        u16::from_le_bytes(e.vm().memory()[a..a + 2].try_into().unwrap()) as i32
+    }
+    let mut e = load(&fixture_path("文曲星版Zelda.lav"));
+    advance(&mut e, 1200);
+    capture(&e, "zelda-title");
+    for _ in 0..3 {
+        key(&mut e, 13);
+    }
+    for stage in 0..3 {
+        assert_eq!(w(&e, 0x208a), stage);
+        for _ in 0..30000 {
+            let n = w(&e, 0x20a2);
+            let px = w(&e, 0x2078);
+            let py = w(&e, 0x207a);
+            let bx = w(&e, 0x2094);
+            let by = w(&e, 0x2096);
+            let h = w(&e, 0x2098);
+            let state = w(&e, 0x2080);
+            let mut targets: Vec<_> = (1..=n as usize)
+                .filter(|&i| w(&e, 0x20c0 + i * 2) == 0)
+                .map(|i| (w(&e, 0x20a8 + i * 2), w(&e, 0x20b4 + i * 2)))
+                .collect();
+            targets.sort_by_key(|&(x, y)| (x - bx).abs() + (y - by).abs());
+            let (x, y) = if state != 2 {
+                (bx, by)
+            } else {
+                targets
+                    .first()
+                    .map(|&(x, y)| (x, y + 3))
+                    .unwrap_or((bx, by))
+            };
+            let mut keys = Vec::new();
+            if (x - px).abs() > 3 {
+                keys.push(if x > px { 22 } else { 23 });
+            } else if (y - py).abs() > 3 {
+                keys.push(if y > py { 21 } else { 20 });
+            }
+            if state == 2 {
+                if let Some(&(x, y)) = targets.first()
+                    && (y + 3 - by).abs() < 8
+                    && ((x < 32 && px <= 35) || (x > 112 && px >= 109))
+                {
+                    keys = vec![13, if x < px { 23 } else { 22 }];
+                }
+            } else if (bx - px).abs() < 12 && (by - py).abs() < 12 && h < 10 {
+                keys.push(13);
+            }
+            e.input_mut().set_keys(keys);
+            e.run_frame().unwrap();
+            if matches!(e.vm().pc(), 0x1e76 | 0x1e77 | 0x1e33 | 0x1e1e) {
+                break;
+            }
+        }
+        e.input_mut().release_all();
+        advance(&mut e, 120);
+        if stage < 2 {
+            assert_eq!(w(&e, 0x2082), 3);
+            assert_eq!(w(&e, 0x20a0), 5 + 5 * stage);
+            assert_eq!(e.vm().pc(), 0x1e33);
+            capture(&e, &format!("zelda-lizards-stage-{stage}-success"));
+            key(&mut e, 13);
+            assert_eq!(e.vm().pc(), 0x1dcd);
+            key(&mut e, 13);
+        } else {
+            assert_eq!(w(&e, 0x2082), 4);
+            assert_eq!(e.vm().pc(), 0x1e77);
+            capture(&e, "zelda-lizards-loss");
+            key(&mut e, 13);
+        }
+    }
+    assert_eq!(e.vm().pc(), 0x2dda);
+    let mut chest = load(&fixture_path("文曲星版Zelda.lav"));
+    advance(&mut chest, 1200);
+    key(&mut chest, 110);
+    assert_eq!(chest.vm().pc(), 0x2c8d);
+    capture(&chest, "zelda-chest-board");
+    let mut timeout = chest.clone();
+    let bank = w(&chest, 0x2e9b) as usize;
+    let board = chest.vm().memory()[0x20cd + bank * 50..0x20cd + (bank + 1) * 50].to_vec();
+    let mut queue = std::collections::VecDeque::from([(0i32, 0i32, Vec::<u8>::new())]);
+    let mut visited = std::collections::HashSet::from([(0, 0)]);
+    let mut solution = None;
+    while let Some((x, y, route)) = queue.pop_front() {
+        for (dx, dy, k) in [(0, -1, 20), (0, 1, 21), (-1, 0, 23), (1, 0, 22)] {
+            let (xx, yy) = (x + dx, y + dy);
+            if !(0..10).contains(&xx) || !(0..5).contains(&yy) {
+                continue;
+            }
+            let tile = board[(yy * 10 + xx) as usize];
+            let mut next = route.clone();
+            next.push(k);
+            if tile == 2 {
+                next.push(13);
+                solution = Some(next);
+                break;
+            }
+            if tile == 1 && visited.insert((xx, yy)) {
+                queue.push_back((xx, yy, next));
+            }
+        }
+        if solution.is_some() {
+            break;
+        }
+    }
+    for k in solution.expect("the original chest must be reachable") {
+        key(&mut chest, k);
+    }
+    assert_eq!(chest.vm().pc(), 0x2c1a);
+    capture(&chest, "zelda-chest-opened");
+    key(&mut chest, 13);
+    key(&mut chest, 13);
+    assert_eq!(chest.vm().pc(), 0x2dda);
+    timeout.input_mut().release_all();
+    advance(&mut timeout, 2400);
+    key(&mut timeout, 13);
+    timeout.input_mut().release_all();
+    advance(&mut timeout, 180);
+    assert_eq!(timeout.vm().pc(), 0x2c3c);
+    capture(&timeout, "zelda-chest-timeout");
+    key(&mut timeout, 13);
+    assert_eq!(timeout.vm().pc(), 0x2dda);
+    key(&mut chest, 109);
+    assert_eq!(chest.vm().pc(), 0x17e4);
+    let speed = w(&chest, 0x207e);
+    key(&mut chest, 23);
+    assert_eq!(w(&chest, 0x207e), speed - 5);
+    chest.input_mut().release_all();
+    for _ in 0..2000 {
+        if chest.vm().pc() == 0x17e4 {
+            break;
+        }
+        chest.run_frame().unwrap();
+    }
+    assert_eq!(chest.vm().pc(), 0x17e4);
+    key(&mut chest, 22);
+    assert_eq!(w(&chest, 0x207e), speed);
+    chest.input_mut().release_all();
+    for _ in 0..2000 {
+        if chest.vm().pc() == 0x17e4 {
+            break;
+        }
+        chest.run_frame().unwrap();
+    }
+    assert_eq!(chest.vm().pc(), 0x17e4);
+    capture(&chest, "zelda-settings");
+    key(&mut chest, 13);
+    assert_eq!(chest.vm().pc(), 0x182c);
+    capture(&chest, "zelda-help");
+    key(&mut chest, 13);
+    assert_eq!(chest.vm().pc(), 0x18af);
+    capture(&chest, "zelda-credits");
+    key(&mut chest, 13);
+    chest.input_mut().release_all();
+    for _ in 0..2000 {
+        if chest.vm().pc() == 0x17e4 {
+            break;
+        }
+        chest.run_frame().unwrap();
+    }
+    assert_eq!(chest.vm().pc(), 0x17e4);
+    key(&mut chest, 27);
+    assert_eq!(chest.vm().pc(), 0x2dda);
+    key(&mut chest, 103);
+    assert_eq!(chest.run_frame().unwrap().status, FrameStatus::Halted(0));
+}
