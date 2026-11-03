@@ -1801,3 +1801,22 @@ without an execution error alone does not establish playability.
   locally. Guest memory is never edited to produce an outcome.
 - Completing the final two lizard difficulties and every random chest layout
   remain unverified. Game files and captures are not distributed.
+
+## Strategy (大战略)
+
+- Both packaged and loose versions enter the original ten-by-nine battlefield.
+  Move the first artillery unit one tile and choose rest from its action menu.
+  Check its coordinates and completed-action state rather than relying on a
+  changed screenshot alone.
+- In a separate branch, move infantry onto the bridge and attack the adjacent
+  opposing infantry. Let the battle animation finish, then check the committed
+  position, both units' remaining health (66 and 62), and ammunition (98 each).
+- Save through the native battle menu, change to the second player's turn,
+  move and rest their artillery, and return to the first player's turn.
+  Import the actual 2,015-byte native save into a fresh emulator and load it
+  through the title menu. Check the original team, cursor, moved infantry,
+  damage and ammunition, and that the later artillery move was not restored.
+- This adds deterministic compatibility coverage without changing emulator
+  behavior. Captures are reviewed locally. Complete campaigns, map editing,
+  every unit action and every scenario remain unverified. Game files, saves
+  and captures are not distributed.

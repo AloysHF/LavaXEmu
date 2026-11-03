@@ -8171,3 +8171,77 @@ fn zelda_minigames_hit_lizards_open_a_chest_time_out_and_configure_controls() {
     key(&mut chest, 103);
     assert_eq!(chest.run_frame().unwrap().status, FrameStatus::Halted(0));
 }
+
+#[test]
+#[ignore = "requires the local game corpus via LAVAX_GAME_ROOT"]
+fn strategy_versions_move_attack_change_turns_and_restore_a_campaign() {
+    fn keys(e: &mut Emulator, keys: &[u8]) {
+        for &key in keys {
+            e.input_mut().release_all();
+            for frame in 0..24 {
+                e.input_mut().set_keys((frame == 0).then_some(key));
+                advance(e, 1);
+            }
+        }
+    }
+    fn unit(e: &Emulator, team: usize, index: usize) -> &[u8] {
+        let start = 0x225d + (team * 48 + index) * 6;
+        &e.vm().memory()[start..start + 6]
+    }
+    for (variant, filename) in [("packaged", "大战略.pac"), ("loose", "dzl.lav")] {
+        let path = fixture_path(filename);
+        let mut e = load(&path);
+        advance(&mut e, 1200);
+        assert_eq!(e.vm().pc(), 0xb93);
+        keys(&mut e, &[13, 13]);
+        assert_eq!(e.vm().pc(), 0x87d5);
+        assert_eq!(&e.vm().memory()[0x300a..0x300f], &[9, 8, 0, 0, 4]);
+        capture(&e, &format!("strategy-{variant}-field"));
+
+        let mut movement = e.clone();
+        keys(&mut movement, &[13, 22, 13, 21, 21, 21, 21, 21, 21, 13]);
+        assert_eq!(movement.vm().pc(), 0x87d5);
+        assert_eq!(unit(&movement, 0, 5), &[1, 4, 100, 5, 67, 9]);
+        capture(&movement, &format!("strategy-{variant}-moved-artillery"));
+
+        keys(&mut e, &[22, 22, 22, 13, 22, 22, 13, 13, 13]);
+        e.input_mut().release_all();
+        advance(&mut e, 1200);
+        assert_eq!(e.vm().pc(), 0x87d5);
+        assert_eq!(unit(&e, 0, 2), &[5, 4, 66, 0, 4, 98]);
+        assert_eq!(unit(&e, 1, 2), &[6, 4, 62, 0, 10, 98]);
+        capture(&e, &format!("strategy-{variant}-battle-result"));
+        keys(&mut e, &[27, 21, 21, 13, 13]);
+        assert_eq!(e.vm().pc(), 0x87d5);
+        let files = e.files_mut().take_dirty_files();
+        let saved = files
+            .iter()
+            .find(|(name, _)| name == "/lavadata/dzl.sav")
+            .unwrap();
+        assert_eq!(saved.1.len(), 2015);
+
+        keys(&mut e, &[27, 13]);
+        assert_eq!(e.vm().pc(), 0x73ca);
+        assert_eq!(e.vm().memory()[0x300c], 1);
+        capture(&e, &format!("strategy-{variant}-second-player-turn"));
+        keys(&mut e, &[13, 13, 23, 13, 21, 21, 21, 21, 21, 21, 13]);
+        assert_eq!(e.vm().pc(), 0x87d5);
+        assert_eq!(&unit(&e, 1, 11)[..4], &[8, 4, 100, 5]);
+        capture(&e, &format!("strategy-{variant}-second-player-moved"));
+        keys(&mut e, &[27, 13, 13]);
+        assert_eq!(e.vm().pc(), 0x87d5);
+        assert_eq!(e.vm().memory()[0x300c], 0);
+
+        let mut restored = load(&path);
+        restored.files_mut().import_file(&saved.0, saved.1.clone());
+        advance(&mut restored, 1200);
+        keys(&mut restored, &[21, 13, 13]);
+        assert_eq!(restored.vm().pc(), 0x87d5);
+        assert_eq!(&restored.vm().memory()[0x300c..0x300f], &[0, 5, 4]);
+        assert_eq!(unit(&restored, 0, 2), &[5, 4, 66, 0, 4, 98]);
+        assert_eq!(unit(&restored, 1, 2), &[6, 4, 62, 0, 10, 98]);
+        assert_eq!(&unit(&restored, 1, 11)[..4], &[9, 4, 100, 5]);
+        assert!(restored.files_mut().take_dirty_files().is_empty());
+        capture(&restored, &format!("strategy-{variant}-restored-campaign"));
+    }
+}

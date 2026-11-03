@@ -110,6 +110,8 @@ pause, native save restoration, an enemy kill, battle loss and normal exit.
 Zelda Minigames has a workflow for lizard hits and results, chest opening and
 timeout, speed settings, instructions, credits and normal exit.
 Expired chest timers now finish when input resumes after the deadline.
+Strategy packaged and loose versions have a workflow for unit movement,
+combat damage, both players' turns and native campaign save restoration.
 
 ## Usage
 
