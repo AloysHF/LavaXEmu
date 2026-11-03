@@ -1761,3 +1761,20 @@ without an execution error alone does not establish playability.
   command; the workflow ends after returning to it. Other modes, every skill
   interaction and every team composition remain unverified. Game files and
   captures are not distributed.
+
+## Tank 2004 (坦克2004)
+
+- Both packaged and loose releases run a deterministic workflow for turning,
+  collision with walls, moving, firing and pausing. During 120 paused frames,
+  the map, actors, player state and displayed image remain unchanged.
+- Save through the original S/Y prompt, move away, then use R/Y to restore the
+  saved position. Import the actual native file into a fresh emulator and use
+  the title's load option to restore the same position without changing the file.
+- A separate input sequence destroys terrain and an enemy: the native kill
+  and full-energy bonus take the score from 40 to 440. A separate sustained-fire
+  branch reaches the original base-loss result. Return from active play to
+  the title in the save branch and exit through the original farewell screen.
+- Captures are inspected locally. This adds reproducible workflow coverage
+  without an emulator behavior change. Level completion, every enemy type,
+  all power-ups and custom maps remain unverified. Game files, native saves
+  and captures are not distributed.

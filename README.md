@@ -105,6 +105,8 @@ Territory Game has a workflow completing the small board in two-player and
 computer modes, including territory scores, extra turns, results and exit.
 Saints vs Gold has a workflow for its complete tutorial, an eight-member AI
 battle, victory and rating pages, and returning to mode selection.
+Tank 2004 packaged and loose versions have a workflow for movement, shooting,
+pause, native save restoration, an enemy kill, battle loss and normal exit.
 
 ## Usage
 

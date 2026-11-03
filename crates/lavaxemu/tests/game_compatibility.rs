@@ -7892,3 +7892,105 @@ fn saints_vs_gold_completes_training_and_an_eight_member_battle() {
     key(&mut e, 13);
     assert_eq!(e.vm().pc(), 0x6f2);
 }
+
+#[test]
+#[ignore = "requires the local game corpus via LAVAX_GAME_ROOT"]
+fn tank_2004_versions_move_fire_pause_and_restore_a_native_save() {
+    fn key(e: &mut Emulator, k: u8, held: usize, frames: usize) {
+        e.input_mut().release_all();
+        for f in 0..frames {
+            e.input_mut().set_keys((f < held).then_some(k));
+            e.run_frame().unwrap();
+        }
+    }
+    fn word(e: &Emulator, a: usize) -> u16 {
+        u16::from_le_bytes(e.vm().memory()[a..a + 2].try_into().unwrap())
+    }
+    for (variant, name) in [("package", "坦克2004.pac"), ("loose", "坦克2004.lav")] {
+        let mut e = load(&fixture_path(name));
+        advance(&mut e, 1200);
+        for _ in 0..6 {
+            key(&mut e, 13, 1, 24);
+        }
+        assert_eq!(e.vm().pc(), 0x8c9b);
+        assert_eq!((word(&e, 0x6704), word(&e, 0x6706)), (48, 72));
+        let mut battle = e.clone();
+        for (k, frames) in [
+            (20, 8),
+            (122, 24),
+            (20, 8),
+            (122, 24),
+            (23, 8),
+            (122, 24),
+            (20, 8),
+            (122, 24),
+            (22, 8),
+            (122, 24),
+            (20, 8),
+        ] {
+            key(&mut battle, k, frames, frames);
+        }
+        let score = u32::from_le_bytes(battle.vm().memory()[0x20a0..0x20a4].try_into().unwrap());
+        assert_eq!(score, 440);
+        capture(&battle, &format!("tank-{variant}-enemy-destroyed"));
+        let mut loss = e.clone();
+        key(&mut loss, 122, 1800, 1800);
+        assert_eq!(loss.vm().pc(), 0x5a01);
+        capture(&loss, &format!("tank-{variant}-battle-ended"));
+        key(&mut e, 23, 8, 8);
+        assert_eq!(word(&e, 0x6708), 2);
+        key(&mut e, 20, 8, 8);
+        assert_eq!((word(&e, 0x6704), word(&e, 0x6706)), (48, 56));
+        capture(&e, &format!("tank-{variant}-moved"));
+        key(&mut e, 122, 8, 8);
+        assert_eq!(word(&e, 0x6492), 1);
+        capture(&e, &format!("tank-{variant}-firing"));
+        key(&mut e, 112, 1, 1);
+        assert_eq!(e.vm().pc(), 0x64cb);
+        let frozen = e.vm().memory()[0x625a..0x6710].to_vec();
+        let picture = e.display().indexed_frame().to_vec();
+        e.input_mut().release_all();
+        advance(&mut e, 120);
+        assert_eq!(&e.vm().memory()[0x625a..0x6710], frozen);
+        assert_eq!(e.display().indexed_frame(), picture);
+        capture(&e, &format!("tank-{variant}-paused"));
+        key(&mut e, 13, 1, 1);
+        key(&mut e, 115, 1, 1);
+        assert_eq!(e.vm().pc(), 0x5121);
+        let position = (word(&e, 0x6704), word(&e, 0x6706));
+        key(&mut e, 121, 1, 24);
+        let saved = e.files().file("/lavadata/tanksave.dat").unwrap().to_vec();
+        assert!(!saved.is_empty());
+        capture(&e, &format!("tank-{variant}-saved"));
+        key(&mut e, 21, 12, 12);
+        assert_ne!((word(&e, 0x6704), word(&e, 0x6706)), position);
+        key(&mut e, 114, 1, 1);
+        assert_eq!(e.vm().pc(), 0x4b12);
+        key(&mut e, 121, 1, 24);
+        assert_eq!((word(&e, 0x6704), word(&e, 0x6706)), position);
+        capture(&e, &format!("tank-{variant}-restored"));
+        let mut fresh = load(&fixture_path(name));
+        fresh
+            .files_mut()
+            .import_file("/lavadata/tanksave.dat", saved.clone());
+        advance(&mut fresh, 1200);
+        key(&mut fresh, 13, 1, 24);
+        key(&mut fresh, 13, 1, 240);
+        assert_eq!(fresh.vm().pc(), 0x6e29);
+        key(&mut fresh, 21, 1, 24);
+        key(&mut fresh, 13, 1, 120);
+        assert_eq!((word(&fresh, 0x6704), word(&fresh, 0x6706)), position);
+        assert_eq!(fresh.files().file("/lavadata/tanksave.dat").unwrap(), saved);
+        capture(&fresh, &format!("tank-{variant}-fresh-restored"));
+        key(&mut fresh, 27, 1, 120);
+        assert_eq!(fresh.vm().pc(), 0x6e29);
+        for _ in 0..5 {
+            key(&mut fresh, 22, 1, 24);
+        }
+        key(&mut fresh, 13, 1, 24);
+        assert_eq!(fresh.vm().pc(), 0x6fc2);
+        capture(&fresh, &format!("tank-{variant}-farewell"));
+        key(&mut fresh, 13, 1, 1);
+        assert_eq!(fresh.run_frame().unwrap().status, FrameStatus::Halted(0));
+    }
+}
