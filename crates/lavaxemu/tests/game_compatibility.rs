@@ -8245,3 +8245,125 @@ fn strategy_versions_move_attack_change_turns_and_restore_a_campaign() {
         capture(&restored, &format!("strategy-{variant}-restored-campaign"));
     }
 }
+
+#[test]
+#[ignore = "requires the local game corpus via LAVAX_GAME_ROOT"]
+fn sky_fighting_art_configures_moves_fires_pauses_and_finishes_a_battle() {
+    fn key(e: &mut Emulator, key: u8) {
+        e.input_mut().release_all();
+        for frame in 0..60 {
+            e.input_mut().set_keys((frame < 18).then_some(key));
+            advance(e, 1);
+        }
+    }
+    fn word(e: &Emulator, address: usize) -> u16 {
+        u16::from_le_bytes(e.vm().memory()[address..address + 2].try_into().unwrap())
+    }
+    let mut title = load(&fixture_path("HFAcs.lav"));
+    advance(&mut title, 1200);
+    assert_eq!(title.vm().pc(), 0xa58);
+    capture(&title, "sky-fighting-title");
+    let mut help = title.clone();
+    key(&mut help, 22);
+    key(&mut help, 13);
+    assert_eq!(help.vm().pc(), 0x1a6);
+    capture(&help, "sky-fighting-controls");
+    for pc in [0x237, 0x2bb, 0x34b, 0x3bc, 0xa58] {
+        key(&mut help, 13);
+        assert_eq!(help.vm().pc(), pc);
+    }
+    assert_eq!(help.vm().pc(), 0xa58);
+
+    for mode in 1..=3 {
+        let mut e = title.clone();
+        key(&mut e, 13);
+        for _ in 1..mode {
+            key(&mut e, 21);
+        }
+        key(&mut e, 13);
+        assert_eq!(e.vm().pc(), 0x6a8);
+        capture(&e, &format!("sky-fighting-mode-{mode}-settings"));
+        let mut configured = e.clone();
+        for k in [23, 21, 22, 13] {
+            key(&mut configured, k);
+        }
+        assert_eq!(word(&configured, 0x23ed), 90);
+        assert_eq!(word(&configured, 0x23f1), 110);
+        capture(&configured, &format!("sky-fighting-mode-{mode}-configured"));
+
+        key(&mut e, 13);
+        assert_eq!(e.vm().memory()[0x24f5], mode);
+        capture(&e, &format!("sky-fighting-mode-{mode}-battle"));
+        let mut paused = e.clone();
+        key(&mut paused, b'p');
+        assert_eq!(paused.vm().pc(), 0x14f);
+        let state = paused.vm().memory()[0x2347..0x24f7].to_vec();
+        let frame = paused.display().indexed_frame().to_vec();
+        advance(&mut paused, 300);
+        assert_eq!(&paused.vm().memory()[0x2347..0x24f7], state.as_slice());
+        assert_eq!(paused.display().indexed_frame(), frame.as_slice());
+        paused.input_mut().set_keys(*b"p");
+        advance(&mut paused, 1);
+        paused.input_mut().release_all();
+        advance(&mut paused, 60);
+        assert_ne!(paused.vm().pc(), 0x14f);
+
+        let position = (word(&e, 0x23f9), word(&e, 0x23fb));
+        key(&mut e, b'd');
+        assert_ne!((word(&e, 0x23f9), word(&e, 0x23fb)), position);
+        let weapon = e.vm().memory()[0x2405];
+        key(&mut e, 20);
+        assert_ne!(e.vm().memory()[0x2405], weapon);
+        let shield = word(&e, 0x23f3);
+        e.input_mut().set_keys([22]);
+        advance(&mut e, 18);
+        e.input_mut().release_all();
+        assert!(word(&e, 0x23f3) < shield);
+        let support = word(&e, 0x23f7);
+        e.input_mut().set_keys([14]);
+        advance(&mut e, 18);
+        e.input_mut().release_all();
+        assert!(word(&e, 0x23f7) < support);
+        capture(&e, &format!("sky-fighting-mode-{mode}-controls-used"));
+        e.input_mut().set_keys([27]);
+        let mut exited = false;
+        for _ in 0..120 {
+            if let FrameStatus::Halted(code) = e.run_frame().unwrap().status {
+                assert_eq!(code, 0);
+                exited = true;
+                break;
+            }
+        }
+        if mode == 3 && e.vm().pc() == 0x4456 {
+            assert_eq!(word(&e, 0x23ef), 0);
+            capture(&e, "sky-fighting-duel-score");
+            key(&mut e, 13);
+            assert_eq!(e.vm().pc(), 0xa58);
+            e.input_mut().set_keys([27]);
+            assert_eq!(e.run_frame().unwrap().status, FrameStatus::Halted(0));
+            exited = true;
+        }
+        assert!(exited, "mode {mode} did not exit: pc={:x}", e.vm().pc());
+
+        if mode == 1 {
+            let mut battle = title.clone();
+            for _ in 0..3 {
+                key(&mut battle, 13);
+            }
+            key(&mut battle, 20);
+            battle.input_mut().set_keys([21]);
+            advance(&mut battle, 6000);
+            battle.input_mut().release_all();
+            assert!(battle.vm().memory()[0x2348] > 0);
+            assert_eq!(word(&battle, 0x23ef), 0);
+            capture(&battle, "sky-fighting-native-loss");
+            key(&mut battle, 27);
+            assert_eq!(battle.vm().pc(), 0x4456);
+            capture(&battle, "sky-fighting-battle-score");
+            key(&mut battle, 13);
+            assert_eq!(battle.vm().pc(), 0xa58);
+        }
+    }
+    title.input_mut().set_keys([27]);
+    assert_eq!(title.run_frame().unwrap().status, FrameStatus::Halted(0));
+}

@@ -17,9 +17,9 @@ do not satisfy this status.
 - Input update checked on 2026-10-31: full rerun of 49 workflows, followed by a corrected Dragon Kiss intro replay and the dedicated WarCraft workflow. Those 50 workflows passed with the updated input behavior; later entries have separate incremental checks.
 - Shared guest text memory checked on 2026-11-01: all 75 dedicated release workflows passed after the text-buffer repair and state migration.
 - Inverted TextOut checked on 2026-11-01: all 77 dedicated release workflows passed after honoring the source-inversion flag.
-- 88 dedicated release workflows passed in this audit.
-- 134 of 324 entry points were loaded by those successful workflows.
-- 190 entry points still need dedicated workflow verification.
+- 89 dedicated release workflows passed in this audit.
+- 135 of 324 entry points were loaded by those successful workflows.
+- 189 entry points still need dedicated workflow verification.
 - The historical [startup gallery](Game-Compatibility.md) is a separate check
   and must not be interpreted as this workflow audit.
 
@@ -133,7 +133,7 @@ an optional screenshot directory. Keep each test's logs and captures separate.
 | 090 | `LAVA1 塞尔达小游戏/文曲星版Zelda.lav` | Game / game package | [Workflow passed: `zelda_minigames_hit_lizards_open_a_chest_time_out_and_configure_controls`](../crates/lavaxemu/tests/game_compatibility.rs#L8000) |
 | 091 | `LAVA1 大战略/大战略.pac` | Game / game package | [Workflow passed: `strategy_versions_move_attack_change_turns_and_restore_a_campaign`](../crates/lavaxemu/tests/game_compatibility.rs#L8177) |
 | 092 | `LAVA1 大战略/非pac/dzl.lav` | Game / game package | [Workflow passed: `strategy_versions_move_attack_change_turns_and_restore_a_campaign`](../crates/lavaxemu/tests/game_compatibility.rs#L8177) |
-| 093 | `LAVA1 天空格斗艺术正式版/HFAcs.lav` | Game / game package | Pending |
+| 093 | `LAVA1 天空格斗艺术正式版/HFAcs.lav` | Game / game package | [Workflow passed: `sky_fighting_art_configures_moves_fires_pauses_and_finishes_a_battle`](../crates/lavaxemu/tests/game_compatibility.rs#L8251) |
 | 094 | `LAVA1 天鹰战机·血战/Eagle.lav` | Game / game package | Pending |
 | 095 | `LAVA1 天鹰战机·血战/VS版/NC2600.lav` | Game / game package | Pending |
 | 096 | `LAVA1 天鹰战机·血战/VS版/NC3000.lav` | Game / game package | Pending |

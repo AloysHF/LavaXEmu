@@ -112,6 +112,8 @@ timeout, speed settings, instructions, credits and normal exit.
 Expired chest timers now finish when input resumes after the deadline.
 Strategy packaged and loose versions have a workflow for unit movement,
 combat damage, both players' turns and native campaign save restoration.
+Sky Fighting Art has a workflow for all three modes, machine configuration,
+movement, weapons, shields, support fire, pause, battle results and exit.
 
 ## Usage
 

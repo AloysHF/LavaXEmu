@@ -1779,6 +1779,25 @@ without an execution error alone does not establish playability.
   all power-ups and custom maps remain unverified. Game files, native saves
   and captures are not distributed.
 
+## Sky Fighting Art (天空格斗艺术)
+
+- Read the six native control pages and enter normal, mixed and duel modes.
+  In each mode, redistribute ten machine points from health to shielding and
+  check the committed capacities (90 and 110). Start a separate default battle
+  for the control checks.
+- Pause with P, release the key, and check that simulation state and the
+  presented framebuffer stay unchanged for 300 frames. A fresh P press resumes
+  play. Hold a direction to move, toggle the weapon, deploy the shield and
+  activate support fire; check position, weapon selection and consumed energy.
+- In normal mode, switch to the gun and hold attack until at least one enemy
+  is destroyed and the native loss animation appears. Acknowledge that screen,
+  check the score page and return to the title. The duel branch also reaches
+  its native loss and score page. Check normal exit from the title and from
+  active battles.
+- This adds deterministic compatibility coverage without changing emulator
+  behavior. Captures are reviewed locally. Duel victory and long survival runs
+  remain unverified. Game files and captures are not distributed.
+
 ## Zelda Minigames (塞尔达小游戏)
 
 - The chest timer previously ended only when the remaining time was exactly
