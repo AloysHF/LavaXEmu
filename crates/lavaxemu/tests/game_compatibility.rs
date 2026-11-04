@@ -8862,3 +8862,106 @@ fn nine_stars_cycles_all_orientation_results_and_exits() {
     e.input_mut().set_keys([27]);
     assert_eq!(e.run_frame().unwrap().status, FrameStatus::Halted(0));
 }
+#[test]
+#[ignore = "requires the local game corpus via LAVAX_GAME_ROOT"]
+fn cosmos_moves_pauses_finishes_and_restores_native_records() {
+    fn word(e: &Emulator, a: usize) -> i16 {
+        i16::from_le_bytes(e.vm().memory()[a..a + 2].try_into().unwrap())
+    }
+    fn key(e: &mut Emulator, k: u8, frames: usize, held: usize) {
+        e.input_mut().release_all();
+        for f in 0..frames {
+            e.input_mut().set_keys((f < held).then_some(k));
+            advance(e, 1);
+        }
+    }
+    let path = fixture_path("宇宙大战.lav");
+    let mut e = load(&path);
+    advance(&mut e, 1200);
+    assert_eq!(e.vm().pc(), 0x1e28);
+    let initial = e.files().file("/lavadata/ch.dat").unwrap().to_vec();
+    assert_eq!(initial, vec![0; 10]);
+    let mut reopened = load(&path);
+    reopened
+        .files_mut()
+        .import_file("/lavadata/ch.dat", initial);
+    advance(&mut reopened, 1200);
+    assert_eq!(&reopened.vm().memory()[0x205a..0x2064], &[0; 10]);
+    capture(&e, "cosmos-title");
+    key(&mut e, 13, 1, 1);
+    for difficulty in 1..=5 {
+        assert_eq!(e.vm().memory()[0x2c01], difficulty);
+        key(&mut e, 21, 24, 1);
+    }
+    assert_eq!(e.vm().memory()[0x2c01], 5);
+    for _ in 0..5 {
+        key(&mut e, 20, 24, 1);
+    }
+    assert_eq!(e.vm().memory()[0x2c01], 1);
+    capture(&e, "cosmos-difficulty");
+    key(&mut e, 13, 60, 1);
+    capture(&e, "cosmos-battle");
+    assert_eq!((word(&e, 0x2bfd), word(&e, 0x2bff)), (80, 40));
+    for (direction, axis, change) in [
+        (23, 0x2bfd, -1),
+        (22, 0x2bfd, 1),
+        (20, 0x2bff, -1),
+        (21, 0x2bff, 1),
+    ] {
+        let mut moved = e.clone();
+        key(&mut moved, direction, 60, 18);
+        assert!((word(&moved, axis) - word(&e, axis)) * change > 0);
+    }
+    let mut paused = e.clone();
+    key(&mut paused, b'p', 60, 18);
+    assert_eq!(paused.vm().pc(), 0x1c81);
+    let memory = paused.vm().memory().to_vec();
+    let frame = paused.display().indexed_frame().to_vec();
+    advance(&mut paused, 300);
+    assert_eq!(paused.vm().memory(), memory);
+    assert_eq!(paused.display().indexed_frame(), frame);
+    capture(&paused, "cosmos-paused");
+    key(&mut paused, 13, 36, 1);
+    assert_ne!(paused.vm().pc(), 0x1c81);
+    let mut help = e.clone();
+    key(&mut help, b'h', 36, 18);
+    assert_eq!(help.vm().pc(), 0xf9e);
+    let first = help.display().indexed_frame().to_vec();
+    key(&mut help, 14, 24, 1);
+    assert_ne!(first, help.display().indexed_frame());
+    capture(&help, "cosmos-help-scrolled");
+    key(&mut help, 19, 24, 1);
+    assert_eq!(first, help.display().indexed_frame());
+    key(&mut help, 27, 24, 1);
+    assert_ne!(help.vm().pc(), 0xf9e);
+    key(&mut e, 23, 60, 18);
+    key(&mut e, 20, 60, 18);
+    capture(&e, "cosmos-moved");
+    advance(&mut e, 1200);
+    assert_eq!(word(&e, 0x2c02), -1);
+    assert_eq!(e.vm().pc(), 0x1d27);
+    let score = word(&e, 0x205a);
+    assert!(score > 0, "evading meteors must earn a native score");
+    capture(&e, "cosmos-finished");
+    key(&mut e, 27, 24, 1);
+    key(&mut e, 21, 24, 1);
+    key(&mut e, 13, 24, 1);
+    assert_eq!(e.vm().pc(), 0x1f0d);
+    capture(&e, "cosmos-records");
+    key(&mut e, 13, 24, 1);
+    key(&mut e, 21, 24, 1);
+    key(&mut e, 21, 24, 1);
+    e.input_mut().set_keys([13]);
+    assert_eq!(e.run_frame().unwrap().status, FrameStatus::Halted(0));
+    let saved = e.files().file("/lavadata/ch.dat").unwrap().to_vec();
+    assert_eq!(saved.len(), 10);
+    assert_eq!(i16::from(saved[0]) + i16::from(saved[1]) * 200, score);
+    let mut restored = load(&path);
+    restored.files_mut().import_file("/lavadata/ch.dat", saved);
+    advance(&mut restored, 1200);
+    assert_eq!(word(&restored, 0x205a), score);
+    key(&mut restored, 21, 24, 1);
+    key(&mut restored, 13, 24, 1);
+    assert_eq!(restored.vm().pc(), 0x1f0d);
+    capture(&restored, "cosmos-records-restored");
+}

@@ -124,6 +124,8 @@ Space Battleship now paces its unthrottled battle loop to allow movement and
 shooting between turns, with checks for pause, enemy hits and native results.
 Nine Stars has a utility workflow covering all 64 orientation/direction
 combinations, result screens, selection wraparound and exit.
+Cosmos has a workflow for movement, pause, help, collision results and native
+records. Its identified release initializes complete records and saves on exit.
 
 ## Usage
 

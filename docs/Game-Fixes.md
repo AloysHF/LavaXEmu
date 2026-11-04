@@ -1926,3 +1926,23 @@ without an execution error alone does not establish playability.
 - This adds reproducible display and input coverage without changing emulator
   behavior. It verifies the software's table and navigation. Game content and
   captures are not distributed.
+
+
+## Cosmos (宇宙大战)
+
+- The identified release initialized only five bytes for five two-byte records.
+  Its exit menu also terminated before the existing save epilogue. A length/CRC
+  guarded loaded-image repair initializes ten bytes and returns through that
+  epilogue. The content file and general exit behavior remain unchanged.
+- Check that a new record file contains ten zero bytes and reopening it in a
+  fresh emulator yields five zero scores. Traverse all five difficulty choices
+  and check the selection bounds.
+- Check four movement directions, help paging and return, plus a 300-frame
+  pause with unchanged memory and display. Evade meteors using real key input,
+  earn a nonzero score, exhaust lives and return to difficulty selection.
+- Review the native ranking screen, exit normally and check the ten-byte
+  base-200 record encoding. Import that generated file into a fresh emulator
+  and verify the same score and ranking screen. Captures are reviewed locally.
+- This covers basic play at the first difficulty; all higher-difficulty battles
+  and recovery of previously malformed score files remain unverified. Game
+  files and captures are not distributed.
