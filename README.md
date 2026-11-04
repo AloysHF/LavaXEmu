@@ -116,6 +116,8 @@ Sky Fighting Art has a workflow for all three modes, machine configuration,
 movement, weapons, shields, support fire, pause, battle results and exit.
 Eagle and its five VS builds have a single-player workflow for aiming, shooting,
 pause, results and native ranking restoration. Serial multiplayer is unverified.
+Liuye has a workflow for map movement, a rewarded riddle, a scripted duel,
+and restoring native progress in a fresh session.
 
 ## Usage
 

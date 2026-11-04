@@ -8505,3 +8505,110 @@ fn eagle_versions_aim_fire_pause_finish_and_restore_the_ranking() {
         assert!(exited);
     }
 }
+
+#[test]
+#[ignore = "requires the local game corpus via LAVAX_GAME_ROOT"]
+fn liuye_moves_answers_a_riddle_fights_and_restores_native_progress() {
+    fn key(e: &mut Emulator, k: u8, held: usize, frames: usize) {
+        e.input_mut().release_all();
+        for f in 0..frames {
+            e.input_mut().set_keys((f < held).then_some(k));
+            advance(e, 1);
+        }
+    }
+    fn start(path: &str, files: &[(String, Vec<u8>)]) -> Emulator {
+        let mut e = load(path);
+        for (name, bytes) in files {
+            e.files_mut().import_file(name, bytes.clone());
+        }
+        advance(&mut e, 1200);
+        key(&mut e, 13, 1, 24);
+        assert_eq!(e.vm().pc(), 0x122e);
+        key(&mut e, 13, 1, 24);
+        for _ in 0..100 {
+            key(&mut e, 13, 18, 60);
+        }
+        assert_eq!(position(&e), (33, 59));
+        e
+    }
+    fn position(e: &Emulator) -> (u8, u8) {
+        let m = e.vm().memory();
+        (m[0x43b2] + m[0x43b4], m[0x43b3] + m[0x43b5])
+    }
+    fn word(e: &Emulator, a: usize) -> u16 {
+        u16::from_le_bytes(e.vm().memory()[a..a + 2].try_into().unwrap())
+    }
+    let path = fixture_path("Liuye.lav");
+    let baseline = start(&path, &[]);
+    capture(&baseline, "liuye-initial-map");
+    let mut e = baseline.clone();
+    for k in [
+        20, 20, 20, 20, 20, 20, 20, 22, 22, 22, 22, 22, 22, 22, 21, 21, 23, 21, 23, 20, 13,
+    ] {
+        key(&mut e, k, 18, 60);
+    }
+    assert_eq!(e.vm().pc(), 0x287);
+    capture(&e, "liuye-riddle-question");
+    key(&mut e, b'y', 3, 60);
+    capture(&e, "liuye-riddle-correct");
+    for _ in 0..2 {
+        key(&mut e, 27, 3, 60);
+    }
+    assert_eq!(e.vm().memory()[0x3eb3], 1);
+    assert_eq!(e.vm().memory()[0x453d], 2);
+    assert_eq!(position(&e), (38, 55));
+    for k in [25, 22, 22, 22, 22, 13, 13, 13, 27, 27, 27] {
+        key(&mut e, k, 3, 120);
+    }
+    let files = e.files_mut().take_dirty_files();
+    assert!(
+        files
+            .iter()
+            .any(|(name, bytes)| name == "/lavadata/liuye_save.dat" && bytes.len() == 2000)
+    );
+    let mut restored = start(&path, &files);
+    assert_eq!(restored.vm().memory()[0x3eb3], 0);
+    for k in [25, 22, 22, 22, 22, 13, 21, 13, 13, 27, 27, 27] {
+        key(&mut restored, k, 3, 120);
+    }
+    assert_eq!(position(&restored), (38, 55));
+    assert_eq!(restored.vm().memory()[0x3eb3], 1);
+    assert_eq!(restored.vm().memory()[0x453d], 2);
+    capture(&restored, "liuye-native-progress-restored");
+    let mut battle = baseline;
+    for k in [
+        20, 20, 20, 20, 20, 20, 20, 20, 20, 20, 20, 20, 20, 20, 23, 23, 23, 23, 23, 23, 23, 23, 23,
+        23, 23, 23, 23, 23, 23, 20, 20, 20, 20, 20, 23, 23, 23, 23, 23, 23, 23, 23, 23, 23, 23, 21,
+        21, 21, 21, 21, 21, 21, 21, 21, 21, 21, 21, 21, 21, 21, 22, 22, 22, 22, 21, 21, 21, 23, 23,
+        23, 23, 23, 20,
+    ] {
+        key(&mut battle, k, 18, 60);
+    }
+    assert_eq!(position(&battle), (17, 21));
+    capture(&battle, "liuye-tavern-dialogue");
+    for _ in 0..2 {
+        key(&mut battle, 27, 3, 120);
+    }
+    advance(&mut battle, 120);
+    key(&mut battle, b'y', 18, 120);
+    for _ in 0..4 {
+        key(&mut battle, 27, 3, 120);
+    }
+    assert_eq!(battle.vm().pc(), 0x1192);
+    assert_eq!(word(&battle, 0x4394), 120);
+    capture(&battle, "liuye-battle-menu");
+    for _ in 0..12 {
+        key(&mut battle, 13, 3, 120);
+    }
+    assert!(word(&battle, 0x4394) < 120);
+    assert!(word(&battle, 0x430e) < 150);
+    capture(&battle, "liuye-battle-damage");
+    for _ in 0..16 {
+        key(&mut battle, 13, 3, 120);
+    }
+    assert_eq!(position(&battle), (17, 21));
+    assert_eq!(battle.vm().memory()[0x2014], 1);
+    assert_eq!(word(&battle, 0x4394), 58);
+    assert_eq!(word(&battle, 0x430e), 13);
+    capture(&battle, "liuye-duel-finished");
+}

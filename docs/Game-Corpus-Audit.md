@@ -17,9 +17,9 @@ do not satisfy this status.
 - Input update checked on 2026-10-31: full rerun of 49 workflows, followed by a corrected Dragon Kiss intro replay and the dedicated WarCraft workflow. Those 50 workflows passed with the updated input behavior; later entries have separate incremental checks.
 - Shared guest text memory checked on 2026-11-01: all 75 dedicated release workflows passed after the text-buffer repair and state migration.
 - Inverted TextOut checked on 2026-11-01: all 77 dedicated release workflows passed after honoring the source-inversion flag.
-- 90 dedicated release workflows passed in this audit.
-- 141 of 324 entry points were loaded by those successful workflows.
-- 183 entry points still need dedicated workflow verification.
+- 91 dedicated release workflows passed in this audit.
+- 142 of 324 entry points were loaded by those successful workflows.
+- 182 entry points still need dedicated workflow verification.
 - The historical [startup gallery](Game-Compatibility.md) is a separate check
   and must not be interpreted as this workflow audit.
 
@@ -140,7 +140,7 @@ an optional screenshot directory. Keep each test's logs and captures separate.
 | 097 | `LAVA1 天鹰战机·血战/VS版/TC1000.lav` | Game / game package | [Workflow passed: `eagle_versions_aim_fire_pause_finish_and_restore_the_ranking`](../crates/lavaxemu/tests/game_compatibility.rs#L8373) |
 | 098 | `LAVA1 天鹰战机·血战/VS版/TC1000S.lav` | Game / game package | [Workflow passed: `eagle_versions_aim_fire_pause_finish_and_restore_the_ranking`](../crates/lavaxemu/tests/game_compatibility.rs#L8373) |
 | 099 | `LAVA1 天鹰战机·血战/VS版/TC808.lav` | Game / game package | [Workflow passed: `eagle_versions_aim_fire_pause_finish_and_restore_the_ranking`](../crates/lavaxemu/tests/game_compatibility.rs#L8373) |
-| 100 | `LAVA1 天龙八步/Liuye.lav` | Game / game package | Pending |
+| 100 | `LAVA1 天龙八步/Liuye.lav` | Game / game package | [Workflow passed: `liuye_moves_answers_a_riddle_fights_and_restores_native_progress`](../crates/lavaxemu/tests/game_compatibility.rs#L8511) |
 | 101 | `LAVA1 太空寻宝/太空寻宝.lav` | Game / game package | Pending |
 | 102 | `LAVA1 太空战舰/太空战舰.lav` | Game / game package | Pending |
 | 103 | `LAVA1 奇门九星诀房屋风水勘测/9stars.lav` | Utility / education | Pending |

@@ -1858,3 +1858,20 @@ without an execution error alone does not establish playability.
   behavior. Captures are reviewed locally. Serial multiplayer and extended
   survival remain unverified; these workflows cover single-player operation
   in the VS builds. Game files, saves and captures are not distributed.
+
+
+## Liuye (天龙八步)
+
+- Complete naming and the opening, then move through the town to the riddle
+  interaction. Answer with the native confirmation key and check both the
+  awarded inventory item and the recorded interaction flag.
+- Save through the original system menu. Import the actual native file into
+  a fresh emulator, start a new session and restore through the original load
+  menu. Check the saved position, awarded item and interaction flag.
+- In a separate branch, walk into the tavern and follow the original dialogue
+  into its duel. Use normal attacks, check damage to both participants, and
+  finish the scripted encounter before returning to the tavern map.
+- This adds reproducible compatibility coverage without changing emulator
+  behavior. The duel's return to the map is not treated as a victory. Full
+  story completion, all spells and optional quests remain unverified.
+  Game files, saves and captures are not distributed.
