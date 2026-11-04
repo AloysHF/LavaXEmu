@@ -1875,3 +1875,21 @@ without an execution error alone does not establish playability.
   behavior. The duel's return to the map is not treated as a victory. Full
   story completion, all spells and optional quests remain unverified.
   Game files, saves and captures are not distributed.
+
+
+## Space Treasure (太空寻宝)
+
+- Check the initial board and its six mirror items. Walk through the corridors
+  and place all six mirrors through the original inventory and targeting menus.
+  The sequence moves before placing some mirrors, since mirrors also block
+  walking. Only native direction and confirmation keys change the board.
+- Complete the first stage, check its original success prompt, empty inventory,
+  exit coordinates and transition to the second stage. A separate branch walks
+  into a ray, checks the loss prompt and retries with the initial state restored.
+- Cancel an exit request and check the second-stage board, inventory and
+  position remain unchanged. Return to the menu, read the instructions and
+  acknowledge the farewell page to exit normally.
+- This adds deterministic compatibility coverage without changing emulator
+  behavior. Captures are reviewed locally. Stages two through eight, all item
+  types and every possible mirror layout remain unverified. Game files and
+  captures are not distributed.

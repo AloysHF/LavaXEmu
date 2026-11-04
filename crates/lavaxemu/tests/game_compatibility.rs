@@ -8612,3 +8612,86 @@ fn liuye_moves_answers_a_riddle_fights_and_restores_native_progress() {
     assert_eq!(word(&battle, 0x430e), 13);
     capture(&battle, "liuye-duel-finished");
 }
+
+#[test]
+#[ignore = "requires the local game corpus via LAVAX_GAME_ROOT"]
+fn space_treasure_places_mirrors_clears_a_stage_retries_and_exits() {
+    fn key(e: &mut Emulator, k: u8, frames: usize) {
+        e.input_mut().release_all();
+        for f in 0..frames {
+            e.input_mut().set_keys((f == 0).then_some(k));
+            advance(e, 1);
+        }
+    }
+    let mut e = load(&fixture_path("太空寻宝.lav"));
+    advance(&mut e, 1200);
+    for _ in 0..40 {
+        for f in 0..60 {
+            e.input_mut().set_keys((f < 18).then_some(13));
+            advance(&mut e, 1);
+        }
+    }
+    e.input_mut().release_all();
+    assert_eq!(&e.vm().memory()[0x347c..0x3481], &[1, 1, 3, 1, 0]);
+    assert_eq!(&e.vm().memory()[0x3631..0x3637], &[5, 6, 6, 6, 5, 5]);
+    capture(&e, "space-treasure-stage-1");
+    let mut loss = e.clone();
+    key(&mut loss, 22, 120);
+    key(&mut loss, 22, 120);
+    assert_eq!(loss.vm().pc(), 0x2a11);
+    assert_eq!(loss.vm().memory()[0x347f], 0);
+    capture(&loss, "space-treasure-ray-collision");
+    key(&mut loss, b'y', 120);
+    assert_eq!(&loss.vm().memory()[0x347c..0x3481], &[1, 1, 3, 1, 0]);
+    capture(&loss, "space-treasure-retry");
+
+    for (i, k) in [
+        109, 14, 13, 23, 23, 23, 23, 23, 20, 20, 13, 117, 117, 117, 109, 21, 21, 21, 98, 23, 23,
+        23, 98, 21, 109, 117, 14, 14, 13, 23, 23, 23, 23, 21, 21, 21, 21, 21, 13, 22, 22, 109, 109,
+        22, 14, 13, 22, 21, 21, 21, 21, 13, 117, 117, 117, 20, 20, 14, 13, 22, 13, 116, 116, 116,
+        117, 22, 22, 22, 109, 109, 14, 13, 22, 22, 22, 22, 22, 22, 22, 13, 21, 109, 109, 21, 14,
+        13, 22, 22, 22, 22, 22, 22, 21, 21, 21, 21, 13, 98, 98, 23,
+    ]
+    .into_iter()
+    .enumerate()
+    {
+        key(&mut e, k, 36);
+        assert_eq!(e.vm().memory()[0x347f], 1);
+        if [10, 38, 51, 60, 79, 96].contains(&i) {
+            capture(&e, &format!("space-treasure-mirror-{}", i));
+        }
+    }
+    assert_eq!(e.vm().pc(), 0x31e5);
+    assert_eq!(&e.vm().memory()[0x347c..0x3481], &[2, 13, 9, 1, 0]);
+    assert_eq!(&e.vm().memory()[0x3631..0x3637], &[0; 6]);
+    capture(&e, "space-treasure-stage-cleared");
+    key(&mut e, 13, 120);
+    assert_eq!(e.vm().memory()[0x347c], 2);
+    let board = e.vm().memory()[0x3481..0x3637].to_vec();
+    let position = e.vm().memory()[0x347d..0x347f].to_vec();
+    capture(&e, "space-treasure-stage-2");
+    key(&mut e, 27, 120);
+    assert_eq!(e.vm().pc(), 0x3080);
+    key(&mut e, b'n', 120);
+    assert_eq!(&e.vm().memory()[0x3481..0x3637], board.as_slice());
+    assert_eq!(&e.vm().memory()[0x347d..0x347f], position.as_slice());
+    for k in [27, b'y', 21, 13] {
+        key(&mut e, k, 120);
+    }
+    assert_eq!(e.vm().pc(), 0x189a);
+    capture(&e, "space-treasure-instructions");
+    key(&mut e, 13, 120);
+    key(&mut e, 27, 120);
+    assert_eq!(e.vm().pc(), 0x1556);
+    capture(&e, "space-treasure-farewell");
+    e.input_mut().set_keys([13]);
+    let mut exited = false;
+    for _ in 0..120 {
+        if let FrameStatus::Halted(code) = e.run_frame().unwrap().status {
+            assert_eq!(code, 0);
+            exited = true;
+            break;
+        }
+    }
+    assert!(exited);
+}

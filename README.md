@@ -118,6 +118,8 @@ Eagle and its five VS builds have a single-player workflow for aiming, shooting,
 pause, results and native ranking restoration. Serial multiplayer is unverified.
 Liuye has a workflow for map movement, a rewarded riddle, a scripted duel,
 and restoring native progress in a fresh session.
+Space Treasure has a workflow for mirror placement, ray avoidance, first-stage
+completion, collision retry, instructions and normal exit.
 
 ## Usage
 
