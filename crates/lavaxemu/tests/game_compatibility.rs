@@ -8695,3 +8695,97 @@ fn space_treasure_places_mirrors_clears_a_stage_retries_and_exits() {
     }
     assert!(exited);
 }
+
+#[test]
+#[ignore = "requires the local game corpus via LAVAX_GAME_ROOT"]
+fn space_battleship_paces_turns_moves_fires_pauses_and_finishes_a_battle() {
+    fn key(e: &mut Emulator, k: u8, frames: usize) {
+        e.input_mut().release_all();
+        for f in 0..frames {
+            e.input_mut().set_keys((f == 0).then_some(k));
+            advance(e, 1);
+        }
+    }
+    fn word(e: &Emulator, a: usize) -> i16 {
+        i16::from_le_bytes(e.vm().memory()[a..a + 2].try_into().unwrap())
+    }
+    let path = fixture_path("太空战舰.lav");
+    let mut e = load(&path);
+    advance(&mut e, 1200);
+    assert_eq!(e.vm().pc(), 0x5c0);
+    for _ in 0..3 {
+        key(&mut e, 13, 24);
+    }
+    key(&mut e, 25, 24);
+    assert_eq!(e.vm().pc(), 0x5a3);
+    capture(&e, "space-battleship-help");
+    key(&mut e, 13, 1);
+    for _ in 0..100 {
+        if e.vm().pc() == 0x135b {
+            break;
+        }
+        advance(&mut e, 1);
+    }
+    assert_eq!(e.vm().pc(), 0x135b);
+    assert_eq!(word(&e, 0x2002), 5);
+    capture(&e, "space-battleship-battle");
+    let mut idle = e.clone();
+    advance(&mut idle, 60);
+    assert_eq!(word(&idle, 0x2002), 5);
+    assert!(word(&idle, 0x205a) < 60);
+    let mut paused = e.clone();
+    key(&mut paused, b'p', 30);
+    assert_eq!(paused.vm().pc(), 0x531);
+    let state = paused.vm().memory()[0x2000..0x2138].to_vec();
+    let frame = paused.display().indexed_frame().to_vec();
+    advance(&mut paused, 300);
+    assert_eq!(&paused.vm().memory()[0x2000..0x2138], state.as_slice());
+    assert_eq!(paused.display().indexed_frame(), frame.as_slice());
+    key(&mut paused, 13, 30);
+    assert_ne!(paused.vm().pc(), 0x531);
+    capture(&paused, "space-battleship-resumed");
+    let mut finished = false;
+    let mut shot_hit = false;
+    for f in 0..1200 {
+        let i = word(&e, 0x212c).clamp(0, 19) as usize;
+        let x = word(&e, 0x2032 + i * 2);
+        let y = word(&e, 0x205a + i * 2);
+        let player = word(&e, 0x2004);
+        let mut target = x + word(&e, 0x2130) * ((69 - y).max(0) / 2);
+        while !(42..=112).contains(&target) {
+            target = if target < 42 {
+                84 - target
+            } else {
+                224 - target
+            };
+        }
+        let k = if (target - player).abs() < 3 {
+            b'a'
+        } else if player < target {
+            22
+        } else {
+            23
+        };
+        e.input_mut().set_keys((f % 6 < 5).then_some(k));
+        let lives = word(&e, 0x2002);
+        let enemies = word(&e, 0x2030);
+        let result = e.run_frame().unwrap();
+        assert!(!matches!(result.status, FrameStatus::Halted(_)));
+        if word(&e, 0x2030) < enemies && word(&e, 0x2002) == lives {
+            shot_hit = true;
+            capture(&e, "space-battleship-enemy-shot");
+        }
+        if e.vm().pc() == 0xdfd {
+            finished = true;
+            break;
+        }
+    }
+    assert!(finished);
+    assert!(shot_hit);
+    assert!(word(&e, 0x212c) >= 1);
+    assert!(word(&e, 0x2030) < 20);
+    assert_eq!(word(&e, 0x2002), 0);
+    capture(&e, "space-battleship-native-loss");
+    e.input_mut().set_keys([13]);
+    assert_eq!(e.run_frame().unwrap().status, FrameStatus::Halted(1));
+}

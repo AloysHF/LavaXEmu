@@ -375,6 +375,19 @@ impl Program {
             // Input waits can resume after the exact chest deadline has passed.
             image[0x2abc] = 0x51;
         }
+        if image.len() == 4_952
+            && crc32fast::hash(&image) == 0xaaed_b282
+            && [0x12f7, 0x130e, 0x1322, 0x1338, 0x133c]
+                .into_iter()
+                .all(|pc| image[pc..pc + 4] == [0x3b, 0xbd, 0x12, 0])
+        {
+            // Pace each unthrottled battle turn before polling the next input.
+            let paced_turn = image.len() as u32;
+            image.extend_from_slice(&[1, 80, 0x87, 0x3b, 0xbd, 0x12, 0]);
+            for pc in [0x12f7, 0x130e, 0x1322, 0x1338, 0x133c] {
+                image[pc + 1..pc + 4].copy_from_slice(&paced_turn.to_le_bytes()[..3]);
+            }
+        }
         Ok(Self { header, image })
     }
 
@@ -510,6 +523,19 @@ mod tests {
         original.resize(9_748, 0);
         original[0x2441..0x2445].copy_from_slice(&[0x3d, 0xa4, 0x1a, 0]);
         original[0x1fc0..0x1fc4].copy_from_slice(&[1, 0, 1, 0]);
+        let saved = original.clone();
+        let program = Program::load(&original).unwrap();
+        assert_eq!(original, saved);
+        assert_eq!(program.image(), original);
+    }
+
+    #[test]
+    fn leaves_similar_unthrottled_battle_programs_unmodified() {
+        let mut original = image(0, 0, 0);
+        original.resize(4_952, 0);
+        for pc in [0x12f7, 0x130e, 0x1322, 0x1338, 0x133c] {
+            original[pc..pc + 4].copy_from_slice(&[0x3b, 0xbd, 0x12, 0]);
+        }
         let saved = original.clone();
         let program = Program::load(&original).unwrap();
         assert_eq!(original, saved);

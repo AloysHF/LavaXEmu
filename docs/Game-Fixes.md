@@ -1893,3 +1893,20 @@ without an execution error alone does not establish playability.
   behavior. Captures are reviewed locally. Stages two through eight, all item
   types and every possible mirror layout remain unverified. Game files and
   captures are not distributed.
+
+
+## Space Battleship (太空战舰)
+
+- The battle loop had no delay or refresh boundary. Multiple updates could
+  execute between input opportunities, consuming all five lives within a few
+  frames. A length/CRC-gated loaded-image repair routes each loop return
+  through an 80 ms delay. The original content file and unknown images remain
+  unchanged; general input polling behavior is unchanged.
+- The regression checks the help page, initial battle state and a 60-frame
+  idle interval without the previous immediate loss. Pause freezes battle
+  memory and the presented frame for 300 frames; a fresh key resumes play.
+- Use physical movement and firing events to intercept enemies. Check that
+  enemy count decreases, the native loss prompt appears after lives run out,
+  and acknowledging it returns the release's original exit code of one.
+- Captures are reviewed locally. Clearing all four formations and every
+  power-up remain unverified. Game files and captures are not distributed.

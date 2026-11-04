@@ -63,6 +63,8 @@ The Four-player Mahjong repair checks the wall before each normal draw and
 rejects a kong without a replacement tile, preventing the remaining count from wrapping.
 The Zelda Minigames chest timer repair expires elapsed deadlines when an input
 wait resumes after the remaining time has become negative.
+The Space Battleship repair adds an 80 ms delay to each battle-loop return
+for one exact release, including movement, firing and pause resume paths.
 These repairs do not modify the content file or
 change the VM's general stack, local variables or file-seek bounds.
 

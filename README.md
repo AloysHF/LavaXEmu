@@ -120,6 +120,8 @@ Liuye has a workflow for map movement, a rewarded riddle, a scripted duel,
 and restoring native progress in a fresh session.
 Space Treasure has a workflow for mirror placement, ray avoidance, first-stage
 completion, collision retry, instructions and normal exit.
+Space Battleship now paces its unthrottled battle loop to allow movement and
+shooting between turns, with checks for pause, enemy hits and native results.
 
 ## Usage
 
