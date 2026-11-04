@@ -8789,3 +8789,76 @@ fn space_battleship_paces_turns_moves_fires_pauses_and_finishes_a_battle() {
     e.input_mut().set_keys([13]);
     assert_eq!(e.run_frame().unwrap().status, FrameStatus::Halted(1));
 }
+
+#[test]
+#[ignore = "requires the local game corpus via LAVAX_GAME_ROOT"]
+fn nine_stars_cycles_all_orientation_results_and_exits() {
+    fn key(e: &mut Emulator, k: u8) {
+        e.input_mut().release_all();
+        for frame in 0..36 {
+            e.input_mut().set_keys((frame == 0).then_some(k));
+            advance(e, 1);
+        }
+    }
+    fn word(e: &Emulator, a: usize) -> u16 {
+        u16::from_le_bytes(e.vm().memory()[a..a + 2].try_into().unwrap())
+    }
+    let matrix = [
+        [7, 2, 1, 6, 5, 3, 4, 0],
+        [2, 7, 0, 4, 3, 6, 5, 1],
+        [0, 1, 7, 5, 6, 3, 4, 2],
+        [6, 4, 5, 7, 1, 2, 0, 3],
+        [5, 3, 6, 1, 7, 0, 2, 4],
+        [4, 6, 3, 0, 2, 7, 1, 5],
+        [3, 5, 4, 0, 2, 1, 7, 6],
+        [0, 1, 2, 3, 4, 5, 6, 7],
+    ];
+    let mut e = load(&fixture_path("9stars.lav"));
+    advance(&mut e, 1200);
+    assert_eq!(e.vm().pc(), 0x1a10);
+    capture(&e, "nine-stars-title");
+    key(&mut e, 13);
+    assert_eq!(word(&e, 0x39b7), 4);
+    capture(&e, "nine-stars-orientation");
+    for _ in 0..4 {
+        key(&mut e, 23);
+    }
+    assert_eq!(word(&e, 0x39b7), 0);
+    let mut seen = [false; 8];
+    for (orientation, row) in matrix.into_iter().enumerate() {
+        assert_eq!(word(&e, 0x39b7), orientation as u16);
+        key(&mut e, 13);
+        assert_eq!(word(&e, 0x39b9), orientation as u16);
+        for _ in 0..orientation {
+            key(&mut e, 23);
+        }
+        for (direction, expected) in row.into_iter().enumerate() {
+            assert_eq!(word(&e, 0x39b9), direction as u16);
+            assert_eq!(
+                word(&e, 0x3936 + (orientation * 8 + direction) * 2),
+                expected
+            );
+            assert_eq!(e.vm().pc(), 0x1d34);
+            if !seen[usize::from(expected)] {
+                capture(&e, &format!("nine-stars-result-{expected}"));
+                seen[usize::from(expected)] = true;
+            }
+            key(&mut e, 22);
+        }
+        assert_eq!(word(&e, 0x39b9), 0);
+        key(&mut e, 23);
+        assert_eq!(word(&e, 0x39b9), 7);
+        key(&mut e, 27);
+        assert_eq!(e.vm().pc(), 0x1a4d);
+        if orientation < 7 {
+            key(&mut e, 22);
+        }
+    }
+    assert!(seen.into_iter().all(|value| value));
+    key(&mut e, 22);
+    assert_eq!(word(&e, 0x39b7), 0);
+    key(&mut e, 23);
+    assert_eq!(word(&e, 0x39b7), 7);
+    e.input_mut().set_keys([27]);
+    assert_eq!(e.run_frame().unwrap().status, FrameStatus::Halted(0));
+}

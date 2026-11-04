@@ -17,9 +17,9 @@ do not satisfy this status.
 - Input update checked on 2026-10-31: full rerun of 49 workflows, followed by a corrected Dragon Kiss intro replay and the dedicated WarCraft workflow. Those 50 workflows passed with the updated input behavior; later entries have separate incremental checks.
 - Shared guest text memory checked on 2026-11-01: all 75 dedicated release workflows passed after the text-buffer repair and state migration.
 - Inverted TextOut checked on 2026-11-01: all 77 dedicated release workflows passed after honoring the source-inversion flag.
-- 93 dedicated release workflows passed in this audit.
-- 144 of 324 entry points were loaded by those successful workflows.
-- 180 entry points still need dedicated workflow verification.
+- 94 dedicated release workflows passed in this audit.
+- 145 of 324 entry points were loaded by those successful workflows.
+- 179 entry points still need dedicated workflow verification.
 - The historical [startup gallery](Game-Compatibility.md) is a separate check
   and must not be interpreted as this workflow audit.
 
@@ -143,7 +143,7 @@ an optional screenshot directory. Keep each test's logs and captures separate.
 | 100 | `LAVA1 天龙八步/Liuye.lav` | Game / game package | [Workflow passed: `liuye_moves_answers_a_riddle_fights_and_restores_native_progress`](../crates/lavaxemu/tests/game_compatibility.rs#L8511) |
 | 101 | `LAVA1 太空寻宝/太空寻宝.lav` | Game / game package | [Workflow passed: `space_treasure_places_mirrors_clears_a_stage_retries_and_exits`](../crates/lavaxemu/tests/game_compatibility.rs#L8618) |
 | 102 | `LAVA1 太空战舰/太空战舰.lav` | Game / game package | [Workflow passed: `space_battleship_paces_turns_moves_fires_pauses_and_finishes_a_battle`](../crates/lavaxemu/tests/game_compatibility.rs#L8701) |
-| 103 | `LAVA1 奇门九星诀房屋风水勘测/9stars.lav` | Utility / education | Pending |
+| 103 | `LAVA1 奇门九星诀房屋风水勘测/9stars.lav` | Utility / education | [Workflow passed: `nine_stars_cycles_all_orientation_results_and_exits`](../crates/lavaxemu/tests/game_compatibility.rs#L8795) |
 | 104 | `LAVA1 宇宙大战/宇宙大战.lav` | Game / game package | Pending |
 | 105 | `LAVA1 宠物世界/GVmaker/NC2600/宠世L_2K6.lav` | Game / game package | [Workflow passed: `pet_world_legacy_versions_reopen_the_main_game_save`](../crates/lavaxemu/tests/game_compatibility.rs#L684) |
 | 106 | `LAVA1 宠物世界/GVmaker/NC2600/宠物世界26.lav` | Game / game package | [Workflow passed: `pet_world_legacy_versions_reopen_the_main_game_save`](../crates/lavaxemu/tests/game_compatibility.rs#L684) |

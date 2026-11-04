@@ -122,6 +122,8 @@ Space Treasure has a workflow for mirror placement, ray avoidance, first-stage
 completion, collision retry, instructions and normal exit.
 Space Battleship now paces its unthrottled battle loop to allow movement and
 shooting between turns, with checks for pause, enemy hits and native results.
+Nine Stars has a utility workflow covering all 64 orientation/direction
+combinations, result screens, selection wraparound and exit.
 
 ## Usage
 

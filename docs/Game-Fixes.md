@@ -1910,3 +1910,19 @@ without an execution error alone does not establish playability.
   and acknowledging it returns the release's original exit code of one.
 - Captures are reviewed locally. Clearing all four formations and every
   power-up remain unverified. Game files and captures are not distributed.
+
+
+## Nine Stars (奇门九星诀房屋风水勘测)
+
+- Treat this entry as a direction-query utility. Check its title, initial south
+  orientation and selection screen, then traverse all eight orientations and
+  all eight queried directions for each orientation.
+- Check the selected indices and the utility's original 64-entry result table.
+  Review captures of all eight output categories, including the instruction
+  page shown for the matching orientation/direction. The animated compass and
+  text remain visible while querying.
+- Check direction selection wraps in both directions, return to orientation
+  selection, check its wraparound and exit with the original Escape control.
+- This adds reproducible display and input coverage without changing emulator
+  behavior. It verifies the software's table and navigation. Game content and
+  captures are not distributed.
