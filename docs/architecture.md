@@ -120,6 +120,9 @@ The VFS provides sandboxed file access for guest programs:
 - Loads resources from the program's directory at startup
 - Provides file read/write operations through system APIs
 - Tracks modified files for selective write-back
+- Uses unbounded in-memory guest storage. Extended `DiskCheck` reports a
+  positive capacity capped at 32,767 for signed 16-bit callers; it does not query
+  host disk capacity. `DiskReclaim` is a no-op because flash compaction is unnecessary.
 - `--read-only` mode prevents any disk writes
 
 ## System API

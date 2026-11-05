@@ -8965,3 +8965,89 @@ fn cosmos_moves_pauses_finishes_and_restores_native_records() {
     assert_eq!(restored.vm().pc(), 0x1f0d);
     capture(&restored, "cosmos-records-restored");
 }
+
+#[test]
+#[ignore = "requires the local game corpus via LAVAX_GAME_ROOT"]
+fn pet_world_80_upgrades_a_pet_saves_and_restores_progress() {
+    fn key(e: &mut Emulator, k: u8) {
+        e.input_mut().release_all();
+        for frame in 0..60 {
+            e.input_mut().set_keys((frame < 3).then_some(k));
+            advance(e, 1);
+        }
+    }
+    fn potential(e: &Emulator) -> u16 {
+        u16::from_le_bytes(e.vm().memory()[0x27db..0x27dd].try_into().unwrap())
+    }
+    fn max_hp(e: &Emulator) -> u32 {
+        u32::from_le_bytes(e.vm().memory()[0x23b6..0x23ba].try_into().unwrap())
+    }
+    fn check_save(bytes: &[u8]) {
+        assert_eq!(bytes.len(), 1072);
+        assert_eq!(&bytes[..3], b"PET");
+        assert_eq!(&bytes[10..12], &[0, 0]);
+        assert_eq!(u32::from_le_bytes(bytes[17..21].try_into().unwrap()), 800);
+    }
+    let path = fixture_path("宠物世界80.lav");
+    let mut e = load(&path);
+    advance(&mut e, 300);
+    assert_ne!(e.vm().pc(), 0x681e, "virtual storage must allow saving");
+    assert_eq!(e.vm().memory()[0x27da], 1);
+    assert_eq!((potential(&e), max_hp(&e)), (200, 200));
+    capture(&e, "pet-world-80-main");
+    key(&mut e, 21);
+    assert_eq!(e.vm().pc(), 0x2423);
+    capture(&e, "pet-world-80-information");
+    key(&mut e, 27);
+    key(&mut e, 20);
+    assert_eq!(e.vm().pc(), 0x2191);
+    capture(&e, "pet-world-80-pet-selection");
+    key(&mut e, 13);
+    for _ in 0..4 {
+        key(&mut e, 22);
+    }
+    capture(&e, "pet-world-80-allocation-menu");
+    key(&mut e, 13);
+    key(&mut e, 13);
+    capture(&e, "pet-world-80-allocation-amount");
+    key(&mut e, 13);
+    assert_eq!((potential(&e), max_hp(&e)), (0, 800));
+    capture(&e, "pet-world-80-upgraded");
+    key(&mut e, 13);
+    key(&mut e, 27);
+    let mut exiting = e.clone();
+    key(&mut exiting, 27);
+    assert_eq!(exiting.vm().pc(), 0x1551);
+    capture(&exiting, "pet-world-80-exit-confirmation");
+    exiting.input_mut().release_all();
+    let mut halted = false;
+    for frame in 0..180 {
+        exiting.input_mut().set_keys((frame < 3).then_some(13));
+        if exiting.run_frame().unwrap().status == FrameStatus::Halted(0) {
+            halted = true;
+            break;
+        }
+    }
+    assert!(halted, "save-and-exit must terminate normally");
+    check_save(exiting.files().file("/lavadata/宠世存档.sav").unwrap());
+    key(&mut e, 23);
+    for _ in 0..4 {
+        key(&mut e, 22);
+    }
+    key(&mut e, 13);
+    assert_eq!(e.vm().pc(), 0x145e);
+    capture(&e, "pet-world-80-saved");
+    let saved = e.files().file("/lavadata/宠世存档.sav").unwrap().to_vec();
+    check_save(&saved);
+    let mut restored = load(&path);
+    restored
+        .files_mut()
+        .import_file("/lavadata/宠世存档.sav", saved);
+    advance(&mut restored, 300);
+    assert_eq!(restored.vm().memory()[0x27da], 1);
+    assert_eq!((potential(&restored), max_hp(&restored)), (0, 800));
+    capture(&restored, "pet-world-80-restored");
+    key(&mut restored, 21);
+    assert_eq!(restored.vm().pc(), 0x2423);
+    capture(&restored, "pet-world-80-restored-information");
+}

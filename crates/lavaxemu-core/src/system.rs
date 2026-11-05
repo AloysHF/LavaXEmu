@@ -859,7 +859,9 @@ impl Emulator {
         let function = self.vm.pop_value()?;
         let result = match function {
             0 => i32::from_be_bytes([b'L', 0, 0, 1]),
-            2..=5 | 7 | 13 | 14 => 0,
+            2..=5 | 7 | 13 => 0,
+            // Virtual storage has no flash quota; keep capacity positive in 16-bit guests.
+            14 => i32::from(i16::MAX),
             1 | 6 | 8 => {
                 self.vm.pop_value()?;
                 0
@@ -1467,6 +1469,24 @@ mod tests {
         emulator.reset();
         emulator.run_frame().unwrap();
         assert_eq!(emulator.vm().result(), 0x4c00_0001);
+    }
+
+    #[test]
+    fn disk_check_allows_saving_before_and_after_reclaim() {
+        let mut emulator = emulator(&[0x01, 14, 0xd3, 0x38, 0x40]);
+        emulator.run_frame().unwrap();
+        let available = emulator.vm().result();
+        assert!(available > 0 && available <= i32::from(i16::MAX));
+        emulator
+            .files_mut()
+            .import_file("/data/save.dat", vec![1; 4096]);
+        emulator.vm.push_value(13).unwrap();
+        emulator.system_extended().unwrap();
+        assert_eq!(emulator.vm.pop_value().unwrap(), 0);
+        emulator.vm.push_value(14).unwrap();
+        emulator.system_extended().unwrap();
+        assert_eq!(emulator.vm.pop_value().unwrap(), available);
+        assert_eq!(emulator.files().file("/data/save.dat").unwrap(), &[1; 4096]);
     }
 
     #[test]

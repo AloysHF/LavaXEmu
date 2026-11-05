@@ -17,9 +17,10 @@ do not satisfy this status.
 - Input update checked on 2026-10-31: full rerun of 49 workflows, followed by a corrected Dragon Kiss intro replay and the dedicated WarCraft workflow. Those 50 workflows passed with the updated input behavior; later entries have separate incremental checks.
 - Shared guest text memory checked on 2026-11-01: all 75 dedicated release workflows passed after the text-buffer repair and state migration.
 - Inverted TextOut checked on 2026-11-01: all 77 dedicated release workflows passed after honoring the source-inversion flag.
-- 95 dedicated release workflows passed in this audit.
-- 146 of 324 entry points were loaded by those successful workflows.
-- 178 entry points still need dedicated workflow verification.
+- Virtual storage capacity checked on 2026-11-05: all 95 existing dedicated release workflows passed after the DiskCheck repair.
+- 96 dedicated release workflows passed in this audit.
+- 147 of 324 entry points were loaded by those successful workflows.
+- 177 entry points still need dedicated workflow verification.
 - The historical [startup gallery](Game-Compatibility.md) is a separate check
   and must not be interpreted as this workflow audit.
 
@@ -154,7 +155,7 @@ an optional screenshot directory. Keep each test's logs and captures separate.
 | 111 | `LAVA1 宠物世界/GVmaker/TC1000/宠物世界1K.lav` | Game / game package | [Workflow passed: `pet_world_legacy_versions_reopen_the_main_game_save`](../crates/lavaxemu/tests/game_compatibility.rs#L684) |
 | 112 | `LAVA1 宠物世界/GVmaker/TC1000S/宠世L_1KS.lav` | Game / game package | [Workflow passed: `pet_world_legacy_versions_reopen_the_main_game_save`](../crates/lavaxemu/tests/game_compatibility.rs#L684) |
 | 113 | `LAVA1 宠物世界/GVmaker/TC1000S/宠物世界1S.lav` | Game / game package | [Workflow passed: `pet_world_legacy_versions_reopen_the_main_game_save`](../crates/lavaxemu/tests/game_compatibility.rs#L684) |
-| 114 | `LAVA1 宠物世界/GVmaker/TC800/宠物世界80.lav` | Game / game package | Pending |
+| 114 | `LAVA1 宠物世界/GVmaker/TC800/宠物世界80.lav` | Game / game package | [Workflow passed: `pet_world_80_upgrades_a_pet_saves_and_restores_progress`](../crates/lavaxemu/tests/game_compatibility.rs#L8971) |
 | 115 | `LAVA1 宠物世界/GVmaker/TC808/宠世L_808.lav` | Game / game package | [Workflow passed: `pet_world_legacy_versions_reopen_the_main_game_save`](../crates/lavaxemu/tests/game_compatibility.rs#L684) |
 | 116 | `LAVA1 宠物世界/GVmaker/TC808/宠物世界88.lav` | Game / game package | [Workflow passed: `pet_world_legacy_versions_reopen_the_main_game_save`](../crates/lavaxemu/tests/game_compatibility.rs#L684) |
 | 117 | `LAVA1 宠物世界/自己绘制宠物(文曲星端)/宠世导出入.lav` | Pet import/export | Pending |

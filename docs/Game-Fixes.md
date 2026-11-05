@@ -1946,3 +1946,22 @@ without an execution error alone does not establish playability.
 - This covers basic play at the first difficulty; all higher-difficulty battles
   and recovery of previously malformed score files remain unverified. Game
   files and captures are not distributed.
+
+
+## Pet World TC800 (宠物世界80)
+
+- `DiskCheck` returned zero, causing a storage warning at startup and refusing
+  native saves. Extended function 14 now reports positive capacity for the
+  unbounded virtual file system, capped at the signed 16-bit maximum. It does
+  not depend on host storage; reclaim remains a no-op.
+- Start a fresh game, check the pet and information screens, then select the
+  pet through its management menu and allocate all 200 initial potential points
+  to increase maximum life from 200 to 800 using the native amount editor.
+- Check both the menu save and save-and-exit paths, including normal exit.
+  Inspect the generated 1,072-byte native save signature and upgraded values;
+  load that actual file in a fresh emulator and check the same pet count, zero
+  remaining potential and 800 maximum life. Review the restored display and
+  information screen locally.
+- This covers basic pet management and persistence. Serial multiplayer, every
+  battle action and later progression remain unverified. Game content, saves
+  and captures are not distributed.
