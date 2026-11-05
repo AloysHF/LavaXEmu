@@ -18,9 +18,9 @@ do not satisfy this status.
 - Shared guest text memory checked on 2026-11-01: all 75 dedicated release workflows passed after the text-buffer repair and state migration.
 - Inverted TextOut checked on 2026-11-01: all 77 dedicated release workflows passed after honoring the source-inversion flag.
 - Virtual storage capacity checked on 2026-11-05: all 95 existing dedicated release workflows passed after the DiskCheck repair.
-- 98 dedicated release workflows passed in this audit.
-- 149 of 324 entry points were loaded by those successful workflows.
-- 175 entry points still need dedicated workflow verification.
+- 99 dedicated release workflows passed in this audit.
+- 150 of 324 entry points were loaded by those successful workflows.
+- 174 entry points still need dedicated workflow verification.
 - The historical [startup gallery](Game-Compatibility.md) is a separate check
   and must not be interpreted as this workflow audit.
 
@@ -160,7 +160,7 @@ an optional screenshot directory. Keep each test's logs and captures separate.
 | 116 | `LAVA1 宠物世界/GVmaker/TC808/宠物世界88.lav` | Game / game package | [Workflow passed: `pet_world_legacy_versions_reopen_the_main_game_save`](../crates/lavaxemu/tests/game_compatibility.rs#L684) |
 | 117 | `LAVA1 宠物世界/自己绘制宠物(文曲星端)/宠世导出入.lav` | Pet import/export | [Workflow passed: `pet_picture_converter_restores_and_round_trips_native_images_without_growth`](../crates/lavaxemu/tests/game_compatibility.rs#L9057), [Workflow passed: `pixel_album_edits_both_sizes_switches_frames_and_reopens_native_saves`](../crates/lavaxemu/tests/game_compatibility.rs#L9118) |
 | 118 | `LAVA1 宠物世界/自己绘制宠物(文曲星端)/象素画册.lav` | Pixel editor | [Workflow passed: `pixel_album_edits_both_sizes_switches_frames_and_reopens_native_saves`](../crates/lavaxemu/tests/game_compatibility.rs#L9118) |
-| 119 | `LAVA1 密室杀机/密室杀机.lav` | Game / game package | Pending |
+| 119 | `LAVA1 密室杀机/密室杀机.lav` | Game / game package | [Workflow passed: `locked_room_creates_an_account_moves_triggers_a_scene_and_restores_progress`](../crates/lavaxemu/tests/game_compatibility.rs#L9259) |
 | 120 | `LAVA1 富甲天下/富甲天下.pac` | Game / game package | Pending |
 | 121 | `LAVA1 富甲天下/非pac/富甲天下.lav` | Game / game package | Pending |
 | 122 | `LAVA1 对战方块/For Computer（模拟器用）.lav` | Game / game package | Pending |

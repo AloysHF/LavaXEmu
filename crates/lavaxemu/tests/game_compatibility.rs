@@ -9253,3 +9253,139 @@ fn pixel_album_edits_both_sizes_switches_frames_and_reopens_native_saves() {
         exit(&mut reopened);
     }
 }
+
+#[test]
+#[ignore = "requires the local game corpus via LAVAX_GAME_ROOT"]
+fn locked_room_creates_an_account_moves_triggers_a_scene_and_restores_progress() {
+    fn key(e: &mut Emulator, k: u8) {
+        e.input_mut().release_all();
+        for frame in 0..60 {
+            e.input_mut().set_keys((frame < 3).then_some(k));
+            advance(e, 1);
+        }
+    }
+    fn account(e: &mut Emulator) {
+        assert_eq!(e.vm().pc(), 0x1875);
+        for k in [b'a', b'i', 13, 13, 13] {
+            key(e, k);
+        }
+        assert_eq!(e.vm().pc(), 0x7e0f);
+        key(e, b'a');
+        key(e, 13);
+    }
+    fn position(e: &Emulator) -> (u8, u8) {
+        (e.vm().memory()[0x453c], e.vm().memory()[0x453d])
+    }
+    fn map_ready(e: &Emulator, map: u8) -> bool {
+        e.vm().memory()[0x2025] == map && (0xd559..=0xd56e).contains(&e.vm().pc())
+    }
+    fn acknowledge(e: &mut Emulator, map: u8) {
+        for _ in 0..128 {
+            if map_ready(e, map) {
+                return;
+            }
+            key(e, 13);
+        }
+        panic!("the story must return to the requested map");
+    }
+    let path = fixture_path("密室杀机.lav");
+    let mut e = load(&path);
+    advance(&mut e, 1200);
+    assert_eq!(e.vm().pc(), 0xa451);
+    capture(&e, "locked-room-title");
+    key(&mut e, 13);
+    capture(&e, "locked-room-menu");
+    key(&mut e, 13);
+    account(&mut e);
+    key(&mut e, b'a');
+    key(&mut e, 13);
+    capture(&e, "locked-room-opening");
+    acknowledge(&mut e, 2);
+    assert_eq!(position(&e), (15, 5));
+    capture(&e, "locked-room-first-map");
+    for (direction, axis, sign) in [
+        (23, 0x453c, -1),
+        (22, 0x453c, 1),
+        (20, 0x453d, -1),
+        (21, 0x453d, 1),
+    ] {
+        let moved = input_branch(&e, direction);
+        assert!(
+            (i16::from(moved.vm().memory()[axis]) - i16::from(e.vm().memory()[axis])) * sign > 0
+        );
+        assert_ne!(moved.display().indexed_frame(), e.display().indexed_frame());
+    }
+    for direction in [23, 23, 21, 21, 21, 23, 23, 21, 21, 21, 21, 21] {
+        let before = position(&e);
+        for _ in 0..60 {
+            e.input_mut().set_keys([direction]);
+            advance(&mut e, 1);
+            if position(&e) != before {
+                break;
+            }
+        }
+        e.input_mut().release_all();
+        advance(&mut e, 60);
+        assert_ne!(position(&e), before);
+    }
+    assert_eq!(position(&e), (11, 13));
+    assert_eq!(e.vm().pc(), 0x33a9);
+    capture(&e, "locked-room-departure");
+    acknowledge(&mut e, 3);
+    assert_eq!(position(&e), (19, 7));
+    capture(&e, "locked-room-next-scene");
+    hold(&mut e, b'b', 18);
+    assert_eq!(e.vm().pc(), 0x764b);
+    capture(&e, "locked-room-status-menu");
+    for _ in 0..4 {
+        key(&mut e, 21);
+    }
+    key(&mut e, 13);
+    assert_eq!(e.vm().pc(), 0x5808);
+    capture(&e, "locked-room-system-menu");
+    key(&mut e, 13);
+    assert_eq!(e.vm().pc(), 0x764b);
+    let saved = e.files().file("/lavadata/挨.dat").unwrap().to_vec();
+    assert_eq!(saved.len(), 3891);
+    assert_eq!(&saved[..4], b"mss\0");
+    assert_eq!(&saved[17..19], &[19, 7]);
+    assert_eq!(saved[42], 3);
+    let progress = e.vm().memory()[0x65fe..0x69fe].to_vec();
+    let mut restored = load(&path);
+    restored
+        .files_mut()
+        .import_file("/lavadata/挨.dat", saved.clone());
+    advance(&mut restored, 1200);
+    key(&mut restored, 13);
+    key(&mut restored, 21);
+    key(&mut restored, 13);
+    account(&mut restored);
+    acknowledge(&mut restored, 3);
+    assert_eq!(position(&restored), (19, 7));
+    assert_eq!(&restored.vm().memory()[0x65fe..0x69fe], progress);
+    assert_eq!(restored.files().file("/lavadata/挨.dat").unwrap(), saved);
+    capture(&restored, "locked-room-restored");
+    hold(&mut restored, b'b', 18);
+    key(&mut restored, 13);
+    capture(&restored, "locked-room-restored-party");
+    key(&mut restored, 27);
+    key(&mut restored, 27);
+    if !map_ready(&restored, 3) {
+        key(&mut restored, 27);
+    }
+    assert!(map_ready(&restored, 3));
+    hold(&mut restored, b'q', 18);
+    assert_eq!(restored.vm().pc(), 0xa609);
+    key(&mut restored, b'y');
+    assert_eq!(restored.vm().pc(), 0xa4dc);
+    restored.input_mut().release_all();
+    let mut halted = false;
+    for frame in 0..120 {
+        restored.input_mut().set_keys((frame < 3).then_some(27));
+        if restored.run_frame().unwrap().status == FrameStatus::Halted(0) {
+            halted = true;
+            break;
+        }
+    }
+    assert!(halted, "exiting the title menu must terminate normally");
+}

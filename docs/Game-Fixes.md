@@ -2001,3 +2001,22 @@ without an execution error alone does not establish playability.
   reviewed locally. The existing emulator behavior is sufficient; clipboard,
   transforms and the remaining drawing tools are outside this workflow.
   Content and captures are not distributed.
+
+
+## Locked Room (密室杀机)
+
+- Start a new game, enter a Chinese account name through the native Pinyin
+  candidate selector and confirm a password twice. Acknowledge the introduction
+  until the first controllable map appears at position (15, 5).
+- Check four independent physical movement branches against the original
+  coordinates and visible map. Walk through passable tiles using real keys
+  until the departure event triggers at (11, 13), then acknowledge its story
+  and check the next scene at map 3, position (19, 7).
+- Open the status and system menus, write the native 3,891-byte save, and
+  check its signature, map and coordinates. Import that generated file into a
+  fresh emulator, use the same Pinyin account and password, and check restored
+  map position, quest flags, variables and party display.
+- Return from menus, confirm leaving the map and exit the title normally.
+  Captures are reviewed locally. No emulator behavior change is required;
+  solving the later mystery and every optional menu action remain unverified.
+  Game content and saves are not distributed.
