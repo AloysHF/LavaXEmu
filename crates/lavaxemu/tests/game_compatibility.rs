@@ -9051,3 +9051,64 @@ fn pet_world_80_upgrades_a_pet_saves_and_restores_progress() {
     assert_eq!(restored.vm().pc(), 0x2423);
     capture(&restored, "pet-world-80-restored-information");
 }
+
+#[test]
+#[ignore = "requires the local game corpus via LAVAX_GAME_ROOT"]
+fn pet_picture_converter_restores_and_round_trips_native_images_without_growth() {
+    fn key(e: &mut Emulator, k: u8) {
+        e.input_mut().release_all();
+        for frame in 0..24 {
+            e.input_mut().set_keys((frame == 0).then_some(k));
+            advance(e, 1);
+        }
+    }
+    let path = fixture_path("宠世导出入.lav");
+    let mut e = load(&path);
+    advance(&mut e, 60);
+    assert_eq!(e.vm().pc(), 0x18a);
+    capture(&e, "pet-picture-converter-menu");
+    key(&mut e, b'c');
+    assert_eq!(e.vm().pc(), 0x3af);
+    let original = e.files().file("/lavadata/宠世图片.dat").unwrap().to_vec();
+    assert_eq!(original.len(), 8 * 32);
+    assert!(original.iter().any(|&pixel| pixel != 0));
+    capture(&e, "pet-picture-converter-original-restored");
+    key(&mut e, 13);
+    let mut exported = Vec::new();
+    for _ in 0..3 {
+        key(&mut e, b'a');
+        assert_eq!(e.vm().pc(), 0x29d);
+        let album = e.files().file("/album/宠世图片.abm").unwrap();
+        assert_eq!(album.len(), 18 + original.len());
+        assert_eq!(&album[..4], b"ABM\0");
+        assert_eq!(&album[4..10], &[16, 0, 16, 0, 8, 0]);
+        assert_eq!(u32::from_le_bytes(album[10..14].try_into().unwrap()), 18);
+        assert_eq!(u32::from_le_bytes(album[14..18].try_into().unwrap()), 274);
+        assert_eq!(&album[18..], original);
+        exported = album.to_vec();
+        key(&mut e, 13);
+        key(&mut e, b'b');
+        assert_eq!(e.vm().pc(), 0x356);
+        assert_eq!(e.files().file("/lavadata/宠世图片.dat").unwrap(), original);
+        key(&mut e, 13);
+    }
+    capture(&e, "pet-picture-converter-round-tripped");
+    key(&mut e, b'd');
+    assert_eq!(e.vm().pc(), 0x42a);
+    assert_eq!(e.files().file("/album/宠世图片.abm").unwrap(), exported);
+    capture(&e, "pet-picture-converter-album-restored");
+    let mut fresh = load(&path);
+    fresh
+        .files_mut()
+        .import_file("/album/宠世图片.abm", exported);
+    advance(&mut fresh, 60);
+    key(&mut fresh, b'b');
+    assert_eq!(
+        fresh.files().file("/lavadata/宠世图片.dat").unwrap(),
+        original
+    );
+    capture(&fresh, "pet-picture-converter-fresh-import");
+    key(&mut fresh, 13);
+    fresh.input_mut().set_keys([27]);
+    assert_eq!(fresh.run_frame().unwrap().status, FrameStatus::Halted(0));
+}

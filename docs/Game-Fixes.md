@@ -1965,3 +1965,20 @@ without an execution error alone does not establish playability.
 - This covers basic pet management and persistence. Serial multiplayer, every
   battle action and later progression remain unverified. Game content, saves
   and captures are not distributed.
+
+
+## Pet Picture Converter (宠世导出入)
+
+- Import counted the 18-byte ABM header as image data after already skipping
+  it. A 256-byte picture collection became 274 bytes, with trailing zeros;
+  repeated export/import would continue growing the file. A length/CRC-guarded
+  loaded-image repair subtracts the header before reading and writing payload.
+- Use the original restore command to create eight native 16 by 16 images.
+  Export a 274-byte ABM album and check its signature, dimensions, count,
+  offsets and unchanged payload. Perform three complete export/import cycles
+  and check all 256 picture bytes remain identical without length growth.
+- Restore the editor album, compare it with the exported album, and import
+  that actual generated file in a fresh emulator. Check byte-for-byte equality
+  with the original pictures, success screens, menu navigation and normal exit.
+- Captures are reviewed locally. This workflow covers the converter commands;
+  picture editing is outside its scope. Content and captures are not distributed.

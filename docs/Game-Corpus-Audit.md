@@ -18,9 +18,9 @@ do not satisfy this status.
 - Shared guest text memory checked on 2026-11-01: all 75 dedicated release workflows passed after the text-buffer repair and state migration.
 - Inverted TextOut checked on 2026-11-01: all 77 dedicated release workflows passed after honoring the source-inversion flag.
 - Virtual storage capacity checked on 2026-11-05: all 95 existing dedicated release workflows passed after the DiskCheck repair.
-- 96 dedicated release workflows passed in this audit.
-- 147 of 324 entry points were loaded by those successful workflows.
-- 177 entry points still need dedicated workflow verification.
+- 97 dedicated release workflows passed in this audit.
+- 148 of 324 entry points were loaded by those successful workflows.
+- 176 entry points still need dedicated workflow verification.
 - The historical [startup gallery](Game-Compatibility.md) is a separate check
   and must not be interpreted as this workflow audit.
 
@@ -158,7 +158,7 @@ an optional screenshot directory. Keep each test's logs and captures separate.
 | 114 | `LAVA1 宠物世界/GVmaker/TC800/宠物世界80.lav` | Game / game package | [Workflow passed: `pet_world_80_upgrades_a_pet_saves_and_restores_progress`](../crates/lavaxemu/tests/game_compatibility.rs#L8971) |
 | 115 | `LAVA1 宠物世界/GVmaker/TC808/宠世L_808.lav` | Game / game package | [Workflow passed: `pet_world_legacy_versions_reopen_the_main_game_save`](../crates/lavaxemu/tests/game_compatibility.rs#L684) |
 | 116 | `LAVA1 宠物世界/GVmaker/TC808/宠物世界88.lav` | Game / game package | [Workflow passed: `pet_world_legacy_versions_reopen_the_main_game_save`](../crates/lavaxemu/tests/game_compatibility.rs#L684) |
-| 117 | `LAVA1 宠物世界/自己绘制宠物(文曲星端)/宠世导出入.lav` | Pet import/export | Pending |
+| 117 | `LAVA1 宠物世界/自己绘制宠物(文曲星端)/宠世导出入.lav` | Pet import/export | [Workflow passed: `pet_picture_converter_restores_and_round_trips_native_images_without_growth`](../crates/lavaxemu/tests/game_compatibility.rs#L9057) |
 | 118 | `LAVA1 宠物世界/自己绘制宠物(文曲星端)/象素画册.lav` | Pixel editor | Pending |
 | 119 | `LAVA1 密室杀机/密室杀机.lav` | Game / game package | Pending |
 | 120 | `LAVA1 富甲天下/富甲天下.pac` | Game / game package | Pending |

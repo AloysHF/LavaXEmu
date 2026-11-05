@@ -67,6 +67,8 @@ The Space Battleship repair adds an 80 ms delay to each battle-loop return
 for one exact release, including movement, firing and pause resume paths.
 The Cosmos repair initializes ten record bytes and returns from its exit menu
 through the existing score-save epilogue, protected by length and CRC checks.
+The Pet Picture Converter repair subtracts the 18-byte album header before
+reading and writing the imported picture payload for one identified release.
 These repairs do not modify the content file or
 change the VM's general stack, local variables or file-seek bounds.
 

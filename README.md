@@ -128,6 +128,8 @@ Cosmos has a workflow for movement, pause, help, collision results and native
 records. Its identified release initializes complete records and saves on exit.
 Pet World TC800 can save with the virtual storage capacity report. Its workflow
 covers pet upgrades, menu and exit saves, and restoration in a fresh session.
+Pet Picture Converter restores and converts native pet pictures without
+appending album-header bytes to the imported image payload.
 
 ## Usage
 

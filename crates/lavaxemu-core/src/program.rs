@@ -375,6 +375,17 @@ impl Program {
             // Input waits can resume after the exact chest deadline has passed.
             image[0x2abc] = 0x51;
         }
+        if image.len() == 1_098
+            && crc32fast::hash(&image) == 0x8609_a2e0
+            && image[0x2e6..0x2eb] == [0x0e, 5, 0, 0xb3, 0x35]
+        {
+            // Exclude the album header when importing the picture payload.
+            let payload_length = image.len() as u32;
+            image.extend_from_slice(&[0x0e, 5, 0, 0xb3, 0x46, 18, 0, 0x35, 0x3b, 0xeb, 2, 0]);
+            image[0x2e6] = 0x3b;
+            image[0x2e7..0x2ea].copy_from_slice(&payload_length.to_le_bytes()[..3]);
+            image[0x2ea] = 0;
+        }
         if image.len() == 8_420
             && crc32fast::hash(&image) == 0x0a62_578a
             && image[0x1f30..0x1f33] == [1, 0, 0x8d]
@@ -532,6 +543,17 @@ mod tests {
         original.resize(9_748, 0);
         original[0x2441..0x2445].copy_from_slice(&[0x3d, 0xa4, 0x1a, 0]);
         original[0x1fc0..0x1fc4].copy_from_slice(&[1, 0, 1, 0]);
+        let saved = original.clone();
+        let program = Program::load(&original).unwrap();
+        assert_eq!(original, saved);
+        assert_eq!(program.image(), original);
+    }
+
+    #[test]
+    fn leaves_similar_picture_import_programs_unmodified() {
+        let mut original = image(0, 0, 0);
+        original.resize(1_098, 0);
+        original[0x2e6..0x2eb].copy_from_slice(&[0x0e, 5, 0, 0xb3, 0x35]);
         let saved = original.clone();
         let program = Program::load(&original).unwrap();
         assert_eq!(original, saved);
