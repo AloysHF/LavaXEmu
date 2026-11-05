@@ -130,6 +130,8 @@ Pet World TC800 can save with the virtual storage capacity report. Its workflow
 covers pet upgrades, menu and exit saves, and restoration in a fresh session.
 Pet Picture Converter restores and converts native pet pictures without
 appending album-header bytes to the imported image payload.
+Pixel Album has a workflow for 8×8 and 16×16 pixel editing, switching pictures,
+native album saves and reopening the edited content in a fresh session.
 
 ## Usage
 

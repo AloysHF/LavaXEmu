@@ -9112,3 +9112,144 @@ fn pet_picture_converter_restores_and_round_trips_native_images_without_growth()
     fresh.input_mut().set_keys([27]);
     assert_eq!(fresh.run_frame().unwrap().status, FrameStatus::Halted(0));
 }
+
+#[test]
+#[ignore = "requires the local game corpus via LAVAX_GAME_ROOT"]
+fn pixel_album_edits_both_sizes_switches_frames_and_reopens_native_saves() {
+    fn key(e: &mut Emulator, k: u8) {
+        e.input_mut().release_all();
+        for frame in 0..24 {
+            e.input_mut().set_keys((frame == 0).then_some(k));
+            advance(e, 1);
+        }
+    }
+    fn assert_page(e: &Emulator, text: &[u8]) {
+        let bp = e.vm().local_bp() as usize;
+        assert_eq!(&e.vm().memory()[bp + 0x5f..bp + 0x5f + text.len()], text);
+        let mut expected = e.display().clone();
+        expected.draw_text(
+            lavaxemu_core::BufferTarget::Front,
+            90,
+            58,
+            text,
+            false,
+            lavaxemu_core::DrawOperation::Set,
+        );
+        assert_eq!(
+            e.display()
+                .capture(lavaxemu_core::BufferTarget::Front, 90, 58, 24, 16),
+            expected.capture(lavaxemu_core::BufferTarget::Front, 90, 58, 24, 16)
+        );
+    }
+    fn open(path: &str, guest: &str, album: &[u8]) -> Emulator {
+        let mut e = load(path);
+        e.files_mut().import_file(guest, album.to_vec());
+        advance(&mut e, 60);
+        key(&mut e, 21);
+        key(&mut e, 13);
+        assert_eq!(e.vm().pc(), 0x1677);
+        key(&mut e, 13);
+        assert_eq!(e.vm().pc(), 0x4340);
+        e
+    }
+    fn exit(e: &mut Emulator) {
+        key(e, 27);
+        key(e, 21);
+        key(e, 21);
+        key(e, 13);
+        assert_eq!(e.vm().pc(), 0x904);
+        e.input_mut().set_keys([27]);
+        assert_eq!(e.run_frame().unwrap().status, FrameStatus::Halted(0));
+    }
+    let path = fixture_path("象素画册.lav");
+    let mut converter = load(&fixture_path("宠世导出入.lav"));
+    advance(&mut converter, 60);
+    key(&mut converter, b'd');
+    let album = converter
+        .files()
+        .file("/album/宠世图片.abm")
+        .unwrap()
+        .to_vec();
+    let mut expected = album[18..].to_vec();
+    let mut e = open(&path, "/album/宠世图片.abm", &album);
+    assert_page(&e, b"1/8");
+    capture(&e, "pixel-album-original");
+    for k in [13, b'd', 13, b's', 13] {
+        key(&mut e, k);
+    }
+    expected[0] ^= 0xc0;
+    expected[2] ^= 0x40;
+    assert_eq!(&e.vm().memory()[0x5200..0x5220], &expected[..32]);
+    capture(&e, "pixel-album-first-edited");
+    key(&mut e, 21);
+    assert_eq!(&e.vm().memory()[0x5200..0x5220], &expected[32..64]);
+    key(&mut e, 13);
+    expected[34] ^= 0x40;
+    assert_page(&e, b"2/8");
+    capture(&e, "pixel-album-second-edited");
+    key(&mut e, 20);
+    assert_eq!(&e.vm().memory()[0x2000..0x2100], expected);
+    assert_eq!(&e.vm().memory()[0x5200..0x5220], &expected[..32]);
+    key(&mut e, 27);
+    key(&mut e, 13);
+    let saved = e.files().file("/album/宠世图片.abm").unwrap().to_vec();
+    assert_eq!(&saved[..18], &album[..18]);
+    assert_eq!(&saved[18..], expected);
+    capture(&e, "pixel-album-saved");
+    exit(&mut e);
+    let mut fresh = open(&path, "/album/宠世图片.abm", &saved);
+    assert_eq!(&fresh.vm().memory()[0x2000..0x2100], expected);
+    assert_eq!(&fresh.vm().memory()[0x5200..0x5220], &expected[..32]);
+    key(&mut fresh, 21);
+    assert_eq!(&fresh.vm().memory()[0x5200..0x5220], &expected[32..64]);
+    capture(&fresh, "pixel-album-reopened-second");
+    exit(&mut fresh);
+    for size in [8_usize, 16] {
+        let mut e = load(&path);
+        advance(&mut e, 60);
+        key(&mut e, 13);
+        if size == 8 {
+            key(&mut e, 21);
+        }
+        key(&mut e, 13);
+        assert_eq!(e.vm().pc(), 0x4340);
+        for k in [13, b'd', 13, b's', 13] {
+            key(&mut e, k);
+        }
+        let mut pixels = vec![0; size * size / 8];
+        pixels[0] = 0xc0;
+        pixels[size / 8] = 0x40;
+        key(&mut e, 27);
+        key(&mut e, 13);
+        assert_eq!(e.vm().pc(), 0x60d);
+        key(&mut e, b'y');
+        let name = format!("emu{size}");
+        for k in name.bytes() {
+            key(&mut e, k);
+        }
+        key(&mut e, 13);
+        let guest = format!("/album/{name}.abm");
+        let saved = e.files().file(&guest).unwrap().to_vec();
+        assert_eq!(saved.len(), 18 + pixels.len());
+        assert_eq!(&saved[..4], b"ABM\0");
+        assert_eq!(
+            u16::from_le_bytes(saved[4..6].try_into().unwrap()),
+            size as u16
+        );
+        assert_eq!(
+            u16::from_le_bytes(saved[6..8].try_into().unwrap()),
+            size as u16
+        );
+        assert_eq!(&saved[8..10], &[1, 0]);
+        assert_eq!(&saved[18..], pixels);
+        capture(&e, &format!("pixel-album-new-{size}-saved"));
+        exit(&mut e);
+        let mut reopened = open(&path, &guest, &saved);
+        assert_eq!(
+            &reopened.vm().memory()[0x5200..0x5200 + pixels.len()],
+            pixels
+        );
+        capture(&reopened, &format!("pixel-album-new-{size}-reopened"));
+        exit(&mut reopened);
+    }
+}
