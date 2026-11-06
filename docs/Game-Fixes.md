@@ -2175,3 +2175,20 @@ without an execution error alone does not establish playability.
   leaves the account file unchanged, review credits and check normal exit.
 - Captures are reviewed locally. Item transfer is not covered by this workflow.
   Game content and captures are not distributed.
+
+## Sky and Land II (幕天席地 2)
+
+- Create a named warrior through the opening and native confirmation. Use actual
+  arrow input to leave the village, verify the field map transition and approach
+  a nearby enemy. No character or enemy memory is edited to create the encounter.
+- Attack through the native Enter control. Check the enemy's health reaches zero
+  or below, the character receives ten experience and loses some health while
+  remaining alive. Open the bag and consume a red potion; check full health and
+  the consumed slot becoming empty.
+- Save through the system menu and check the genuine 578-byte record. Load it
+  through the account editor in a fresh instance, then check map, world position,
+  experience, health and the whole visible bag match. Continue walking and check
+  the record remains unchanged. Captures are reviewed locally.
+- This adds reproducible coverage without changing emulator behavior. Other
+  classes, skills, quests and the ending remain unverified. Game content and
+  captures are not distributed.

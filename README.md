@@ -48,6 +48,8 @@ being progressively improved.
   programs without uploading them
 
 Compatibility evidence is tracked in the [workflow audit](docs/Game-Corpus-Audit.md).
+Sky and Land II has a workflow for character creation, village/field transitions,
+combat rewards, healing and native save restoration with continued movement.
 Sky and Land Helper can return from monster browsing to its menu. Its workflow
 reads a native account, views equipment and browses every monster and item.
 Empire v4.1 monochrome and grayscale builds preserve construction costs and

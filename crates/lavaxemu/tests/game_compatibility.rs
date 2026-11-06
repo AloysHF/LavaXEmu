@@ -10453,3 +10453,119 @@ fn sky_and_land_helper_reads_a_native_account_and_browses_its_catalogs() {
     }
     assert!(halted);
 }
+
+#[test]
+#[ignore = "requires the local game corpus via LAVAX_GAME_ROOT"]
+fn sky_and_land_two_explores_defeats_an_enemy_heals_and_restores_progress() {
+    fn word(e: &Emulator, a: usize) -> u16 {
+        u16::from_le_bytes(e.vm().memory()[a..a + 2].try_into().unwrap())
+    }
+    fn experience(e: &Emulator) -> u32 {
+        u32::from_le_bytes(e.vm().memory()[0x4c0a..0x4c0e].try_into().unwrap())
+    }
+    fn position(e: &Emulator) -> (u16, u16, u16) {
+        (
+            word(e, 0x4c12),
+            word(e, 0x4c14) + u16::from(e.vm().memory()[0x3f6c]),
+            word(e, 0x4c16) + u16::from(e.vm().memory()[0x3f6d]),
+        )
+    }
+    fn key(e: &mut Emulator, k: u8, frames: usize, held: usize) {
+        e.input_mut().release_all();
+        for frame in 0..frames {
+            e.input_mut().set_keys((frame < held).then_some(k));
+            advance(e, 1);
+        }
+    }
+    fn step(e: &mut Emulator, k: u8) {
+        let before = position(e);
+        e.input_mut().release_all();
+        for _ in 0..120 {
+            e.input_mut().set_keys([k]);
+            advance(e, 1);
+            if position(e) != before {
+                break;
+            }
+        }
+        e.input_mut().release_all();
+        advance(e, 60);
+        assert_ne!(
+            position(e),
+            before,
+            "the route must advance through actual input"
+        );
+    }
+    let path = fixture_path("幕天席地2.lav");
+    let mut e = load(&path);
+    advance(&mut e, 1200);
+    capture(&e, "sky-two-title");
+    key(&mut e, 13, 120, 18);
+    key(&mut e, 13, 120, 18);
+    advance(&mut e, 1200);
+    assert_eq!(e.vm().pc(), 0x2c13);
+    capture(&e, "sky-two-new-game-confirmation");
+    for k in [b'y', b'e', b'm', b'u', 13, 13, 13] {
+        key(&mut e, k, 120, 18);
+    }
+    assert_eq!(position(&e), (0, 7, 2));
+    assert_eq!(word(&e, 0x4c02), 0);
+    capture(&e, "sky-two-village");
+    for k in [
+        22, 21, 21, 21, 21, 21, 22, 22, 22, 21, 21, 23, 23, 23, 23, 21, 21,
+    ] {
+        step(&mut e, k);
+    }
+    assert_eq!(position(&e), (1, 4, 3));
+    capture(&e, "sky-two-field");
+    for _ in 0..3 {
+        step(&mut e, 23);
+    }
+    assert_eq!(position(&e), (1, 1, 3));
+    assert_eq!(word(&e, 0x5012), 18);
+    capture(&e, "sky-two-before-combat");
+    for k in [21, 13, 13, 13] {
+        key(&mut e, k, 60, 8);
+    }
+    assert!(word(&e, 0x5012) as i16 <= 0);
+    assert_eq!(experience(&e), 10);
+    assert!((1..25).contains(&word(&e, 0x4c18)));
+    capture(&e, "sky-two-enemy-defeated");
+    for k in [28, 22, 22, 22, 13] {
+        key(&mut e, k, 120, 18);
+    }
+    assert_eq!(e.vm().memory()[0x4ca0], 17);
+    capture(&e, "sky-two-potion");
+    key(&mut e, 13, 120, 8);
+    assert_eq!(word(&e, 0x4c18), word(&e, 0x4c1a));
+    assert_eq!(e.vm().memory()[0x4ca0], 18);
+    capture(&e, "sky-two-potion-used");
+    let inventory = e.vm().memory()[0x4ca0..0x4cb4].to_vec();
+    for k in [27, 22, 22, 22, 13] {
+        key(&mut e, k, 120, 8);
+    }
+    capture(&e, "sky-two-system");
+    key(&mut e, 13, 120, 8);
+    let saved = e.files().file("/LavaData/emu.sl2").unwrap().to_vec();
+    assert_eq!(saved.len(), 578);
+    capture(&e, "sky-two-saved");
+    let mut restored = load(&path);
+    restored
+        .files_mut()
+        .import_file("/LavaData/emu.sl2", saved.clone());
+    advance(&mut restored, 1200);
+    for k in [13, 21, 13, b'e', b'm', b'u', 13] {
+        key(&mut restored, k, 120, 18);
+    }
+    assert_eq!(position(&restored), (1, 1, 3));
+    assert_eq!(experience(&restored), 10);
+    assert_eq!(word(&restored, 0x4c18), 25);
+    assert_eq!(&restored.vm().memory()[0x4ca0..0x4cb4], inventory);
+    assert_eq!(
+        restored.files().file("/LavaData/emu.sl2"),
+        Some(saved.as_slice())
+    );
+    capture(&restored, "sky-two-restored");
+    step(&mut restored, 20);
+    assert_eq!(position(&restored), (1, 1, 2));
+    capture(&restored, "sky-two-continued");
+}
