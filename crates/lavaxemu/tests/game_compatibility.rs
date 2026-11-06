@@ -10031,3 +10031,96 @@ fn mountain_go_219_versions_capture_and_restore_through_the_file_list() {
         capture(&restored, &format!("mountain-go-219-{version}-continued"));
     }
 }
+
+#[test]
+#[ignore = "requires the local game corpus via LAVAX_GAME_ROOT"]
+fn mountain_go_converter_preserves_a_legacy_record_and_reloads_its_output() {
+    fn key(e: &mut Emulator, k: u8) {
+        e.input_mut().release_all();
+        for frame in 0..60 {
+            e.input_mut().set_keys((frame < 3).then_some(k));
+            advance(e, 1);
+        }
+    }
+    fn record_name(e: &mut Emulator) {
+        for k in [b'e', b'm', b'u', 13] {
+            key(e, k);
+        }
+    }
+    let path = fixture_path("山尘围棋v2.lav");
+    let mut game = load(&path);
+    advance(&mut game, 1200);
+    key(&mut game, 13);
+    for _ in 0..3 {
+        key(&mut game, 23);
+    }
+    for _ in 0..16 {
+        key(&mut game, 20);
+    }
+    for k in [21, 13, 20, 13, 22, 13, 29, b'y'] {
+        key(&mut game, k);
+    }
+    record_name(&mut game);
+    let native = game.files().file("/LavaData/EMU.SGO").unwrap().to_vec();
+    assert_eq!(native.len(), 107);
+    let board = game.vm().memory()[0x2094..0x21fd].to_vec();
+    let history = game.vm().memory()[0x2080..0x2086].to_vec();
+    // Encode the genuine short game using the legacy headerless byte counters.
+    let mut legacy = native[10..84].to_vec();
+    legacy.extend([native[87], native[85], native[89], native[84]]);
+    legacy.extend_from_slice(&native[91..]);
+    let mut converter = load(&fixture_path("存档转化器_山尘围棋.lav"));
+    converter
+        .files_mut()
+        .import_file("/LavaData/EMU.GOS", legacy.clone());
+    advance(&mut converter, 1200);
+    capture(&converter, "mountain-go-converter-title");
+    for k in [13, 30, b'y'] {
+        key(&mut converter, k);
+    }
+    capture(&converter, "mountain-go-converter-old-filename");
+    record_name(&mut converter);
+    advance(&mut converter, 300);
+    assert_eq!(&converter.vm().memory()[0x2094..0x21fd], board);
+    assert_eq!(&converter.vm().memory()[0x2080..0x2086], history);
+    for _ in 0..9 {
+        key(&mut converter, 20);
+    }
+    capture(&converter, "mountain-go-converter-loaded-board");
+    for k in [29, b'y'] {
+        key(&mut converter, k);
+    }
+    capture(&converter, "mountain-go-converter-new-filename");
+    record_name(&mut converter);
+    advance(&mut converter, 300);
+    let converted = converter.files().file("/LavaData/EMU.GO").unwrap().to_vec();
+    assert_eq!(converted, native);
+    assert_eq!(
+        converter.files().file("/LavaData/EMU.GOS"),
+        Some(legacy.as_slice())
+    );
+    capture(&converter, "mountain-go-converter-saved-board");
+    let mut restored = load(&path);
+    restored
+        .files_mut()
+        .import_file("/LavaData/EMU.SGO", converted);
+    advance(&mut restored, 1200);
+    for k in [13, 30, b'y'] {
+        key(&mut restored, k);
+    }
+    record_name(&mut restored);
+    assert_eq!(&restored.vm().memory()[0x2094..0x21fd], board);
+    assert_eq!(&restored.vm().memory()[0x2080..0x2086], history);
+    for _ in 0..16 {
+        key(&mut restored, 20);
+    }
+    for _ in 0..3 {
+        key(&mut restored, 23);
+    }
+    capture(&restored, "mountain-go-converter-output-reloaded");
+    for k in [22, 21, 13] {
+        key(&mut restored, k);
+    }
+    assert_eq!(restored.vm().memory()[0x2094 + 19 + 1], 1);
+    capture(&restored, "mountain-go-converter-output-continued");
+}

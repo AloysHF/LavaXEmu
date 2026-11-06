@@ -2106,3 +2106,19 @@ without an execution error alone does not establish playability.
 - This adds reproducible coverage without changing emulator behavior. Both
   versions have reviewed captures; SGF import, all capture patterns and record
   length limits remain unverified. Game content and captures are not distributed.
+
+## Mountain Go save converter
+
+- Generate a short game with a corner capture through actual game input and
+  save the native record. Encode this genuine record into the legacy headerless
+  layout with byte counters, then load it using the converter's filename editor.
+  Check the complete board and move counters match the original game.
+- Save the new-format output through the converter. Check it matches the original
+  native record byte for byte and that the legacy input remains unchanged.
+  Import the output under the game's native record extension into a fresh
+  instance, load it and check the board and counters again; continue play.
+- The legacy input is a derived test fixture, rather than a historical save.
+  This verifies short-record conversion and the actual tool controls, without
+  claiming coverage of all historical saves or counter limits. Captures are
+  reviewed locally. No emulator behavior changes are needed; game content and
+  captures are not distributed.
