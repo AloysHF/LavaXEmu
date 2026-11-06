@@ -2138,3 +2138,24 @@ without an execution error alone does not establish playability.
 - This adds reproducible coverage without changing emulator behavior. Business,
   mining, every interaction and the ten-year ending remain unverified. Game
   content and captures are not distributed.
+
+## Empire v4.1 (帝国传)
+
+- The identified monochrome and grayscale builds compared day-based current
+  time against stored times without the day. Construction finished immediately.
+  Resource refresh also subtracted a timestamp address literal, and later
+  replaced paid construction costs with an older resource snapshot.
+- Repair only the two fingerprinted loaded images. Align timer timestamps,
+  read the stored resource timestamp and deduct construction costs from both
+  current resources and the next resource snapshot. Original content remains
+  unchanged and unrelated images are not patched.
+- Start the wood-production building upgrade through actual menus and the U
+  control. Check the displayed costs are paid, the 75-second job remains pending
+  after ten seconds, and save that pending job through the native exit menu.
+  Check the genuine 1,433-byte record and normal exit.
+- Load that record in a fresh instance. Check resources and the pending job,
+  allow the timer to finish, then check level one and production eight. Resource
+  refresh must retain the paid costs. Start the next upgrade to verify continued
+  operation. Both display modes have reviewed captures.
+- Combat, all unit types, month rollover and long-term economic progression
+  remain unverified. Game content and captures are not distributed.

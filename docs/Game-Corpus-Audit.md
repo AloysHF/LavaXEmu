@@ -18,9 +18,9 @@ do not satisfy this status.
 - Shared guest text memory checked on 2026-11-01: all 75 dedicated release workflows passed after the text-buffer repair and state migration.
 - Inverted TextOut checked on 2026-11-01: all 77 dedicated release workflows passed after honoring the source-inversion flag.
 - Virtual storage capacity checked on 2026-11-05: all 95 existing dedicated release workflows passed after the DiskCheck repair.
-- 106 dedicated release workflows passed in this audit.
-- 161 of 324 entry points were loaded by those successful workflows.
-- 163 entry points still need dedicated workflow verification.
+- 107 dedicated release workflows passed in this audit.
+- 163 of 324 entry points were loaded by those successful workflows.
+- 161 entry points still need dedicated workflow verification.
 - The historical [startup gallery](Game-Compatibility.md) is a separate check
   and must not be interpreted as this workflow audit.
 
@@ -172,8 +172,8 @@ an optional screenshot directory. Keep each test's logs and captures separate.
 | 128 | `LAVA1 山尘围棋v2.19/SCGO_219_16gray.lav` | Game / game package | [Workflow passed: `mountain_go_219_versions_capture_and_restore_through_the_file_list`](../crates/lavaxemu/tests/game_compatibility.rs#L9921) |
 | 129 | `LAVA1 山村淘金记/gold.pac` | Game / game package | [Workflow passed: `village_gold_versions_explore_and_restore_a_native_diary`](../crates/lavaxemu/tests/game_compatibility.rs#L10130) |
 | 130 | `LAVA1 山村淘金记/非pac/山村淘金记.lav` | Game / game package | [Workflow passed: `village_gold_versions_explore_and_restore_a_native_diary`](../crates/lavaxemu/tests/game_compatibility.rs#L10130) |
-| 131 | `LAVA1 帝国传4.1/帝国传灰/帝国传.lav` | Game / game package | Pending |
-| 132 | `LAVA1 帝国传4.1/帝国传黑白/帝国传.lav` | Game / game package | Pending |
+| 131 | `LAVA1 帝国传4.1/帝国传灰/帝国传.lav` | Game / game package | [Workflow passed: `empire_versions_preserve_timed_construction_costs_and_pending_saves`](../crates/lavaxemu/tests/game_compatibility.rs#L10228) |
+| 132 | `LAVA1 帝国传4.1/帝国传黑白/帝国传.lav` | Game / game package | [Workflow passed: `empire_versions_preserve_timed_construction_costs_and_pending_saves`](../crates/lavaxemu/tests/game_compatibility.rs#L10228) |
 | 133 | `LAVA1 幕天席地1.1/幕天助手.lav` | Game helper | Pending |
 | 134 | `LAVA1 幕天席地1.1/幕天席地.lav` | Game / game package | [Workflow passed: `sky_and_land_creates_a_local_save_and_moves_on_the_map`](../crates/lavaxemu/tests/game_compatibility.rs#L1146) |
 | 135 | `LAVA1 幕天席地2封印之石1.3/幕天席地2.lav` | Game / game package | Pending |

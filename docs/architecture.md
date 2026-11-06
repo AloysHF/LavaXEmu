@@ -69,6 +69,9 @@ The Cosmos repair initializes ten record bytes and returns from its exit menu
 through the existing score-save epilogue, protected by length and CRC checks.
 The Pet Picture Converter repair subtracts the 18-byte album header before
 reading and writing the imported picture payload for one identified release.
+The Empire v4.1 repair aligns stored and current timer timestamps, reads the
+resource timestamp value instead of its address literal, and retains construction
+costs in the resource snapshot. It is restricted to two length/CRC fingerprints.
 These repairs do not modify the content file or
 change the VM's general stack, local variables or file-seek bounds.
 

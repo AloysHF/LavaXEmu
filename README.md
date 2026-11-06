@@ -48,6 +48,8 @@ being progressively improved.
   programs without uploading them
 
 Compatibility evidence is tracked in the [workflow audit](docs/Game-Corpus-Audit.md).
+Empire v4.1 monochrome and grayscale builds preserve construction costs and
+pending upgrades across native saves, then finish the timed work and continue.
 Village Gold packaged and loose versions have a workflow for name entry, opening
 dialogue, movement, obstacle collision, menus and native diary saving/loading.
 Mountain Go v2.0 has a workflow for alternating moves, corner capture, undo/redo

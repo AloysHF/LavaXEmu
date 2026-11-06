@@ -10222,3 +10222,119 @@ fn village_gold_versions_explore_and_restore_a_native_diary() {
         capture(&restored, &format!("village-gold-{version}-continued"));
     }
 }
+
+#[test]
+#[ignore = "requires the local game corpus via LAVAX_GAME_ROOT"]
+fn empire_versions_preserve_timed_construction_costs_and_pending_saves() {
+    fn key(e: &mut Emulator, k: u8) {
+        e.input_mut().release_all();
+        for frame in 0..120 {
+            e.input_mut().set_keys((frame < 3).then_some(k));
+            advance(e, 1);
+        }
+    }
+    fn number(e: &Emulator, address: usize) -> i32 {
+        i32::from_le_bytes(e.vm().memory()[address..address + 4].try_into().unwrap())
+    }
+    for (version, size, main_pc, message_pc) in [
+        ("mono", 35_213, 0x8445, 0x20a9),
+        ("gray", 35_313, 0x849f, 0x20f8),
+    ] {
+        let path = fixture_path_with_size("帝国传.lav", Some(size));
+        let mut e = load(&path);
+        advance(&mut e, 1200);
+        capture(&e, &format!("empire-{version}-fortune"));
+        key(&mut e, 13);
+        assert_eq!(e.vm().pc(), main_pc);
+        capture(&e, &format!("empire-{version}-menu"));
+        key(&mut e, 13);
+        key(&mut e, 13);
+        capture(&e, &format!("empire-{version}-wood-cost"));
+        assert_eq!(e.vm().memory()[0x211d], 0);
+        let wood = number(&e, 0x2000);
+        let iron = number(&e, 0x2008);
+        let wood_cost = u16::from_le_bytes(e.vm().memory()[0x2122..0x2124].try_into().unwrap());
+        let iron_cost = u16::from_le_bytes(e.vm().memory()[0x2126..0x2128].try_into().unwrap());
+        key(&mut e, b'u');
+        assert_eq!(number(&e, 0x2000), wood - i32::from(wood_cost));
+        assert_eq!(number(&e, 0x2008), iron - i32::from(iron_cost));
+        assert_eq!(e.vm().memory()[0x2050], 1);
+        assert_eq!(e.vm().memory()[0x211d], 0);
+        capture(&e, &format!("empire-{version}-upgrade-started"));
+        key(&mut e, 13);
+        advance(&mut e, 600);
+        assert_eq!(e.vm().memory()[0x2050], 1);
+        assert_eq!(
+            e.vm().memory()[0x211d],
+            0,
+            "75-second work must not finish immediately"
+        );
+        let paid = (number(&e, 0x2000), number(&e, 0x2008));
+        assert_eq!(
+            paid,
+            (wood - i32::from(wood_cost), iron - i32::from(iron_cost))
+        );
+        for k in [21, 21, 21, 21, 21, 13, 21, 21, 13] {
+            key(&mut e, k);
+        }
+        assert_eq!(e.vm().pc(), message_pc);
+        let saved = e.files().file("/LavaData/dgz.sav").unwrap().to_vec();
+        assert_eq!(saved.len(), 1433);
+        assert_eq!(saved[0x50], 1);
+        assert_eq!(saved[0x11d], 0);
+        capture(&e, &format!("empire-{version}-saved-pending"));
+        key(&mut e, 13);
+        capture(&e, &format!("empire-{version}-credits"));
+        let mut halted = false;
+        e.input_mut().release_all();
+        for frame in 0..600 {
+            e.input_mut().set_keys((frame < 3).then_some(13));
+            if e.run_frame().unwrap().status == FrameStatus::Halted(0) {
+                halted = true;
+                break;
+            }
+        }
+        assert!(halted);
+        let mut restored = load(&path);
+        restored
+            .files_mut()
+            .import_file("/LavaData/dgz.sav", saved.clone());
+        advance(&mut restored, 1200);
+        assert_eq!(restored.vm().pc(), message_pc);
+        assert_eq!(restored.vm().memory()[0x2050], 1);
+        assert_eq!(restored.vm().memory()[0x211d], 0);
+        assert_eq!((number(&restored, 0x2000), number(&restored, 0x2008)), paid);
+        capture(&restored, &format!("empire-{version}-restored-pending"));
+        key(&mut restored, 13);
+        assert_eq!(restored.vm().pc(), main_pc);
+        for _ in 0..7200 {
+            if restored.vm().memory()[0x2050] == 0 {
+                break;
+            }
+            advance(&mut restored, 1);
+        }
+        advance(&mut restored, 120);
+        assert_eq!(restored.vm().memory()[0x2050], 0);
+        assert_eq!(restored.vm().memory()[0x211d], 1);
+        assert_eq!(number(&restored, 0x2034), 8);
+        assert_eq!(
+            (number(&restored, 0x2000), number(&restored, 0x2008)),
+            paid,
+            "resource refresh must retain construction costs"
+        );
+        assert_eq!(
+            restored.files().file("/LavaData/dgz.sav"),
+            Some(saved.as_slice())
+        );
+        capture(&restored, &format!("empire-{version}-upgrade-completed"));
+        key(&mut restored, 13);
+        key(&mut restored, 13);
+        key(&mut restored, 13);
+        capture(&restored, &format!("empire-{version}-level-one"));
+        key(&mut restored, b'u');
+        assert_eq!(restored.vm().memory()[0x2050], 1);
+        assert_eq!(restored.vm().memory()[0x211d], 1);
+        assert!(number(&restored, 0x2000) < paid.0);
+        capture(&restored, &format!("empire-{version}-continued-upgrade"));
+    }
+}

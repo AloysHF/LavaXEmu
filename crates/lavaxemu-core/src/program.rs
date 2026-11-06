@@ -98,10 +98,92 @@ pub struct Program {
     image: Vec<u8>,
 }
 
+fn repair_empire_timers(image: &mut Vec<u8>) {
+    fn replace(image: &mut Vec<u8>, pattern: &[u8], body: &[u8], length: usize) {
+        let pc = image
+            .windows(pattern.len())
+            .position(|bytes| bytes == pattern)
+            .expect("fingerprinted instruction sequence");
+        let target = image.len() as u32;
+        image.extend_from_slice(body);
+        image.push(0x3b);
+        image.extend_from_slice(&((pc + length) as u32).to_le_bytes()[..3]);
+        image[pc] = 0x3b;
+        image[pc + 1..pc + 4].copy_from_slice(&target.to_le_bytes()[..3]);
+        image[pc + 4..pc + length].fill(0);
+    }
+    // Use the day in both sides of construction and troop timer comparisons.
+    for base in [0x20fdu16, 0x210d, 0x20bd] {
+        let [low, high] = base.to_le_bytes();
+        let seconds = [0x07, low, high, 0x21];
+        let mut body = seconds.to_vec();
+        if base == 0x20bd {
+            body.extend_from_slice(&[0x0e, 0x44, 0, 0x4a, 1, 0, 0x0e, 0x43, 0, 0x21]);
+        } else {
+            body.extend_from_slice(&[0x0e, 0x43, 0]);
+        }
+        body.extend_from_slice(&[
+            0x4a, 3, 0, 0x45, 3, 0, 0x07, low, high, 0x03, 0x80, 0x51, 1, 0, 0x2a, 0x21,
+        ]);
+        let mut pattern = seconds.to_vec();
+        pattern.extend_from_slice(if base == 0x20bd {
+            &[0x35, 0x38]
+        } else {
+            &[0x32, 0x27]
+        });
+        for _ in 0..2 {
+            replace(image, &pattern, &body, 4);
+        }
+    }
+    // Initialize the resource timestamp with the same day-based time unit.
+    replace(
+        image,
+        &[0x04, 0xb3, 0x20, 0x21, 0x35, 0x38, 0x03, 5, 0, 0x81, 0],
+        &[
+            0x04, 0xb3, 0x20, 0x21, 0x04, 0xb0, 0x20, 0x03, 0x80, 0x51, 1, 0, 0x2a, 0x21,
+        ],
+        4,
+    );
+    // Subtract the stored resource timestamp rather than its address literal.
+    for _ in 0..2 {
+        replace(
+            image,
+            &[0x10, 5, 0, 0x46, 0x74, 0x20, 0x50, 10, 0],
+            &[0x10, 5, 0, 0x06, 0x74, 0x20, 0x22, 0x50, 10, 0],
+            9,
+        );
+    }
+    // Keep the next resource snapshot consistent with construction costs.
+    let mut body = Vec::new();
+    for (address, cost) in [(0x2018u16, 5), (0x2020, 9), (0x2028, 13)] {
+        let [low, high] = address.to_le_bytes();
+        body.extend_from_slice(&[
+            0x03, low, high, 4, 0, 0x06, low, high, 0x01, 0, 0x0e, 5, 0, 0x21, 0x47, 0x13, 0, 0x45,
+            cost, 0, 0x09, 0x1d, 0x21, 0x22, 0x35, 0x38,
+        ]);
+    }
+    body.extend_from_slice(&[0x02, 0xad, 0x20, 0xc2]);
+    replace(
+        image,
+        &[
+            0x02, 0xad, 0x20, 0xc2, 0x01, 0, 0x0e, 9, 0, 0x21, 0x4a, 3, 0, 0x45, 0xbd, 0x20, 0xc2,
+        ],
+        &body,
+        4,
+    );
+}
+
 impl Program {
     pub fn load(data: &[u8]) -> Result<Self> {
         let header = ProgramHeader::parse(data)?;
         let mut image = data.to_vec();
+        if matches!(
+            (image.len(), crc32fast::hash(&image)),
+            (35_213, 0xba73_8ddc) | (35_313, 0xa7af_34c5)
+        ) {
+            repair_empire_timers(&mut image);
+        }
+
         if image.len() == 23_739
             && crc32fast::hash(&image) == 0x12e8_a226
             && image[0x573a] == 0x31
@@ -547,6 +629,19 @@ mod tests {
         let program = Program::load(&original).unwrap();
         assert_eq!(original, saved);
         assert_eq!(program.image(), original);
+    }
+
+    #[test]
+    fn leaves_similar_empire_timer_programs_unmodified() {
+        for length in [35_213, 35_313] {
+            let mut original = image(0, 0, 0);
+            original.resize(length, 0);
+            original[0x5fd9..0x5fe2].copy_from_slice(&[0x10, 5, 0, 0x46, 0x74, 0x20, 0x50, 10, 0]);
+            let saved = original.clone();
+            let program = Program::load(&original).unwrap();
+            assert_eq!(original, saved);
+            assert_eq!(program.image(), original);
+        }
     }
 
     #[test]
