@@ -2122,3 +2122,19 @@ without an execution error alone does not establish playability.
   claiming coverage of all historical saves or counter limits. Captures are
   reviewed locally. No emulator behavior changes are needed; game content and
   captures are not distributed.
+
+## Village Gold (山村淘金记)
+
+- Run the packaged and loose versions through startup, the introduction and
+  actual name entry. Finish the mayor's opening dialogue and check the map
+  begins at (12, 15), retaining the entered name.
+- Walk east, check the southern obstacle prevents movement, then walk east
+  again. Assert world coordinates after each action. Open the status view,
+  browse all five menu sections and save through the first native diary slot.
+- Import that genuine 414-byte save into a fresh instance and load it through
+  the title menu. Check position, name and cash match the saved game, the save
+  remains unchanged and walking can continue. Review all ten capture pairs;
+  both distributions produce identical images.
+- This adds reproducible coverage without changing emulator behavior. Business,
+  mining, every interaction and the ten-year ending remain unverified. Game
+  content and captures are not distributed.

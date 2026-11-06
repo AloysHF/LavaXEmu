@@ -10124,3 +10124,101 @@ fn mountain_go_converter_preserves_a_legacy_record_and_reloads_its_output() {
     assert_eq!(restored.vm().memory()[0x2094 + 19 + 1], 1);
     capture(&restored, "mountain-go-converter-output-continued");
 }
+
+#[test]
+#[ignore = "requires the local game corpus via LAVAX_GAME_ROOT"]
+fn village_gold_versions_explore_and_restore_a_native_diary() {
+    fn key(e: &mut Emulator, k: u8, frames: usize, held: usize) {
+        e.input_mut().release_all();
+        for frame in 0..frames {
+            e.input_mut().set_keys((frame < held).then_some(k));
+            advance(e, 1);
+        }
+    }
+    fn title(e: &mut Emulator) {
+        advance(e, 1200);
+        for _ in 0..3 {
+            key(e, 13, 120, 3);
+        }
+        assert_eq!(e.vm().pc(), 0xf078);
+    }
+    fn position(e: &Emulator) -> (u16, u16) {
+        let m = e.vm().memory();
+        (
+            u16::from(m[0x37bc]) + u16::from(m[0x37be]),
+            u16::from(m[0x37bd]) + u16::from(m[0x37bf]),
+        )
+    }
+    for (version, filename) in [("loose", "山村淘金记.lav"), ("packaged", "gold.pac")] {
+        let path = fixture_path(filename);
+        let mut e = load(&path);
+        title(&mut e);
+        capture(&e, &format!("village-gold-{version}-title"));
+        key(&mut e, 13, 120, 3);
+        advance(&mut e, 3600);
+        assert_eq!(e.vm().pc(), 0xf193);
+        for k in [b'e', b'm', b'u', 13] {
+            key(&mut e, k, 120, 3);
+        }
+        capture(&e, &format!("village-gold-{version}-welcome"));
+        for _ in 0..30 {
+            if e.vm().pc() == 0x10311 {
+                break;
+            }
+            key(&mut e, 13, 240, 18);
+        }
+        assert_eq!(e.vm().pc(), 0x10311);
+        assert_eq!(position(&e), (12, 15));
+        assert_eq!(&e.vm().memory()[0x379a..0x379e], b"emu\0");
+        capture(&e, &format!("village-gold-{version}-map"));
+        key(&mut e, 22, 120, 18);
+        assert_eq!(position(&e), (13, 15));
+        key(&mut e, 21, 120, 18);
+        assert_eq!(
+            position(&e),
+            (13, 15),
+            "the southern obstacle blocks movement"
+        );
+        key(&mut e, 22, 120, 18);
+        assert_eq!(position(&e), (14, 15));
+        capture(&e, &format!("village-gold-{version}-moved"));
+        key(&mut e, 28, 120, 18);
+        capture(&e, &format!("village-gold-{version}-status"));
+        for _ in 0..4 {
+            key(&mut e, 14, 120, 3);
+        }
+        capture(&e, &format!("village-gold-{version}-system"));
+        key(&mut e, 13, 120, 3);
+        assert_eq!(e.vm().pc(), 0x2471);
+        let saved = e.files().file("/LavaData/goldsave0.dat").unwrap().to_vec();
+        assert_eq!(saved.len(), 414);
+        let saved_position = position(&e);
+        let money = e.vm().memory()[0x37c7..0x37cb].to_vec();
+        capture(&e, &format!("village-gold-{version}-saved"));
+        let mut restored = load(&path);
+        restored
+            .files_mut()
+            .import_file("/LavaData/goldsave0.dat", saved.clone());
+        title(&mut restored);
+        for k in [22, 13, 13] {
+            key(&mut restored, k, 120, 3);
+        }
+        assert_eq!(restored.vm().pc(), 0x3251);
+        capture(
+            &restored,
+            &format!("village-gold-{version}-load-confirmation"),
+        );
+        key(&mut restored, 13, 120, 3);
+        assert_eq!(position(&restored), saved_position);
+        assert_eq!(&restored.vm().memory()[0x379a..0x379e], b"emu\0");
+        assert_eq!(&restored.vm().memory()[0x37c7..0x37cb], money);
+        assert_eq!(
+            restored.files().file("/LavaData/goldsave0.dat"),
+            Some(saved.as_slice())
+        );
+        capture(&restored, &format!("village-gold-{version}-restored"));
+        key(&mut restored, 23, 120, 18);
+        assert_eq!(position(&restored), (13, 15));
+        capture(&restored, &format!("village-gold-{version}-continued"));
+    }
+}

@@ -48,6 +48,8 @@ being progressively improved.
   programs without uploading them
 
 Compatibility evidence is tracked in the [workflow audit](docs/Game-Corpus-Audit.md).
+Village Gold packaged and loose versions have a workflow for name entry, opening
+dialogue, movement, obstacle collision, menus and native diary saving/loading.
 Mountain Go v2.0 has a workflow for alternating moves, corner capture, undo/redo
 and native record saving, fresh loading and continued play. The v2.19 monochrome
 and grayscale builds also cover record selection through the file list. The save
