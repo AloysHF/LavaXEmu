@@ -10706,3 +10706,118 @@ fn sky_and_land_three_demo_travels_fights_heals_and_restores_its_account() {
     }
     assert!(halted);
 }
+
+#[test]
+#[ignore = "requires the local game corpus via LAVAX_GAME_ROOT"]
+fn phantom_fighter_moves_pauses_destroys_enemies_and_reaches_stage_two() {
+    fn word(e: &Emulator, a: usize) -> u16 {
+        u16::from_le_bytes(e.vm().memory()[a..a + 2].try_into().unwrap())
+    }
+    fn ticks(e: &Emulator) -> u32 {
+        u32::from_le_bytes(e.vm().memory()[0x2e03..0x2e07].try_into().unwrap())
+    }
+    fn key(e: &mut Emulator, k: u8, frames: usize, held: usize) {
+        e.input_mut().release_all();
+        for frame in 0..frames {
+            e.input_mut().set_keys((frame < held).then_some(k));
+            advance(e, 1);
+        }
+    }
+    let mut e = load(&fixture_path("幻影战机.lav"));
+    advance(&mut e, 1200);
+    capture(&e, "phantom-intro");
+    key(&mut e, 13, 120, 18);
+    capture(&e, "phantom-title");
+    key(&mut e, 13, 120, 18);
+    let menu = e.clone();
+    capture(&e, "phantom-menu");
+    key(&mut e, 13, 120, 18);
+    advance(&mut e, 600);
+    assert_eq!(e.vm().pc(), 0x3fa8);
+    capture(&e, "phantom-stage-one");
+    key(&mut e, 13, 120, 18);
+    assert_eq!(word(&e, 0x2de3), 600);
+    assert_eq!(ticks(&e), 60);
+    for (k, address, bound, label) in [
+        (22, 0x2de5, 1530, "right"),
+        (23, 0x2de5, 120, "left"),
+        (20, 0x2de7, 100, "top"),
+        (21, 0x2de7, 690, "bottom"),
+    ] {
+        let mut moved = e.clone();
+        key(&mut moved, k, 240, 240);
+        assert_eq!(word(&moved, address), bound);
+        capture(&moved, &format!("phantom-{label}-bound"));
+    }
+    let mut paused = e.clone();
+    key(&mut paused, b'p', 120, 18);
+    assert_eq!(paused.vm().pc(), 0x4423);
+    let frozen = paused.vm().memory()[0x2c51..0x2ea7].to_vec();
+    advance(&mut paused, 300);
+    assert_eq!(&paused.vm().memory()[0x2c51..0x2ea7], frozen);
+    capture(&paused, "phantom-paused");
+    key(&mut paused, 13, 120, 18);
+    assert!(ticks(&paused) > ticks(&e));
+    capture(&paused, "phantom-resumed");
+    // Each digit holds fire, optionally with up/down/right/left, for 24 frames.
+    let actions = b"1003020030001000000002000100002000000000000010000002001004421000020000102013302000001020000100430000214402012330100002000100442000030300010020010204434100023400134200103040200100020100210213402010203040010020103042123412000102033102010002000010424120341002003412000102133020000010402013";
+    let mut fired = false;
+    let mut destroyed = false;
+    let mut damaged = false;
+    let mut elapsed = 0;
+    for (step, &action) in actions.iter().enumerate() {
+        let direction = match action {
+            b'0' => None,
+            b'1' => Some(20),
+            b'2' => Some(21),
+            b'3' => Some(22),
+            b'4' => Some(23),
+            _ => unreachable!(),
+        };
+        for _ in 0..24 {
+            let before: Vec<_> = (0..6)
+                .map(|i| (word(&e, 0x2e07 + i * 2), word(&e, 0x2e1b + i * 2) as i16))
+                .collect();
+            e.input_mut()
+                .set_keys(std::iter::once(b'a').chain(direction));
+            advance(&mut e, 1);
+            fired |= (0..6).any(|i| word(&e, 0x2d7d + i * 2) == 1);
+            destroyed |= before.iter().enumerate().any(|(i, &(kind, hp))| {
+                (1..=10).contains(&kind) && hp > 0 && word(&e, 0x2e1b + i * 2) as i16 <= 0
+            });
+            damaged |= word(&e, 0x2de3) < 600;
+            elapsed = elapsed.max(ticks(&e));
+            assert!(word(&e, 0x2de3) > 0);
+        }
+        if step == 100 || step == 200 {
+            capture(&e, &format!("phantom-combat-{step}"));
+        }
+    }
+    assert!(fired && destroyed && damaged);
+    assert!(elapsed > 2000);
+    assert_eq!(word(&e, 0x2c4f), 2);
+    assert_eq!(word(&e, 0x2de3), 600);
+    assert_eq!(word(&e, 0x2df5), 10);
+    assert_eq!(word(&e, 0x2df9), 2);
+    capture(&e, "phantom-stage-two-upgrade");
+    e.input_mut().release_all();
+    key(&mut e, 13, 120, 18);
+    key(&mut e, b'a', 60, 18);
+    assert_eq!(word(&e, 0x2c4f), 2);
+    capture(&e, "phantom-stage-two-playing");
+    let mut quitter = menu;
+    for k in [21, 22] {
+        key(&mut quitter, k, 120, 3);
+    }
+    capture(&quitter, "phantom-abandon-menu");
+    quitter.input_mut().release_all();
+    let mut halted = false;
+    for frame in 0..300 {
+        quitter.input_mut().set_keys((frame < 18).then_some(13));
+        if quitter.run_frame().unwrap().status == FrameStatus::Halted(0) {
+            halted = true;
+            break;
+        }
+    }
+    assert!(halted);
+}

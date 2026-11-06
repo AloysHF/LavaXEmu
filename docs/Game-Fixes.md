@@ -2210,3 +2210,19 @@ without an execution error alone does not establish playability.
 - This adds reproducible coverage without changing emulator behavior. All quests,
   other classes, skills and every demo area remain unverified. Game content and
   captures are not distributed.
+
+## Phantom Fighter (幻影战机)
+
+- Review the introduction, title, menu and first-stage start. Check all four
+  movement bounds through actual held arrows. Pause through P, check the native
+  timer and gameplay memory remain unchanged for 300 frames, then resume.
+- Replay a fixed sequence of actual fire and directional inputs through the
+  first stage. Check player bullets appear, enemy health reaches zero, the
+  character takes damage and survives, and the stage timer exceeds 2,000 ticks.
+  No guest memory is modified to construct enemies or progress.
+- Check the native stage advances to two, health resets and weapon power and
+  firing mode upgrade. Acknowledge the second-stage start and continue shooting.
+  Review the native abandon-menu selection and check normal exit.
+- This adds reproducible coverage without changing emulator behavior. Later
+  stages, every weapon interaction and the ending remain unverified. Captures
+  are reviewed locally; game content and captures are not distributed.

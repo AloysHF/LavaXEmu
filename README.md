@@ -48,6 +48,8 @@ being progressively improved.
   programs without uploading them
 
 Compatibility evidence is tracked in the [workflow audit](docs/Game-Corpus-Audit.md).
+Phantom Fighter has a workflow for movement bounds, pause/resume, shooting,
+enemy destruction and the first-stage clear with the second-stage weapon upgrade.
 Sky and Land III demo has a workflow for three areas, dialogue, combat rewards,
 potion use, native account saving/loading and confirmed exit.
 Sky and Land II has a workflow for character creation, village/field transitions,

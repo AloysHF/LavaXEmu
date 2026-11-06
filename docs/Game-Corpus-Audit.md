@@ -18,9 +18,9 @@ do not satisfy this status.
 - Shared guest text memory checked on 2026-11-01: all 75 dedicated release workflows passed after the text-buffer repair and state migration.
 - Inverted TextOut checked on 2026-11-01: all 77 dedicated release workflows passed after honoring the source-inversion flag.
 - Virtual storage capacity checked on 2026-11-05: all 95 existing dedicated release workflows passed after the DiskCheck repair.
-- 110 dedicated release workflows passed in this audit.
-- 166 of 324 entry points were loaded by those successful workflows.
-- 158 entry points still need dedicated workflow verification.
+- 111 dedicated release workflows passed in this audit.
+- 167 of 324 entry points were loaded by those successful workflows.
+- 157 entry points still need dedicated workflow verification.
 - The historical [startup gallery](Game-Compatibility.md) is a separate check
   and must not be interpreted as this workflow audit.
 
@@ -180,7 +180,7 @@ an optional screenshot directory. Keep each test's logs and captures separate.
 | 136 | `LAVA1 幕天席地3v0.7DEMO/幕天席地3_plus.lav` | Game / game package | [Workflow passed: `sky_and_land_three_demo_travels_fights_heals_and_restores_its_account`](../crates/lavaxemu/tests/game_compatibility.rs#L10575) |
 | 137 | `LAVA1 平面魔方/平面魔方.pac` | Game / game package | [Workflow passed: `flat_cube_selects_shifts_swaps_and_returns_to_the_menu`](../crates/lavaxemu/tests/game_compatibility.rs#L1270) |
 | 138 | `LAVA1 平面魔方/非pac/平面魔方.lav` | Game / game package | [Workflow passed: `flat_cube_selects_shifts_swaps_and_returns_to_the_menu`](../crates/lavaxemu/tests/game_compatibility.rs#L1270) |
-| 139 | `LAVA1 幻影战机/幻影战机.lav` | Game / game package | Pending |
+| 139 | `LAVA1 幻影战机/幻影战机.lav` | Game / game package | [Workflow passed: `phantom_fighter_moves_pauses_destroys_enemies_and_reaches_stage_two`](../crates/lavaxemu/tests/game_compatibility.rs#L10712) |
 | 140 | `LAVA1 幽灵屋/105(打包后的).pac` | Game / game package | Pending |
 | 141 | `LAVA1 幽灵屋/105.lav` | Game / game package | Pending |
 | 142 | `LAVA1 异域传说序章/Land.pac` | Game / game package | Pending |
