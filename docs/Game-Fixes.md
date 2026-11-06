@@ -2226,3 +2226,23 @@ without an execution error alone does not establish playability.
 - This adds reproducible coverage without changing emulator behavior. Later
   stages, every weapon interaction and the ending remain unverified. Captures
   are reviewed locally; game content and captures are not distributed.
+
+## Ghost House (幽灵屋)
+
+- The identified release reverses its two load-menu choices: choosing the first
+  slot reads the second native file. With only a first-slot save, it reads missing
+  data as invalid level and life values. Repair the selected-slot predicate in
+  the loaded image, guarded by program length and CRC; leave original files and
+  general VM/file behavior unchanged. A negative fingerprint test protects
+  unrelated programs.
+- Replay the loose and packaged versions through native easy settings, collecting
+  four charms through springs and falling passages to reach stage two. Check
+  ghost capture decrements life and restarts the first stage; verify P freezes
+  gameplay for 300 frames and confirmation resumes it.
+- Save distinct two- and three-charm positions through F1 and F2. Import each
+  genuine 151-byte file and the native settings into a fresh instance, select
+  its matching menu slot, and assert all map cells, positions, level, lives and
+  collected count restore. Continue moving after each reload. Return to the
+  menu and check normal exit; review all stage captures locally.
+- Other difficulty modes, later levels and the ending remain unverified. Game
+  content, saved data and captures are not distributed.

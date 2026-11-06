@@ -177,6 +177,11 @@ impl Program {
     pub fn load(data: &[u8]) -> Result<Self> {
         let header = ProgramHeader::parse(data)?;
         let mut image = data.to_vec();
+        if image.len() == 8_520 && crc32fast::hash(&image) == 0xd20c_4c1f {
+            // Match the selected first save slot to its native file.
+            image[0x07b0..0x07b2].copy_from_slice(&9u16.to_le_bytes());
+        }
+
         if image.len() == 8_313 && crc32fast::hash(&image) == 0xc4b2_948b {
             // Redraw the helper menu instead of treating the catalog's Escape as exit.
             let trampoline = image.len() as u32;
@@ -633,6 +638,17 @@ mod tests {
         original.resize(9_748, 0);
         original[0x2441..0x2445].copy_from_slice(&[0x3d, 0xa4, 0x1a, 0]);
         original[0x1fc0..0x1fc4].copy_from_slice(&[1, 0, 1, 0]);
+        let saved = original.clone();
+        let program = Program::load(&original).unwrap();
+        assert_eq!(original, saved);
+        assert_eq!(program.image(), original);
+    }
+
+    #[test]
+    fn leaves_similar_ghost_house_save_programs_unmodified() {
+        let mut original = image(0, 0, 0);
+        original.resize(8_520, 0);
+        original[0x07ac..0x07b3].copy_from_slice(&[0x0f, 7, 0, 0x4c, 1, 0, 0x38]);
         let saved = original.clone();
         let program = Program::load(&original).unwrap();
         assert_eq!(original, saved);

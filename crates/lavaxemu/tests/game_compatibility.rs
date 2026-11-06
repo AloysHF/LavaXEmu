@@ -10821,3 +10821,163 @@ fn phantom_fighter_moves_pauses_destroys_enemies_and_reaches_stage_two() {
     }
     assert!(halted);
 }
+
+#[test]
+#[ignore = "requires the local game corpus via LAVAX_GAME_ROOT"]
+fn ghost_house_versions_collect_charms_clear_stage_pause_and_restore_both_save_slots() {
+    fn word(e: &Emulator, address: usize) -> u16 {
+        u16::from_le_bytes(e.vm().memory()[address..address + 2].try_into().unwrap())
+    }
+    fn key(e: &mut Emulator, k: u8, frames: usize, held: usize) {
+        e.input_mut().release_all();
+        for frame in 0..frames {
+            e.input_mut()
+                .set_keys((k != 0 && frame < held).then_some(k));
+            advance(e, 1);
+        }
+    }
+    fn save_and_restore(e: &Emulator, path: &str, slot: u8, prefix: &str) {
+        let mut saving = e.clone();
+        key(&mut saving, 27 + slot, 60, 6);
+        let name = format!("/GVMdata/save{slot}.dat");
+        let saved = saving.files().file(&name).unwrap().to_vec();
+        assert_eq!(saved.len(), 151);
+        assert_eq!(saved[148], 1);
+        assert_eq!(saved[149], 5);
+        assert_eq!(u16::from(saved[150]), word(e, 0x241c));
+        capture(&saving, &format!("{prefix}-slot-{slot}-saved"));
+        let mut restored = load(path);
+        restored.files_mut().import_file(&name, saved.clone());
+        restored.files_mut().import_file(
+            "/GVMdata/sys.dat",
+            e.files().file("/GVMdata/sys.dat").unwrap().to_vec(),
+        );
+        advance(&mut restored, 1200);
+        for k in [21, 13] {
+            key(&mut restored, k, 360, 6);
+        }
+        if slot == 2 {
+            key(&mut restored, 21, 60, 6);
+        }
+        capture(&restored, &format!("{prefix}-slot-{slot}-selected"));
+        key(&mut restored, 13, 60, 6);
+        for (address, value) in [
+            (0x257c, saved[145]),
+            (0x257e, saved[144]),
+            (0x258c, saved[146]),
+            (0x258e, saved[147]),
+            (0x2590, saved[148]),
+            (0x2592, saved[149]),
+            (0x241c, saved[150]),
+        ] {
+            assert_eq!(
+                word(&restored, address),
+                u16::from(value),
+                "slot {slot}, {address:x}"
+            );
+        }
+        for x in 1..=24 {
+            for y in 1..=6 {
+                assert_eq!(
+                    word(&restored, 0x241e + (x * 7 + y) * 2),
+                    u16::from(saved[(x - 1) * 6 + y - 1])
+                );
+            }
+        }
+        advance(&mut restored, 250);
+        capture(&restored, &format!("{prefix}-slot-{slot}-restored"));
+        let before = word(&restored, 0x2584);
+        key(&mut restored, 22, 18, 18);
+        assert!(
+            word(&restored, 0x2584) > before,
+            "slot {slot} before {before} after {} y{} ghost{},{} pc{:x}",
+            word(&restored, 0x2584),
+            word(&restored, 0x2586),
+            word(&restored, 0x2588),
+            word(&restored, 0x258a),
+            restored.vm().pc()
+        );
+        assert_eq!(word(&restored, 0x2592), 5);
+        assert_eq!(restored.files().file(&name), Some(saved.as_slice()));
+        capture(&restored, &format!("{prefix}-slot-{slot}-continued"));
+    }
+    for (file, prefix) in [
+        ("105.lav", "ghost-loose"),
+        ("105(打包后的).pac", "ghost-package"),
+    ] {
+        let path = fixture_path(file);
+        let mut e = load(&path);
+        advance(&mut e, 1200);
+        capture(&e, &format!("{prefix}-title"));
+        for k in [21, 21, 21, 13, 21, 23, 23] {
+            key(&mut e, k, 360, 6);
+        }
+        capture(&e, &format!("{prefix}-easy-setting"));
+        key(&mut e, 27, 360, 6);
+        assert_eq!(e.files().file("/GVMdata/sys.dat"), Some([20, 0].as_slice()));
+        for k in [20, 20, 20, 13, 0, 0] {
+            key(&mut e, k, 360, 6);
+        }
+        assert_eq!(word(&e, 0x2590), 1);
+        assert_eq!(word(&e, 0x2592), 5);
+        capture(&e, &format!("{prefix}-stage-one"));
+        let mut caught = e.clone();
+        advance(&mut caught, 2400);
+        assert!(matches!(caught.vm().pc(), 0x211e | 0x2120));
+        capture(&caught, &format!("{prefix}-caught"));
+        for _ in 0..2 {
+            key(&mut caught, 13, 60, 6);
+        }
+        advance(&mut caught, 360);
+        assert_eq!(word(&caught, 0x2592), 4);
+        assert_eq!(word(&caught, 0x2590), 1);
+        assert_eq!(word(&caught, 0x241c), 0);
+        capture(&caught, &format!("{prefix}-life-lost-restarted"));
+        let mut paused = e.clone();
+        key(&mut paused, b'p', 60, 6);
+        assert_eq!(paused.vm().pc(), 0x095d);
+        let frozen = paused.vm().memory()[0x241c..0x2596].to_vec();
+        advance(&mut paused, 300);
+        assert_eq!(&paused.vm().memory()[0x241c..0x2596], frozen);
+        capture(&paused, &format!("{prefix}-paused"));
+        key(&mut paused, 13, 60, 6);
+        assert_ne!(&paused.vm().memory()[0x241c..0x2596], frozen);
+        capture(&paused, &format!("{prefix}-resumed"));
+        let route = [
+            22, 22, 22, 22, 22, 22, 0, 23, 23, 23, 23, 22, 22, 22, 22, 0, 22, 22, 0, 0, 0, 0, 0,
+            22, 22, 22, 22, 22, 22, 22, 0, 0, 0, 0, 0, 22, 22, 22, 22, 22, 22, 22, 22, 22, 0, 22,
+            23, 0, 22, 22,
+        ];
+        for (i, k) in route.into_iter().enumerate() {
+            key(&mut e, k, 18, 18);
+            if i == 10 {
+                assert_eq!(word(&e, 0x241c), 2);
+                capture(&e, &format!("{prefix}-two-charms"));
+                save_and_restore(&e, &path, 1, prefix);
+            }
+            if i == 25 {
+                assert_eq!(word(&e, 0x241c), 3);
+                capture(&e, &format!("{prefix}-three-charms"));
+                save_and_restore(&e, &path, 2, prefix);
+            }
+        }
+        assert_eq!(word(&e, 0x2590), 2);
+        assert_eq!(word(&e, 0x2592), 5);
+        assert_eq!(word(&e, 0x241c), 0);
+        capture(&e, &format!("{prefix}-stage-two-announcement"));
+        advance(&mut e, 360);
+        capture(&e, &format!("{prefix}-stage-two"));
+        key(&mut e, 27, 60, 6);
+        assert_eq!(e.vm().pc(), 0x10d3);
+        capture(&e, &format!("{prefix}-returned-menu"));
+        let mut halted = false;
+        for frame in 0..120 {
+            e.input_mut().set_keys((frame < 6).then_some(27));
+            if e.run_frame().unwrap().status == FrameStatus::Halted(0) {
+                halted = true;
+                break;
+            }
+        }
+        assert!(halted);
+    }
+}

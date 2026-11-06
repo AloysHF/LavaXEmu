@@ -74,6 +74,8 @@ resource timestamp value instead of its address literal, and retains constructio
 costs in the resource snapshot. It is restricted to two length/CRC fingerprints.
 The Sky and Land Helper repair returns from monster browsing to the menu redraw
 path, preventing its Escape key from also triggering exit, for one fingerprint.
+The Ghost House repair matches the first selected save slot to its first native
+file, correcting reversed load-menu selection for one length/CRC fingerprint.
 These repairs do not modify the content file or
 change the VM's general stack, local variables or file-seek bounds.
 
