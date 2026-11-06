@@ -2020,3 +2020,19 @@ without an execution error alone does not establish playability.
   Captures are reviewed locally. No emulator behavior change is required;
   solving the later mystery and every optional menu action remain unverified.
   Game content and saves are not distributed.
+
+
+## Rich World (富甲天下)
+
+- Check packaged and loose versions through the animated introduction, main
+  menu, three-player setup and map. Stop each of the first two players' rolls
+  with a fresh Enter press, check actual player coordinates change and control
+  passes from player one to two to three. Decline continuation of the native
+  casino event when it occurs so the turn can finish.
+- Open System, choose the first native save slot and acknowledge completion.
+  Import the actual 3,474-byte file into a fresh emulator, choose Load and the
+  same slot, acknowledge loading, then check player three remains current and
+  all three players' records match, including their positions and resources.
+- Check normal exit through System. Captures are reviewed locally. No emulator
+  behavior change is required. Combat, every city action and campaign victory
+  remain unverified. Game content, saves and captures are not distributed.

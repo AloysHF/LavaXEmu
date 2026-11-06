@@ -9389,3 +9389,106 @@ fn locked_room_creates_an_account_moves_triggers_a_scene_and_restores_progress()
     }
     assert!(halted, "exiting the title menu must terminate normally");
 }
+
+#[test]
+#[ignore = "requires the local game corpus via LAVAX_GAME_ROOT"]
+fn rich_world_versions_move_take_turns_and_restore_native_saves() {
+    fn key(e: &mut Emulator, k: u8, frames: usize) {
+        e.input_mut().release_all();
+        for f in 0..frames {
+            e.input_mut().set_keys((f < 3).then_some(k));
+            advance(e, 1);
+        }
+    }
+    fn menu(e: &mut Emulator) {
+        advance(e, 1200);
+        assert_eq!(e.vm().pc(), 0x19d1);
+        key(e, 13, 1200);
+        assert_eq!(e.vm().pc(), 0x1b97);
+        key(e, 13, 120);
+        assert_eq!(e.vm().pc(), 0x1d28);
+    }
+    fn position(e: &Emulator, player: usize) -> (u8, u8) {
+        let a = 0x334c + player * 51 + 48;
+        (e.vm().memory()[a], e.vm().memory()[a + 1])
+    }
+    for (filename, label) in [("富甲天下.lav", "loose"), ("富甲天下.pac", "packaged")] {
+        let path = fixture_path(filename);
+        let mut e = load(&path);
+        menu(&mut e);
+        capture(&e, &format!("rich-world-{label}-menu"));
+        key(&mut e, 13, 120);
+        assert_eq!(e.vm().pc(), 0x35a3);
+        capture(&e, &format!("rich-world-{label}-players"));
+        key(&mut e, 13, 120);
+        assert_eq!(e.vm().pc(), 0x91c3);
+        assert_eq!(e.vm().memory()[0x30df], 1);
+        capture(&e, &format!("rich-world-{label}-board"));
+        for player in 0..2 {
+            let before = position(&e, player);
+            key(&mut e, 13, 120);
+            capture(&e, &format!("rich-world-{label}-roll-{player}"));
+            key(&mut e, 13, 180);
+            capture(&e, &format!("rich-world-{label}-outcome-{player}"));
+            for _ in 0..12 {
+                match e.vm().pc() {
+                    0x397c | 0x3ab1 => key(&mut e, 27, 180),
+                    0x3dbb => key(&mut e, b'n', 180),
+                    _ => break,
+                }
+            }
+            assert_eq!(e.vm().pc(), 0x91c3);
+            assert_eq!(e.vm().memory()[0x30df], player as u8 + 2);
+            assert_ne!(position(&e, player), before);
+        }
+        capture(&e, &format!("rich-world-{label}-after-turns"));
+        for _ in 0..3 {
+            key(&mut e, 21, 120);
+        }
+        key(&mut e, 13, 120);
+        capture(&e, &format!("rich-world-{label}-system"));
+        key(&mut e, 21, 120);
+        key(&mut e, 13, 120);
+        key(&mut e, 13, 120);
+        assert_eq!(e.vm().pc(), 0x17d8);
+        capture(&e, &format!("rich-world-{label}-saved"));
+        let saved = e.files().file("/lavadata/rich01.dat").unwrap().to_vec();
+        assert_eq!(saved.len(), 3474);
+        let players = e.vm().memory()[0x334c..0x334c + 153].to_vec();
+        key(&mut e, 13, 120);
+        let mut restored = load(&path);
+        restored
+            .files_mut()
+            .import_file("/lavadata/rich01.dat", saved.clone());
+        menu(&mut restored);
+        key(&mut restored, 21, 120);
+        key(&mut restored, 13, 120);
+        key(&mut restored, 13, 120);
+        assert_eq!(restored.vm().pc(), 0x19b7);
+        key(&mut restored, 13, 120);
+        assert_eq!(restored.vm().pc(), 0x91c3);
+        assert_eq!(restored.vm().memory()[0x30df], 3);
+        assert_eq!(&restored.vm().memory()[0x334c..0x334c + 153], players);
+        assert_eq!(
+            restored.files().file("/lavadata/rich01.dat").unwrap(),
+            saved
+        );
+        capture(&restored, &format!("rich-world-{label}-restored"));
+        for _ in 0..3 {
+            key(&mut restored, 21, 120);
+        }
+        key(&mut restored, 13, 120);
+        key(&mut restored, 21, 120);
+        key(&mut restored, 21, 120);
+        restored.input_mut().set_keys([13]);
+        let mut halted = false;
+        for _ in 0..120 {
+            if restored.run_frame().unwrap().status == FrameStatus::Halted(0) {
+                halted = true;
+                break;
+            }
+            restored.input_mut().set_keys([]);
+        }
+        assert!(halted);
+    }
+}

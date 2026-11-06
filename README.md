@@ -134,6 +134,8 @@ Pixel Album has a workflow for 8×8 and 16×16 pixel editing, switching pictures
 native album saves and reopening the edited content in a fresh session.
 Locked Room has a workflow for a Pinyin account, password confirmation, map
 movement, a story-triggered scene transition and native progress restoration.
+Rich World packaged and loose versions have a workflow for player setup,
+movement, turn changes, native saves and restoration of all three players.
 
 ## Usage
 
