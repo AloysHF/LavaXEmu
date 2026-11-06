@@ -48,6 +48,8 @@ being progressively improved.
   programs without uploading them
 
 Compatibility evidence is tracked in the [workflow audit](docs/Game-Corpus-Audit.md).
+Sky and Land Helper can return from monster browsing to its menu. Its workflow
+reads a native account, views equipment and browses every monster and item.
 Empire v4.1 monochrome and grayscale builds preserve construction costs and
 pending upgrades across native saves, then finish the timed work and continue.
 Village Gold packaged and loose versions have a workflow for name entry, opening

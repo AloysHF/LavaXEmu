@@ -10338,3 +10338,118 @@ fn empire_versions_preserve_timed_construction_costs_and_pending_saves() {
         capture(&restored, &format!("empire-{version}-continued-upgrade"));
     }
 }
+
+#[test]
+#[ignore = "requires the local game corpus via LAVAX_GAME_ROOT"]
+fn sky_and_land_helper_reads_a_native_account_and_browses_its_catalogs() {
+    fn key(e: &mut Emulator, k: u8, frames: usize, held: usize) {
+        e.input_mut().release_all();
+        for frame in 0..frames {
+            e.input_mut().set_keys((frame < held).then_some(k));
+            advance(e, 1);
+        }
+    }
+    fn catalog_index(e: &Emulator) -> u16 {
+        let address = e.vm().local_bp() as usize + 5;
+        u16::from_le_bytes(e.vm().memory()[address..address + 2].try_into().unwrap())
+    }
+    let mut game = load(&fixture_path("幕天席地.lav"));
+    advance(&mut game, 300);
+    for k in [13, 13, 20, 13] {
+        hold(&mut game, k, 18);
+        advance(&mut game, 12);
+    }
+    for k in b"ylava"
+        .iter()
+        .copied()
+        .chain([13])
+        .chain(*b"test")
+        .chain([13])
+    {
+        press(&mut game, k);
+    }
+    advance(&mut game, 600);
+    hold(&mut game, 25, 18);
+    press(&mut game, 13);
+    let saved = game.files().file("/LavaData/lava.sls").unwrap().to_vec();
+    assert_eq!(saved.len(), 88);
+    let mut helper = load(&fixture_path("幕天助手.lav"));
+    helper
+        .files_mut()
+        .import_file("/LavaData/lava.sls", saved.clone());
+    advance(&mut helper, 1200);
+    capture(&helper, "sky-helper-splash");
+    key(&mut helper, 13, 600, 180);
+    capture(&helper, "sky-helper-title");
+    key(&mut helper, 13, 120, 3);
+    capture(&helper, "sky-helper-account-prompt");
+    for k in b"lava".iter().copied().chain([13]) {
+        key(&mut helper, k, 120, 3);
+    }
+    assert_eq!(&helper.vm().memory()[0x3202..0x3218], &saved[..22]);
+    assert_eq!(&helper.vm().memory()[0x3270..0x3284], &saved[22..42]);
+    capture(&helper, "sky-helper-menu");
+    key(&mut helper, 13, 120, 3);
+    assert_eq!(helper.vm().pc(), 0x119f);
+    capture(&helper, "sky-helper-stats");
+    key(&mut helper, 13, 120, 3);
+    capture(&helper, "sky-helper-equipment");
+    key(&mut helper, 13, 120, 3);
+    key(&mut helper, 21, 120, 3);
+    key(&mut helper, 13, 120, 3);
+    capture(&helper, "sky-helper-bag");
+    key(&mut helper, 27, 120, 3);
+    key(&mut helper, 21, 120, 3);
+    key(&mut helper, 13, 120, 3);
+    capture(&helper, "sky-helper-monster");
+    assert_eq!(catalog_index(&helper), 20);
+    key(&mut helper, 23, 120, 3);
+    assert_eq!(catalog_index(&helper), 20);
+    key(&mut helper, 22, 120, 3);
+    assert_eq!(catalog_index(&helper), 21);
+    capture(&helper, "sky-helper-next-monster");
+    for expected in 22..=43 {
+        key(&mut helper, 22, 120, 3);
+        assert_eq!(catalog_index(&helper), expected);
+    }
+    key(&mut helper, 22, 120, 3);
+    assert_eq!(catalog_index(&helper), 43);
+    capture(&helper, "sky-helper-last-monster");
+    key(&mut helper, 27, 120, 3);
+    assert_eq!(helper.vm().pc(), 0x1ede);
+    assert_eq!(helper.vm().memory()[0x36fa], 2);
+    capture(&helper, "sky-helper-returned-menu");
+    key(&mut helper, 21, 120, 3);
+    key(&mut helper, 13, 120, 3);
+    capture(&helper, "sky-helper-item");
+    assert_eq!(catalog_index(&helper), 0);
+    key(&mut helper, 23, 120, 3);
+    assert_eq!(catalog_index(&helper), 0);
+    key(&mut helper, 22, 120, 3);
+    assert_eq!(catalog_index(&helper), 1);
+    capture(&helper, "sky-helper-next-item");
+    for expected in 2..=49 {
+        key(&mut helper, 22, 120, 3);
+        assert_eq!(catalog_index(&helper), expected);
+    }
+    key(&mut helper, 22, 120, 3);
+    assert_eq!(catalog_index(&helper), 49);
+    capture(&helper, "sky-helper-last-item");
+    key(&mut helper, 27, 120, 3);
+    assert_eq!(
+        helper.files().file("/LavaData/lava.sls"),
+        Some(saved.as_slice())
+    );
+    key(&mut helper, 27, 120, 3);
+    capture(&helper, "sky-helper-credits");
+    let mut halted = false;
+    helper.input_mut().release_all();
+    for frame in 0..300 {
+        helper.input_mut().set_keys((frame < 3).then_some(13));
+        if helper.run_frame().unwrap().status == FrameStatus::Halted(0) {
+            halted = true;
+            break;
+        }
+    }
+    assert!(halted);
+}

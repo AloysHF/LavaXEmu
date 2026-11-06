@@ -2159,3 +2159,19 @@ without an execution error alone does not establish playability.
   operation. Both display modes have reviewed captures.
 - Combat, all unit types, month rollover and long-term economic progression
   remain unverified. Game content and captures are not distributed.
+
+## Sky and Land Helper (幕天助手)
+
+- Leaving monster information with Escape previously fell through to the main
+  menu's exit check with the same key value. Redirect that one fingerprinted
+  loaded image to redraw the menu after the catalog returns. Original content
+  and unrelated images remain unchanged.
+- Generate an actual game account and native 88-byte save, then read it through
+  the helper's account editor. Check the account and bag bytes match the genuine
+  record. Review character attributes, equipment and bag contents.
+- Browse all 24 monsters and 50 items using actual arrows, checking each native
+  index and both ends of each catalog. Leave monster information and assert
+  the main menu remains active, then enter item information. Verify browsing
+  leaves the account file unchanged, review credits and check normal exit.
+- Captures are reviewed locally. Item transfer is not covered by this workflow.
+  Game content and captures are not distributed.

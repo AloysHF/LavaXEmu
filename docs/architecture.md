@@ -72,6 +72,8 @@ reading and writing the imported picture payload for one identified release.
 The Empire v4.1 repair aligns stored and current timer timestamps, reads the
 resource timestamp value instead of its address literal, and retains construction
 costs in the resource snapshot. It is restricted to two length/CRC fingerprints.
+The Sky and Land Helper repair returns from monster browsing to the menu redraw
+path, preventing its Escape key from also triggering exit, for one fingerprint.
 These repairs do not modify the content file or
 change the VM's general stack, local variables or file-seek bounds.
 

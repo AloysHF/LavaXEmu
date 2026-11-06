@@ -177,6 +177,14 @@ impl Program {
     pub fn load(data: &[u8]) -> Result<Self> {
         let header = ProgramHeader::parse(data)?;
         let mut image = data.to_vec();
+        if image.len() == 8_313 && crc32fast::hash(&image) == 0xc4b2_948b {
+            // Redraw the helper menu instead of treating the catalog's Escape as exit.
+            let trampoline = image.len() as u32;
+            image.extend_from_slice(&[0x3d, 0x0a, 0x1a, 0, 0x3b, 0x15, 0x1e, 0]);
+            image[0x1f5c] = 0x3b;
+            image[0x1f5d..0x1f60].copy_from_slice(&trampoline.to_le_bytes()[..3]);
+        }
+
         if matches!(
             (image.len(), crc32fast::hash(&image)),
             (35_213, 0xba73_8ddc) | (35_313, 0xa7af_34c5)
@@ -625,6 +633,17 @@ mod tests {
         original.resize(9_748, 0);
         original[0x2441..0x2445].copy_from_slice(&[0x3d, 0xa4, 0x1a, 0]);
         original[0x1fc0..0x1fc4].copy_from_slice(&[1, 0, 1, 0]);
+        let saved = original.clone();
+        let program = Program::load(&original).unwrap();
+        assert_eq!(original, saved);
+        assert_eq!(program.image(), original);
+    }
+
+    #[test]
+    fn leaves_similar_helper_catalog_programs_unmodified() {
+        let mut original = image(0, 0, 0);
+        original.resize(8_313, 0);
+        original[0x1f5c..0x1f60].copy_from_slice(&[0x3d, 0x0a, 0x1a, 0]);
         let saved = original.clone();
         let program = Program::load(&original).unwrap();
         assert_eq!(original, saved);
