@@ -9492,3 +9492,192 @@ fn rich_world_versions_move_take_turns_and_restore_native_saves() {
         assert!(halted);
     }
 }
+
+#[test]
+#[ignore = "requires the local game corpus via LAVAX_GAME_ROOT"]
+fn battle_blocks_versions_control_both_boards_clear_a_line_pause_and_finish() {
+    fn run(e: &mut Emulator, keys: &[u8], frames: usize) {
+        for _ in 0..frames {
+            e.input_mut().set_keys(keys.iter().copied());
+            advance(e, 1);
+        }
+    }
+    fn key(e: &mut Emulator, k: u8) {
+        e.input_mut().release_all();
+        run(e, &[k], 3);
+        run(e, &[], 57);
+    }
+    fn score(e: &Emulator) -> u16 {
+        u16::from_le_bytes(e.vm().memory()[0x2523..0x2525].try_into().unwrap())
+    }
+    let device: &[(usize, u8)] = &[
+        (2, 8),
+        (0, 7),
+        (3, 7),
+        (0, 7),
+        (0, 8),
+        (0, 6),
+        (1, 8),
+        (0, 8),
+        (0, 8),
+        (0, 8),
+        (0, 5),
+        (2, 7),
+        (0, 8),
+        (0, 7),
+        (0, 4),
+        (0, 4),
+        (2, 5),
+        (0, 2),
+        (0, 2),
+        (2, 5),
+        (0, 2),
+        (0, 3),
+        (2, 5),
+        (0, 2),
+        (0, 0),
+    ];
+    let computer: &[(usize, u8)] = &[
+        (0, 2),
+        (0, 3),
+        (0, 1),
+        (0, 1),
+        (0, 2),
+        (0, 3),
+        (2, 2),
+        (0, 3),
+        (0, 3),
+        (1, 3),
+        (0, 0),
+        (0, 2),
+        (0, 5),
+        (1, 8),
+    ];
+    for (filename, label, recipe) in [
+        ("对战方块.lav", "device", device),
+        ("For Computer（模拟器用）.lav", "computer", computer),
+    ] {
+        let mut e = load(&fixture_path(filename));
+        advance(&mut e, 1200);
+        assert_eq!(e.vm().pc(), 0x3a5);
+        key(&mut e, 13);
+        assert_eq!(e.vm().pc(), 0x5d8);
+        key(&mut e, 13);
+        assert_eq!(e.vm().pc(), 0x8ff);
+        capture(&e, &format!("battle-blocks-{label}-controls"));
+        key(&mut e, b'y');
+        if label == "device" {
+            advance(&mut e, 60);
+        }
+        capture(&e, &format!("battle-blocks-{label}-board"));
+        let mut controls = e.clone();
+        for _ in 0..1200 {
+            if controls.vm().memory()[0x251d] < 16 && controls.vm().memory()[0x251f] < 16 {
+                break;
+            }
+            advance(&mut controls, 1);
+        }
+        let mut moved = controls.clone();
+        run(&mut moved, &[b'a', 22], 18);
+        run(&mut moved, &[], 42);
+        assert!(moved.vm().memory()[0x251c] < e.vm().memory()[0x251c]);
+        assert!(moved.vm().memory()[0x251e] > e.vm().memory()[0x251e]);
+        capture(&moved, &format!("battle-blocks-{label}-both-moved"));
+        let mut rotated = controls.clone();
+        let before = rotated.vm().memory()[0x2518];
+        for _ in 0..240 {
+            run(&mut rotated, b"w", 1);
+            if rotated.vm().memory()[0x2518] != before {
+                break;
+            }
+        }
+        rotated.input_mut().release_all();
+        assert_ne!(rotated.vm().memory()[0x2518], before);
+        let mut right = controls.clone();
+        let mut did_rotate = false;
+        for _ in 0..6 {
+            right = input_branch(&right, 21);
+            for _ in 0..1200 {
+                if right.vm().memory()[0x251f] < 16 {
+                    break;
+                }
+                advance(&mut right, 1);
+            }
+            let before = right.vm().memory()[0x2519];
+            for _ in 0..240 {
+                run(&mut right, &[20], 1);
+                if right.vm().memory()[0x2519] != before {
+                    break;
+                }
+            }
+            right.input_mut().release_all();
+            if right.vm().memory()[0x2519] != before {
+                did_rotate = true;
+                break;
+            }
+        }
+        assert!(did_rotate, "a visible non-square piece must rotate");
+        capture(&right, &format!("battle-blocks-{label}-right-rotated"));
+        let mut paused = input_branch(&e, b'p');
+        let pause_pc = if label == "device" { 0x4174 } else { 0x4177 };
+        assert_eq!(paused.vm().pc(), pause_pc);
+        let memory = paused.vm().memory().to_vec();
+        let frame = paused.display().indexed_frame().to_vec();
+        advance(&mut paused, 300);
+        assert_eq!(paused.vm().memory(), memory);
+        assert_eq!(paused.display().indexed_frame(), frame);
+        capture(&paused, &format!("battle-blocks-{label}-paused"));
+        key(&mut paused, 13);
+        assert_ne!(paused.vm().pc(), pause_pc);
+        assert_eq!(score(&e), 0);
+        for &(rotations, target) in recipe {
+            for _ in 0..rotations {
+                run(&mut e, b"w", 8);
+                run(&mut e, &[], 8);
+            }
+            for _ in 0..100 {
+                let x = e.vm().memory()[0x251c];
+                if x == target {
+                    break;
+                }
+                run(&mut e, &[if x < target { b'd' } else { b'a' }], 1);
+            }
+            run(&mut e, &[], 2);
+            assert_eq!(e.vm().memory()[0x251c], target);
+            let board = e.vm().memory()[0x2204..0x22d6].to_vec();
+            let mut locked = false;
+            for _ in 0..180 {
+                run(&mut e, b"s", 1);
+                if e.vm().memory()[0x2204..0x22d6] != board {
+                    locked = true;
+                    break;
+                }
+            }
+            e.input_mut().release_all();
+            assert!(locked, "the piece must lock through actual down input");
+            assert_eq!(&e.vm().memory()[0x2512..0x2514], &[0, 0]);
+        }
+        assert_eq!(score(&e), 1, "the native row clear must award a point");
+        assert!(
+            e.vm().memory()[0x252b..0x2540]
+                .iter()
+                .all(|&count| count < 10)
+        );
+        capture(&e, &format!("battle-blocks-{label}-line-cleared"));
+        let mut lost = false;
+        for _ in 0..12000 {
+            if e.run_frame().unwrap().status == FrameStatus::WaitingForInput {
+                lost = true;
+                break;
+            }
+        }
+        assert!(lost);
+        assert!(e.vm().memory()[0x2512..0x2514].contains(&255));
+        capture(&e, &format!("battle-blocks-{label}-loss"));
+        key(&mut e, 13);
+        key(&mut e, 13);
+        capture(&e, &format!("battle-blocks-{label}-result"));
+        e.input_mut().set_keys(*b"n");
+        assert_eq!(e.run_frame().unwrap().status, FrameStatus::Halted(0));
+    }
+}

@@ -2036,3 +2036,24 @@ without an execution error alone does not establish playability.
 - Check normal exit through System. Captures are reviewed locally. No emulator
   behavior change is required. Combat, every city action and campaign victory
   remain unverified. Game content, saves and captures are not distributed.
+
+
+## Battle Blocks (对战方块)
+
+- Check both device and computer builds through default player names, the
+  control instructions and the two-board game. Move both players simultaneously
+  with left-side WASD and right-side arrow controls, and rotate visible pieces
+  after allowing their native polling loops to observe the input.
+- Pause with P, check that all guest memory and the presented frame stay
+  unchanged for 300 frames, and resume with a fresh key.
+- Replay fixed sequences of real rotations, horizontal moves and accelerated
+  drops: 25 placements in the device build and 14 in the computer build. Check
+  that pieces lock, both players remain alive, the native score increases from
+  zero to one and no completed row remains. No guest memory is modified to
+  construct the board or score.
+- Let the boards fill naturally, check a native loss flag, acknowledge both
+  prompts and review the scores and winner screen. Decline another round and
+  check normal exit. Captures are reviewed locally.
+- This adds reproducible coverage without changing emulator behavior. Multiple
+  simultaneous line clears and every garbage-row interaction remain unverified.
+  Game content and captures are not distributed.
