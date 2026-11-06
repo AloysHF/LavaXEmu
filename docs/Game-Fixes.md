@@ -2093,3 +2093,16 @@ without an execution error alone does not establish playability.
 - This adds reproducible coverage without changing emulator behavior. SGF
   import, every capture pattern and the maximum record length remain unverified.
   Game content and captures are not distributed.
+
+## Mountain Go v2.19 (山尘围棋)
+
+- Repeat the actual-input corner capture, undo and redo workflow in both
+  monochrome and grayscale builds. Check the same native board outcomes and
+  review the title, stones, cursor and board in each display mode.
+- Save through the native filename editor into the game record directory.
+  Import the genuine record into a fresh instance, open the file list, move
+  selection down and up, then load the saved record. Check all 361 intersections
+  and move-history counters match; continue with the opposite color.
+- This adds reproducible coverage without changing emulator behavior. Both
+  versions have reviewed captures; SGF import, all capture patterns and record
+  length limits remain unverified. Game content and captures are not distributed.

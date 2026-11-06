@@ -9915,3 +9915,119 @@ fn mountain_go_captures_undoes_redoes_and_restores_a_native_record() {
     assert_eq!(stone(&restored, 1, 1), 1);
     capture(&restored, "mountain-go-continued");
 }
+
+#[test]
+#[ignore = "requires the local game corpus via LAVAX_GAME_ROOT"]
+fn mountain_go_219_versions_capture_and_restore_through_the_file_list() {
+    fn key(e: &mut Emulator, k: u8) {
+        e.input_mut().release_all();
+        for frame in 0..60 {
+            e.input_mut().set_keys((frame < 3).then_some(k));
+            advance(e, 1);
+        }
+    }
+    fn stone(e: &Emulator, offset: usize, x: usize, y: usize) -> u8 {
+        e.vm().memory()[0x2098 + offset + x * 19 + y]
+    }
+    fn top_left(e: &mut Emulator, offset: usize) {
+        for _ in 0..3 {
+            key(e, 23);
+        }
+        for _ in 0..15 {
+            key(e, 20);
+        }
+        assert_eq!(e.vm().memory()[0x208c + offset], 0);
+        assert_eq!(
+            e.vm().memory()[0x2088 + offset] + e.vm().memory()[0x208d + offset],
+            0
+        );
+    }
+    for (version, filename, offset) in [
+        ("mono", "SCGO_219.lav", 0),
+        ("gray", "SCGO_219_16gray.lav", 0x130),
+    ] {
+        let path = fixture_path(filename);
+        let mut e = load(&path);
+        advance(&mut e, 1200);
+        capture(&e, &format!("mountain-go-219-{version}-title"));
+        key(&mut e, 13);
+        assert!(
+            e.vm().memory()[0x2098 + offset..0x2201 + offset]
+                .iter()
+                .all(|&v| v == 0)
+        );
+        top_left(&mut e, offset);
+        key(&mut e, 21);
+        key(&mut e, 13);
+        assert_eq!(stone(&e, offset, 0, 1), 2);
+        key(&mut e, 20);
+        key(&mut e, 13);
+        assert_eq!(stone(&e, offset, 0, 0), 1);
+        capture(&e, &format!("mountain-go-219-{version}-before-capture"));
+        key(&mut e, 22);
+        key(&mut e, 13);
+        assert_eq!(
+            (
+                stone(&e, offset, 0, 0),
+                stone(&e, offset, 0, 1),
+                stone(&e, offset, 1, 0)
+            ),
+            (0, 2, 2)
+        );
+        let board = e.vm().memory()[0x2098 + offset..0x2201 + offset].to_vec();
+        let history = e.vm().memory()[0x2080 + offset..0x2086 + offset].to_vec();
+        capture(&e, &format!("mountain-go-219-{version}-captured"));
+        key(&mut e, b'i');
+        assert_eq!(
+            (
+                stone(&e, offset, 0, 0),
+                stone(&e, offset, 0, 1),
+                stone(&e, offset, 1, 0)
+            ),
+            (1, 2, 0)
+        );
+        capture(&e, &format!("mountain-go-219-{version}-undone"));
+        key(&mut e, b'o');
+        assert_eq!(&e.vm().memory()[0x2098 + offset..0x2201 + offset], board);
+        capture(&e, &format!("mountain-go-219-{version}-redone"));
+        for k in [29, b'y', b'e', b'm', b'u', 13] {
+            key(&mut e, k);
+        }
+        let record = e
+            .files()
+            .file("/LavaData/SCGO/EMU.SGO")
+            .expect("native save")
+            .to_vec();
+        assert!(record.starts_with(b"[SCGO_SGO]"));
+        capture(&e, &format!("mountain-go-219-{version}-saved"));
+        let mut restored = load(&path);
+        restored
+            .files_mut()
+            .import_file("/LavaData/SCGO/EMU.SGO", record);
+        advance(&mut restored, 1200);
+        for k in [13, 30, b'y'] {
+            key(&mut restored, k);
+        }
+        let listed = restored.display().indexed_frame().to_vec();
+        capture(&restored, &format!("mountain-go-219-{version}-file-list"));
+        key(&mut restored, 21);
+        assert_ne!(listed, restored.display().indexed_frame());
+        key(&mut restored, 20);
+        key(&mut restored, 13);
+        assert_eq!(
+            &restored.vm().memory()[0x2098 + offset..0x2201 + offset],
+            board
+        );
+        assert_eq!(
+            &restored.vm().memory()[0x2080 + offset..0x2086 + offset],
+            history
+        );
+        top_left(&mut restored, offset);
+        capture(&restored, &format!("mountain-go-219-{version}-restored"));
+        key(&mut restored, 22);
+        key(&mut restored, 21);
+        key(&mut restored, 13);
+        assert_eq!(stone(&restored, offset, 1, 1), 1);
+        capture(&restored, &format!("mountain-go-219-{version}-continued"));
+    }
+}
