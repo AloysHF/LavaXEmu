@@ -18,9 +18,9 @@ do not satisfy this status.
 - Shared guest text memory checked on 2026-11-01: all 75 dedicated release workflows passed after the text-buffer repair and state migration.
 - Inverted TextOut checked on 2026-11-01: all 77 dedicated release workflows passed after honoring the source-inversion flag.
 - Virtual storage capacity checked on 2026-11-05: all 95 existing dedicated release workflows passed after the DiskCheck repair.
-- 102 dedicated release workflows passed in this audit.
-- 155 of 324 entry points were loaded by those successful workflows.
-- 169 entry points still need dedicated workflow verification.
+- 103 dedicated release workflows passed in this audit.
+- 156 of 324 entry points were loaded by those successful workflows.
+- 168 entry points still need dedicated workflow verification.
 - The historical [startup gallery](Game-Compatibility.md) is a separate check
   and must not be interpreted as this workflow audit.
 
@@ -167,7 +167,7 @@ an optional screenshot directory. Keep each test's logs and captures separate.
 | 123 | `LAVA1 对战方块/对战方块.lav` | Game / game package | [Workflow passed: `battle_blocks_versions_control_both_boards_clear_a_line_pause_and_finish`](../crates/lavaxemu/tests/game_compatibility.rs#L9498) |
 | 124 | `LAVA1 小猴过河/小猴过河.lav` | Game / game package | [Workflow passed: `monkey_river_places_roads_retries_and_completes_a_crossing`](../crates/lavaxemu/tests/game_compatibility.rs#L9687) |
 | 125 | `LAVA1 山尘围棋2.0/存档转化器_山尘围棋.lav` | Save converter | Pending |
-| 126 | `LAVA1 山尘围棋2.0/山尘围棋v2.lav` | Game / game package | Pending |
+| 126 | `LAVA1 山尘围棋2.0/山尘围棋v2.lav` | Game / game package | [Workflow passed: `mountain_go_captures_undoes_redoes_and_restores_a_native_record`](../crates/lavaxemu/tests/game_compatibility.rs#L9837) |
 | 127 | `LAVA1 山尘围棋v2.19/SCGO_219.lav` | Game / game package | Pending |
 | 128 | `LAVA1 山尘围棋v2.19/SCGO_219_16gray.lav` | Game / game package | Pending |
 | 129 | `LAVA1 山村淘金记/gold.pac` | Game / game package | Pending |

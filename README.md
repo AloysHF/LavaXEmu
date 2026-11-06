@@ -48,6 +48,8 @@ being progressively improved.
   programs without uploading them
 
 Compatibility evidence is tracked in the [workflow audit](docs/Game-Corpus-Audit.md).
+Mountain Go v2.0 has a workflow for alternating moves, corner capture, undo/redo
+and native record saving, fresh loading and continued play.
 Five in a Row v0.80 has reproducible monochrome and grayscale workflows for
 winning, undo/redo, record persistence, restarting and confirmed exit.
 Five Tigers has complete-round workflows for alternating play, all five

@@ -2077,3 +2077,19 @@ without an execution error alone does not establish playability.
   This adds reproducible coverage without changing emulator behavior; it does
   not assert that every random sequence of pieces has a solution. Game content
   and captures are not distributed.
+
+## Mountain Go v2.0 (山尘围棋)
+
+- Start a new 19×19 board and move the cursor to the top-left corner through
+  actual arrow input. Place alternating stones at (0, 1), (0, 0) and (1, 0).
+  Check the surrounded corner stone is removed while both surrounding stones
+  remain. Review the board before and after capture.
+- Undo the last move and check the captured stone returns and the last placed
+  stone disappears. Redo and check the complete board matches the capture result.
+- Save through the native filename editor, check the record signature, import
+  that genuine record into a fresh emulator and load it through the game menu.
+  Check all 361 intersections and move-history counters match. Continue with
+  the opposite color at (1, 1). Captures are reviewed locally.
+- This adds reproducible coverage without changing emulator behavior. SGF
+  import, every capture pattern and the maximum record length remain unverified.
+  Game content and captures are not distributed.
