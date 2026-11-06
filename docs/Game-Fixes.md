@@ -2057,3 +2057,23 @@ without an execution error alone does not establish playability.
 - This adds reproducible coverage without changing emulator behavior. Multiple
   simultaneous line clears and every garbage-row interaction remain unverified.
   Game content and captures are not distributed.
+
+
+## Monkey River (小猴过河)
+
+- Check the title and all four instruction pages, including page bounds and
+  backward navigation. Enter the puzzle and check the initial eight placements
+  and cursor bounds. Use the actual arrows to select the road position.
+- Place roads through the native Q/A/Z controls. Check each valid placement
+  consumes one opportunity; reject placing over an occupied slot without
+  changing the board or remaining count.
+- Finish four unsuccessful layouts and use the native replay menu each time.
+  On the next generated layout, place eight road pieces at fixed positions
+  and check the native success result. Independently traverse the resulting
+  board to verify it connects the entrance at (1, 2) to the exit at (12, 11).
+  The unsuccessful layout must fail the same connectivity check.
+- Review the crossing message, leave through the replay menu, acknowledge
+  both credit pages and check normal exit. Captures are reviewed locally.
+  This adds reproducible coverage without changing emulator behavior; it does
+  not assert that every random sequence of pieces has a solution. Game content
+  and captures are not distributed.

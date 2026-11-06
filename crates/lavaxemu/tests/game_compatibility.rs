@@ -9681,3 +9681,153 @@ fn battle_blocks_versions_control_both_boards_clear_a_line_pause_and_finish() {
         assert_eq!(e.run_frame().unwrap().status, FrameStatus::Halted(0));
     }
 }
+
+#[test]
+#[ignore = "requires the local game corpus via LAVAX_GAME_ROOT"]
+fn monkey_river_places_roads_retries_and_completes_a_crossing() {
+    fn word(e: &Emulator, a: usize) -> u16 {
+        u16::from_le_bytes(e.vm().memory()[a..a + 2].try_into().unwrap())
+    }
+    fn key(e: &mut Emulator, k: u8) {
+        e.input_mut().release_all();
+        for frame in 0..60 {
+            e.input_mut().set_keys((frame < 3).then_some(k));
+            advance(e, 1);
+        }
+    }
+    fn place(e: &mut Emulator, x: u16, y: u16, k: u8) {
+        while word(e, 0x2176) != x {
+            key(e, if word(e, 0x2176) < x { 22 } else { 23 });
+        }
+        while word(e, 0x2178) != y {
+            key(e, if word(e, 0x2178) < y { 21 } else { 20 });
+        }
+        let before = word(e, 0x217e);
+        key(e, k);
+        assert_eq!(word(e, 0x217e), before - 1);
+    }
+    fn finish(e: &mut Emulator, expected: u16) {
+        let mut waiting = false;
+        for _ in 0..12000 {
+            if e.run_frame().unwrap().status == FrameStatus::WaitingForInput {
+                waiting = true;
+                break;
+            }
+        }
+        assert!(waiting);
+        assert_eq!(e.vm().pc(), 0x18f3);
+        assert_eq!(word(e, 0x2180), expected);
+    }
+    fn connected(e: &Emulator) -> bool {
+        let mut queue = vec![(1_usize, 2_usize)];
+        let mut seen = [[false; 13]; 13];
+        seen[1][2] = true;
+        let mut cursor = 0;
+        while cursor < queue.len() {
+            let (x, y) = queue[cursor];
+            cursor += 1;
+            if word(e, 0x2000 + 2 * (x * 13 + y)) != 1 {
+                continue;
+            }
+            if (x, y) == (12, 11) {
+                return true;
+            }
+            for (a, b) in [
+                (x.wrapping_sub(1), y),
+                (x + 1, y),
+                (x, y.wrapping_sub(1)),
+                (x, y + 1),
+            ] {
+                if a < 13 && b < 13 && !seen[a][b] {
+                    seen[a][b] = true;
+                    queue.push((a, b));
+                }
+            }
+        }
+        false
+    }
+    let mut e = load(&fixture_path("小猴过河.lav"));
+    advance(&mut e, 1200);
+    assert_eq!(e.vm().pc(), 0x1ba3);
+    capture(&e, "monkey-river-title");
+    let mut help = e.clone();
+    key(&mut help, 21);
+    key(&mut help, 13);
+    advance(&mut help, 1200);
+    for page in 1..=4 {
+        assert_eq!(word(&help, 0x2172), page);
+        capture(&help, &format!("monkey-river-help-{page}"));
+        key(&mut help, 21);
+    }
+    assert_eq!(word(&help, 0x2172), 4);
+    key(&mut help, 20);
+    assert_eq!(word(&help, 0x2172), 3);
+    key(&mut help, 27);
+    key(&mut e, 13);
+    key(&mut e, 13);
+    key(&mut e, 13);
+    assert_eq!(e.vm().pc(), 0x1741);
+    assert_eq!(word(&e, 0x217e), 8);
+    key(&mut e, 20);
+    key(&mut e, 23);
+    assert_eq!((word(&e, 0x2176), word(&e, 0x2178)), (1, 1));
+    capture(&e, "monkey-river-initial-board");
+    for round in 0..4 {
+        for piece in 0..8 {
+            place(&mut e, piece % 4 + 1, piece / 4 + 1, b'q');
+            if round == 0 && piece == 0 {
+                let board = e.vm().memory()[0x2000..0x2152].to_vec();
+                key(&mut e, b'q');
+                assert_eq!(word(&e, 0x217e), 7);
+                assert_eq!(&e.vm().memory()[0x2000..0x2152], board);
+                capture(&e, "monkey-river-overlap-rejected");
+            }
+        }
+        finish(&mut e, 2);
+        assert!(!connected(&e));
+        if round == 0 {
+            capture(&e, "monkey-river-failed");
+        }
+        key(&mut e, 13);
+        if round == 0 {
+            capture(&e, "monkey-river-retry-menu");
+        }
+        key(&mut e, 13);
+        assert_eq!(word(&e, 0x217e), 8);
+    }
+    for (piece, (x, y)) in [
+        (1, 1),
+        (2, 1),
+        (3, 2),
+        (3, 3),
+        (4, 3),
+        (4, 1),
+        (2, 2),
+        (4, 4),
+    ]
+    .into_iter()
+    .enumerate()
+    {
+        place(&mut e, x, y, b"qaz"[piece % 3]);
+    }
+    finish(&mut e, 1);
+    assert!(connected(&e));
+    capture(&e, "monkey-river-crossed");
+    key(&mut e, 13);
+    key(&mut e, 21);
+    key(&mut e, 13);
+    assert_eq!(e.vm().pc(), 0x1a86);
+    capture(&e, "monkey-river-credits");
+    key(&mut e, 13);
+    assert_eq!(e.vm().pc(), 0x1b03);
+    e.input_mut().set_keys([13]);
+    let mut halted = false;
+    for _ in 0..600 {
+        if e.run_frame().unwrap().status == FrameStatus::Halted(0) {
+            halted = true;
+            break;
+        }
+        e.input_mut().set_keys([]);
+    }
+    assert!(halted);
+}

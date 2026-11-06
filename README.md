@@ -138,6 +138,8 @@ Rich World packaged and loose versions have a workflow for player setup,
 movement, turn changes, native saves and restoration of all three players.
 Battle Blocks device and computer builds have a workflow for both players’
 controls, line clearing and scoring, pause, native results and normal exit.
+Monkey River has a workflow for road placement, overlap rejection, failure and
+retry, an eight-placement successful crossing, instructions and normal exit.
 
 ## Usage
 
