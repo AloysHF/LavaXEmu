@@ -2192,3 +2192,21 @@ without an execution error alone does not establish playability.
 - This adds reproducible coverage without changing emulator behavior. Other
   classes, skills, quests and the ending remain unverified. Game content and
   captures are not distributed.
+
+## Sky and Land III demo (幕天席地 3)
+
+- Create a named character using the native E confirmation, finish the opening
+  dialogue and walk from the starting area to the village and the field. Check
+  all three map IDs and world positions. Read the gate dialogue and continue
+  walking after leaving it.
+- Approach a field enemy and attack through the native Enter control. Check
+  eight experience and eight gold are awarded while the character takes damage
+  and survives. Use the bag's native action menu to consume a life potion; check
+  full health and the inventory slot becoming empty.
+- Save the genuine 400-byte account through the system menu. Read it in a fresh
+  instance, then check map, position, health, experience, gold and bag contents.
+  Continue walking, leave through the system confirmation and check normal exit.
+  Captures are reviewed locally.
+- This adds reproducible coverage without changing emulator behavior. All quests,
+  other classes, skills and every demo area remain unverified. Game content and
+  captures are not distributed.

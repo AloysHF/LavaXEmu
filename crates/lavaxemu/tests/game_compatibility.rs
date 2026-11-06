@@ -10569,3 +10569,140 @@ fn sky_and_land_two_explores_defeats_an_enemy_heals_and_restores_progress() {
     assert_eq!(position(&restored), (1, 1, 2));
     capture(&restored, "sky-two-continued");
 }
+
+#[test]
+#[ignore = "requires the local game corpus via LAVAX_GAME_ROOT"]
+fn sky_and_land_three_demo_travels_fights_heals_and_restores_its_account() {
+    fn word(e: &Emulator, a: usize) -> u16 {
+        u16::from_le_bytes(e.vm().memory()[a..a + 2].try_into().unwrap())
+    }
+    fn number(e: &Emulator, a: usize) -> u32 {
+        u32::from_le_bytes(e.vm().memory()[a..a + 4].try_into().unwrap())
+    }
+    fn position(e: &Emulator) -> (u16, u16, u16) {
+        (word(e, 0x22ae), word(e, 0x54be), word(e, 0x54c0))
+    }
+    fn key(e: &mut Emulator, k: u8, frames: usize, held: usize) {
+        e.input_mut().release_all();
+        for frame in 0..frames {
+            e.input_mut().set_keys((frame < held).then_some(k));
+            advance(e, 1);
+        }
+    }
+    fn step(e: &mut Emulator, k: u8) {
+        let before = position(e);
+        e.input_mut().release_all();
+        for _ in 0..240 {
+            e.input_mut().set_keys([k]);
+            advance(e, 1);
+            if position(e) != before {
+                break;
+            }
+        }
+        e.input_mut().release_all();
+        advance(e, 60);
+        assert_ne!(position(e), before);
+    }
+    let path = fixture_path("幕天席地3_plus.lav");
+    let mut e = load(&path);
+    advance(&mut e, 1200);
+    capture(&e, "sky-three-splash");
+    for k in [13, b'e', b'm', b'u', 13] {
+        key(&mut e, k, 180, 18);
+    }
+    capture(&e, "sky-three-character");
+    for k in [b'e', 13, 13, 13, 13] {
+        key(&mut e, k, 180, 18);
+    }
+    assert_eq!(position(&e), (3, 1, 2));
+    capture(&e, "sky-three-starting-map");
+    for k in [21, 22, 22, 22, 21, 21, 21, 21, 21] {
+        step(&mut e, k);
+    }
+    advance(&mut e, 1200);
+    for _ in 0..3 {
+        key(&mut e, 13, 180, 18);
+    }
+    assert_eq!(position(&e), (0, 16, 5));
+    capture(&e, "sky-three-village");
+    for k in [
+        23, 21, 23, 23, 23, 23, 23, 23, 23, 23, 23, 21, 21, 21, 23, 23, 23, 23, 23, 23,
+    ] {
+        step(&mut e, k);
+    }
+    advance(&mut e, 600);
+    assert_eq!(position(&e), (1, 48, 9));
+    capture(&e, "sky-three-field");
+    step(&mut e, 23);
+    step(&mut e, 23);
+    for _ in 0..4 {
+        key(&mut e, 13, 120, 18);
+    }
+    capture(&e, "sky-three-gate-dialogue");
+    for _ in 0..3 {
+        step(&mut e, 23);
+    }
+    assert_eq!(position(&e), (1, 43, 9));
+    assert_eq!(word(&e, 0x542a), 38);
+    assert_eq!(number(&e, 0x22b2), 0);
+    let money = number(&e, 0x22b6);
+    capture(&e, "sky-three-before-combat");
+    for _ in 0..6 {
+        key(&mut e, 13, 180, 120);
+    }
+    assert_eq!(number(&e, 0x22b2), 8);
+    assert_eq!(number(&e, 0x22b6), money + 8);
+    assert!((1..55).contains(&word(&e, 0x229e)));
+    capture(&e, "sky-three-enemy-defeated");
+    for k in [28, 22, 22, 22, 13, 13] {
+        key(&mut e, k, 120, 18);
+    }
+    assert_eq!(e.vm().memory()[0x22e0], 87);
+    capture(&e, "sky-three-potion-action");
+    key(&mut e, 13, 120, 18);
+    assert_eq!(e.vm().memory()[0x22e0], 0);
+    assert_eq!(word(&e, 0x229e), 55);
+    capture(&e, "sky-three-potion-used");
+    let inventory = e.vm().memory()[0x22e0..0x22f4].to_vec();
+    for k in [27, 22, 22, 22, 13, 13] {
+        key(&mut e, k, 120, 18);
+    }
+    let saved = e.files().file("/LavaData/emu.sl3").unwrap().to_vec();
+    assert_eq!(saved.len(), 400);
+    capture(&e, "sky-three-saved");
+    let mut restored = load(&path);
+    restored
+        .files_mut()
+        .import_file("/LavaData/emu.sl3", saved.clone());
+    advance(&mut restored, 1200);
+    for k in [21, 13, b'e', b'm', b'u', 13] {
+        key(&mut restored, k, 180, 18);
+    }
+    assert_eq!(position(&restored), (1, 43, 9));
+    assert_eq!(number(&restored, 0x22b2), 8);
+    assert_eq!(number(&restored, 0x22b6), money + 8);
+    assert_eq!(word(&restored, 0x229e), 55);
+    assert_eq!(&restored.vm().memory()[0x22e0..0x22f4], inventory);
+    assert_eq!(
+        restored.files().file("/LavaData/emu.sl3"),
+        Some(saved.as_slice())
+    );
+    capture(&restored, "sky-three-restored");
+    step(&mut restored, 20);
+    assert_eq!(position(&restored), (1, 43, 8));
+    capture(&restored, "sky-three-continued");
+    for k in [28, 22, 22, 22, 22, 22, 22, 13, 22, 22, 22, 13] {
+        key(&mut restored, k, 120, 18);
+    }
+    capture(&restored, "sky-three-exit-confirmation");
+    restored.input_mut().release_all();
+    let mut halted = false;
+    for frame in 0..300 {
+        restored.input_mut().set_keys((frame < 18).then_some(b'y'));
+        if restored.run_frame().unwrap().status == FrameStatus::Halted(0) {
+            halted = true;
+            break;
+        }
+    }
+    assert!(halted);
+}

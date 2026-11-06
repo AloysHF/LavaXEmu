@@ -18,9 +18,9 @@ do not satisfy this status.
 - Shared guest text memory checked on 2026-11-01: all 75 dedicated release workflows passed after the text-buffer repair and state migration.
 - Inverted TextOut checked on 2026-11-01: all 77 dedicated release workflows passed after honoring the source-inversion flag.
 - Virtual storage capacity checked on 2026-11-05: all 95 existing dedicated release workflows passed after the DiskCheck repair.
-- 109 dedicated release workflows passed in this audit.
-- 165 of 324 entry points were loaded by those successful workflows.
-- 159 entry points still need dedicated workflow verification.
+- 110 dedicated release workflows passed in this audit.
+- 166 of 324 entry points were loaded by those successful workflows.
+- 158 entry points still need dedicated workflow verification.
 - The historical [startup gallery](Game-Compatibility.md) is a separate check
   and must not be interpreted as this workflow audit.
 
@@ -177,7 +177,7 @@ an optional screenshot directory. Keep each test's logs and captures separate.
 | 133 | `LAVA1 幕天席地1.1/幕天助手.lav` | Game helper | [Workflow passed: `sky_and_land_helper_reads_a_native_account_and_browses_its_catalogs`](../crates/lavaxemu/tests/game_compatibility.rs#L10344) |
 | 134 | `LAVA1 幕天席地1.1/幕天席地.lav` | Game / game package | [Workflow passed: `sky_and_land_creates_a_local_save_and_moves_on_the_map`](../crates/lavaxemu/tests/game_compatibility.rs#L1146), [Workflow passed: `sky_and_land_helper_reads_a_native_account_and_browses_its_catalogs`](../crates/lavaxemu/tests/game_compatibility.rs#L10344) |
 | 135 | `LAVA1 幕天席地2封印之石1.3/幕天席地2.lav` | Game / game package | [Workflow passed: `sky_and_land_two_explores_defeats_an_enemy_heals_and_restores_progress`](../crates/lavaxemu/tests/game_compatibility.rs#L10459) |
-| 136 | `LAVA1 幕天席地3v0.7DEMO/幕天席地3_plus.lav` | Game / game package | Pending |
+| 136 | `LAVA1 幕天席地3v0.7DEMO/幕天席地3_plus.lav` | Game / game package | [Workflow passed: `sky_and_land_three_demo_travels_fights_heals_and_restores_its_account`](../crates/lavaxemu/tests/game_compatibility.rs#L10575) |
 | 137 | `LAVA1 平面魔方/平面魔方.pac` | Game / game package | [Workflow passed: `flat_cube_selects_shifts_swaps_and_returns_to_the_menu`](../crates/lavaxemu/tests/game_compatibility.rs#L1270) |
 | 138 | `LAVA1 平面魔方/非pac/平面魔方.lav` | Game / game package | [Workflow passed: `flat_cube_selects_shifts_swaps_and_returns_to_the_menu`](../crates/lavaxemu/tests/game_compatibility.rs#L1270) |
 | 139 | `LAVA1 幻影战机/幻影战机.lav` | Game / game package | Pending |

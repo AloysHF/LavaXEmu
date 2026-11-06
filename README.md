@@ -48,6 +48,8 @@ being progressively improved.
   programs without uploading them
 
 Compatibility evidence is tracked in the [workflow audit](docs/Game-Corpus-Audit.md).
+Sky and Land III demo has a workflow for three areas, dialogue, combat rewards,
+potion use, native account saving/loading and confirmed exit.
 Sky and Land II has a workflow for character creation, village/field transitions,
 combat rewards, healing and native save restoration with continued movement.
 Sky and Land Helper can return from monster browsing to its menu. Its workflow
