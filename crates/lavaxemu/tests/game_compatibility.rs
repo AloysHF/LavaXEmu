@@ -13434,3 +13434,193 @@ fn sudoku_plays_a_level_fills_digits_and_switches_levels() {
     assert!(halted, "the exit item leaves the program");
     assert!(!emulator.vm().is_running());
 }
+
+#[test]
+#[ignore = "requires the local game corpus via LAVAX_GAME_ROOT"]
+fn circuit_simulator_browses_chips_edits_waveforms_and_exits() {
+    fn tap(emulator: &mut Emulator, key: u8, settle: usize) {
+        emulator.input_mut().set_keys([key]);
+        advance(emulator, 1);
+        emulator.input_mut().release_all();
+        advance(emulator, settle);
+    }
+    fn tap_until(
+        emulator: &mut Emulator,
+        key: u8,
+        settle: usize,
+        ready: impl Fn(&Emulator) -> bool,
+    ) {
+        for _ in 0..60 {
+            tap(emulator, key, settle);
+            if ready(emulator) {
+                return;
+            }
+        }
+        panic!("key {key} did not reach the expected screen");
+    }
+    for (name, path) in [
+        ("unpacked", "LAVA1 数电模拟器/未打包的文件/数电模拟器.lav"),
+        ("packed", "LAVA1 数电模拟器/已打包的文件/数电模拟器.pac"),
+    ] {
+        let mut emulator = load(path);
+        advance(&mut emulator, 600);
+        assert_eq!(emulator.vm().pc(), 0x4a81, "the intro reaches the menu");
+        assert!(emulator.vm().is_running());
+        capture(&emulator, &format!("circuit-{name}-menu"));
+
+        tap(&mut emulator, 21, 30);
+        assert_eq!(emulator.vm().memory()[0x25bd], 1, "down moves the menu");
+        tap(&mut emulator, 21, 30);
+        assert_eq!(emulator.vm().memory()[0x25bd], 2);
+        tap(&mut emulator, 21, 30);
+        assert_eq!(emulator.vm().memory()[0x25bd], 0, "down wraps");
+        tap(&mut emulator, 20, 30);
+        assert_eq!(emulator.vm().memory()[0x25bd], 2, "up wraps");
+        tap(&mut emulator, 21, 30);
+        tap(&mut emulator, 22, 30);
+        assert_eq!(
+            emulator.vm().memory()[0x25bc],
+            1,
+            "right selects the triggers"
+        );
+        tap(&mut emulator, 23, 30);
+        assert_eq!(emulator.vm().memory()[0x25bc], 0, "left selects the gates");
+
+        let menu = emulator.display().indexed_frame().to_vec();
+        tap(&mut emulator, 13, 400);
+        assert_ne!(
+            menu,
+            emulator.display().indexed_frame(),
+            "the chip viewer replaces the menu"
+        );
+        assert_eq!(
+            emulator.vm().memory()[0x25d4],
+            0,
+            "the list opens on 74LS00"
+        );
+        tap_until(&mut emulator, 21, 200, |emulator| {
+            emulator.vm().memory()[0x25d4] == 1
+        });
+        assert_eq!(emulator.vm().memory()[0x25d4], 1, "down selects 74LS08");
+        capture(&emulator, &format!("circuit-{name}-chip"));
+        tap_until(&mut emulator, 21, 200, |emulator| {
+            emulator.vm().memory()[0x25d4] == 6
+        });
+        assert_eq!(
+            emulator.vm().memory()[0x25d4],
+            6,
+            "the list reaches 74LS283"
+        );
+        tap_until(&mut emulator, 20, 200, |emulator| {
+            emulator.vm().memory()[0x25d4] == 4
+        });
+        assert_eq!(emulator.vm().memory()[0x25d4], 4, "up moves back");
+        tap_until(&mut emulator, 27, 200, |emulator| {
+            emulator.vm().pc() == 0x4a81
+        });
+
+        tap(&mut emulator, 21, 30);
+        tap(&mut emulator, 21, 30);
+        tap(&mut emulator, 13, 60);
+        assert_eq!(emulator.vm().pc(), 0x5338, "enter opens the notes");
+        capture(&emulator, &format!("circuit-{name}-notes"));
+        tap(&mut emulator, 20, 60);
+        assert_eq!(emulator.vm().pc(), 0x4a81, "a key leaves the notes");
+        assert_eq!(emulator.vm().memory()[0x25bd], 0, "the menu resets");
+
+        tap(&mut emulator, 22, 30);
+        tap(&mut emulator, 13, 60);
+        assert_eq!(emulator.vm().pc(), 0x54df, "enter opens the trigger list");
+        let first = emulator.display().indexed_frame().to_vec();
+        for _ in 0..5 {
+            tap(&mut emulator, 21, 100);
+        }
+        let last = emulator.display().indexed_frame().to_vec();
+        assert_ne!(first, last, "down moves the trigger selection");
+        capture(&emulator, &format!("circuit-{name}-triggers"));
+        tap(&mut emulator, 21, 100);
+        assert_eq!(
+            last,
+            emulator.display().indexed_frame(),
+            "the trigger list clamps at the last entry"
+        );
+        tap(&mut emulator, 20, 100);
+        assert_ne!(
+            last,
+            emulator.display().indexed_frame(),
+            "up moves the trigger selection"
+        );
+        tap(&mut emulator, 20, 100);
+        tap(&mut emulator, 27, 60);
+        assert_eq!(emulator.vm().pc(), 0x4a81, "escape leaves the trigger list");
+
+        tap(&mut emulator, 22, 30);
+        tap(&mut emulator, 21, 30);
+        tap(&mut emulator, 13, 60);
+        assert_eq!(emulator.vm().pc(), 0x7e27, "the editor shows its intro");
+        capture(&emulator, &format!("circuit-{name}-editor-intro"));
+        tap(&mut emulator, 13, 60);
+        assert_eq!(emulator.vm().pc(), 0x54df, "a key opens the trigger list");
+        tap(&mut emulator, 13, 60);
+        assert_eq!(
+            emulator.vm().pc(),
+            0x56be,
+            "enter opens the waveform editor"
+        );
+        capture(&emulator, &format!("circuit-{name}-editor"));
+
+        for _ in 0..16 {
+            tap(&mut emulator, 22, 30);
+        }
+        assert_eq!(emulator.vm().memory()[0x25c3], 0, "the column cursor wraps");
+        tap(&mut emulator, 23, 30);
+        assert_eq!(emulator.vm().memory()[0x25c3], 15, "left wraps backwards");
+        tap(&mut emulator, 22, 30);
+        tap(&mut emulator, 21, 30);
+        assert_eq!(emulator.vm().memory()[0x25c4], 1, "down selects the R row");
+        tap(&mut emulator, 21, 30);
+        assert_eq!(emulator.vm().memory()[0x25c4], 1, "the row clamps");
+        tap(&mut emulator, 20, 30);
+        assert_eq!(emulator.vm().memory()[0x25c4], 0, "up returns to the S row");
+
+        let idle = emulator.display().indexed_frame().to_vec();
+        tap(&mut emulator, 48, 30);
+        assert_ne!(
+            idle,
+            emulator.display().indexed_frame(),
+            "a digit drives the input low"
+        );
+        tap(&mut emulator, 13, 120);
+        assert_eq!(emulator.vm().pc(), 0x5b9d, "enter simulates the latch");
+        capture(&emulator, &format!("circuit-{name}-result"));
+        tap(&mut emulator, 27, 60);
+        assert_eq!(emulator.vm().pc(), 0x5bdf, "escape asks to return");
+        capture(&emulator, &format!("circuit-{name}-return"));
+        tap(&mut emulator, 121, 60);
+        assert_eq!(emulator.vm().pc(), 0x56be, "y returns to the editor");
+        tap(&mut emulator, 27, 60);
+        assert_eq!(
+            emulator.vm().pc(),
+            0x586d,
+            "escape asks to leave the editor"
+        );
+        tap(&mut emulator, 121, 60);
+        assert_eq!(emulator.vm().pc(), 0x4a81, "y leaves the editor");
+
+        tap(&mut emulator, 27, 60);
+        assert_eq!(emulator.vm().pc(), 0x48a5, "escape shows the credits");
+        capture(&emulator, &format!("circuit-{name}-credits"));
+        emulator.input_mut().set_keys([27]);
+        let mut halted = false;
+        for _ in 0..120 {
+            let result = emulator.run_frame().expect("the credits must execute");
+            if matches!(result.status, FrameStatus::Halted(_)) {
+                halted = true;
+                break;
+            }
+        }
+        emulator.input_mut().release_all();
+        assert!(halted, "escape leaves the program");
+        assert!(!emulator.vm().is_running());
+    }
+}

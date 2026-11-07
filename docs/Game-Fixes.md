@@ -2565,3 +2565,36 @@ without an execution error alone does not establish playability.
   emulator, and the regression locks the observed overlay to catch changes.
 - Saving/continuing, the menu hint toggle, level completion and scoring, the
   remaining levels, and the solver subdirectory remain unverified.
+
+## Circuit Simulator (数电模拟器)
+
+- Content: `LAVA1 数电模拟器/已打包的文件/数电模拟器.pac` and
+  `LAVA1 数电模拟器/未打包的文件/数电模拟器.lav` with its companion `ttl.dat`.
+  Both entries produce identical memory and frames at every checked point.
+- Startup-only evidence had not covered a screen beyond the intro. No emulator
+  runtime defect was reproduced.
+- A dedicated release workflow waits for the intro to settle on the menu (pc
+  `0x4a81`), then moves the row cursor at `0x25bd` down through both sections,
+  wraps it forward, wraps it back with Up, and switches the column at `0x25bc`
+  between the gate and trigger sections with Left/Right.
+- `Enter` on the gate section opens the chip viewer (pc `0x4cd4`/`0x4cd7`) with
+  the seven chips listed and the index at `0x25d4`. The viewer auto-scrolls its
+  marquee, so navigation is phase-gated; the workflow presses Down until the
+  selection advances, walks from 74LS00 to 74LS283, moves back up to 74LS138,
+  and escapes to the menu.
+- The notes item opens pc `0x5338`, where any key returns to the menu. The
+  trigger section opens the trigger list at pc `0x54df`; Down walks all five
+  entries, the list clamps at the last one, and Up and Escape return.
+- The design/editor item first shows an intro at pc `0x7e27`, then opens the
+  trigger list and the waveform editor at pc `0x56be`. The column cursor at
+  `0x25c3` walks the 16 columns and wraps in both directions, the row cursor at
+  `0x25c4` clamps between the S̄ and R̄ rows, and input cells default high: a
+  digit writes a low pulse.
+- A deterministic route drives the S̄ column low, simulates the latch, and
+  reaches the waveform result at pc `0x5b9d`. Escape asks to return to the
+  editor (`0x5bdf`), `y` returns, Escape asks to leave the editor (`0x586d`), and
+  `y` returns to the menu.
+- Escape on the menu shows the credits at pc `0x48a5`, and a further Escape
+  halts the program.
+- The remaining chips, trigger types, editor columns, and result views remain
+  unverified.
