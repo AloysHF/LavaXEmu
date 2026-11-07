@@ -47,9 +47,10 @@ do not satisfy this status.
 - Wangwang Tycoon checked on 2026-11-07: one dedicated release workflow walks the four-entry title, opens and closes the manual, toggles both settings pages and the character modes, lists the four save slots and returns from the empty slot, starts the board through the scrolling transition, takes a turn into the purchase prompt and the next AI event, and exits from both the menu entry and Escape.
 - Meteor Butterfly Sword checked on 2026-11-07: one dedicated release workflow leaves the loading splash for the three-entry brush title, walks the entries with clamped horizontal selection, opens the about page and the credits, adjusts and restores the difficulty bar while recording the post-adjustment escape behavior, starts the arena from the control page, moves and attacks with the letter keys, and quits with code 0.
 - Haidian Floating Life checked on 2026-11-07: one dedicated release workflow enters a name, starts the life menu with its fixed values and key mapping, buys and sells a cheap good with exact cash changes, donates blood and takes treatment at the hospital, pays the bar bill, is refused an unaffordable computer and a small casino stake, takes and repays a bank loan, sleeps through a night with cash, debt, health and calendar changes, saves a 31-byte record, changes the statistics again, loads the record back, and halts from the system exit entry.
-- 153 dedicated release workflows passed in this audit.
-- 221 of 324 entry points were loaded by those successful workflows.
-- 103 entry points still need dedicated workflow verification.
+- Pirate Ship checked on 2026-11-07: one dedicated release workflow covers the packaged and unpacked entries, finishes the splash and logo, wraps the four-entry menu in both directions, scrolls the help text to its last page, opens all four credit pages, halts from the exit entry, wraps the difficulty selector, compares the easy, normal and hard starting fleets and sea layouts, moves the main ship with the arrows and letter keys, fires and lets the pirates take a turn, cancels and confirms the quit prompt, sinks three ships into the reef with life deductions, reaches game over, and returns to the difficulty selector.
+- 154 dedicated release workflows passed in this audit.
+- 223 of 324 entry points were loaded by those successful workflows.
+- 101 entry points still need dedicated workflow verification.
 - The historical [startup gallery](Game-Compatibility.md) is a separate check
   and must not be interpreted as this workflow audit.
 
@@ -276,8 +277,8 @@ an optional screenshot directory. Keep each test's logs and captures separate.
 | 203 | `LAVA1 汪汪大富翁/wangwang.lav` | Game / game package | [Workflow passed: `wangwang_tycoon_title_settings_slots_and_board_turns`](../crates/lavaxemu/tests/game_compatibility.rs#L15798) |
 | 204 | `LAVA1 流星蝴蝶剑/流星蝴蝶剑.lav` | Game / game package | [Workflow passed: `meteor_butterfly_sword_title_pages_difficulty_and_arena`](../crates/lavaxemu/tests/game_compatibility.rs#L15957) |
 | 205 | `LAVA1 海淀浮生记/海淀浮生记.lav` | Game / game package | [Workflow passed: `haidian_floating_life_name_menu_actions_and_save_round_trip`](../crates/lavaxemu/tests/game_compatibility.rs#L16109) |
-| 206 | `LAVA1 海盗船/打包/海盗船.pac` | Game / game package | Pending |
-| 207 | `LAVA1 海盗船/未打包/海盗船.lav` | Game / game package | Pending |
+| 206 | `LAVA1 海盗船/打包/海盗船.pac` | Game / game package | [Workflow passed: `pirate_ship_menus_help_credits_difficulty_and_sailing`](../crates/lavaxemu/tests/game_compatibility.rs#L16440) |
+| 207 | `LAVA1 海盗船/未打包/海盗船.lav` | Game / game package | [Workflow passed: `pirate_ship_menus_help_credits_difficulty_and_sailing`](../crates/lavaxemu/tests/game_compatibility.rs#L16440) |
 | 208 | `LAVA1 火箭车/火箭车.lav` | Game / game package | [Workflow passed: `rocket_car_keeps_the_track_visible_and_responds_to_controls`](../crates/lavaxemu/tests/game_compatibility.rs#L1316) |
 | 209 | `LAVA1 灵剑射击/灵剑射击.lav` | Game / game package | Pending |
 | 210 | `LAVA1 炸潜艇/炸潜艇v1.1 2007.7.6.lav` | Game / game package | Pending |

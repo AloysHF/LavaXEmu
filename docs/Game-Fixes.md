@@ -2995,3 +2995,42 @@ without an execution error alone does not establish playability.
   74, morality 85 to 90) and loading the record back to the saved values.
 - Multi-day progression, the casino's random outcome after a large stake,
   other goods and the story consequences of the statistics remain unverified.
+
+## Pirate Ship (海盗船)
+
+- Content: `LAVA1 海盗船/打包/海盗船.pac` and
+  `LAVA1 海盗船/未打包/海盗船.lav`. Both distributions render the same frames
+  and reach the same state with the same inputs.
+- The splash waits at pc `0x7d1` and Enter opens the studio logo at pc `0x83b`;
+  a second Enter fades to pc `0x12f` and then the title menu at pc `0x8a1`.
+- The title has four entries (开始游戏 / 游戏帮助 / 制作人员 / 退出游戏) with
+  the selection count stored at `0x2f76`. Down wraps the entries 1→2→3→4→1 and
+  Up wraps them 1→4.
+- 游戏帮助 opens the 游戏帮助 page at pc `0x6be`. Down scrolls through its ten
+  pages and the text stops at the end; Escape leaves at pc `0x12f` and returns
+  to the menu.
+- 制作人员 shows four credit pages at pc `0x9a0`, `0x9c8`, `0x9f0` and
+  `0xa18`, each advanced by Enter. The last page leaves to pc `0x12f` and the
+  menu returns.
+- 退出游戏 shows a farewell page at pc `0xa4d`; any key halts the program with
+  code 0 from pc `0xa55`.
+- 开始游戏 opens the difficulty selector at pc `0xab4` with three settings
+  (简易 / 正常 / 困难). Down wraps 1→2→3→1 and Up wraps 1→3. The
+  choice is stored at `0x2f4e` and decides the starting fleet: easy places one
+  pirate ship, one island and four harbors, normal places three ships, two
+  islands and three harbors, and hard places three ships, three islands and two
+  harbors. Every difficulty starts with three lives at `0x2f64` on level one at
+  `0x2f66`, and each lays out a different sea.
+- Sailing runs at pc `0x133d`. The main ship starts at `(4,4)` at `0x2f10` /
+  `0x2f12` and the first pirate ship at `(4,1)` at `0x2f28` / `0x2f2a`. Right,
+  Left, Up and Down move one cell, `a`/`z`/`s`/`x` move diagonally, and Enter
+  fires without moving the ship while the pirate ships take their turn.
+- Escape opens the leave prompt at pc `0x1990`; `n` resumes sailing and `y`
+  leaves to the difficulty selector at pc `0xab4`.
+- Sailing into the reef at `(4,1)` sinks the ship: pc `0x1e4f`, the sinking
+  animation at `0x1e71`, the sunk message at `0x12f`, and the next ship after
+  Enter. A life is deducted when the message is dismissed. After the third loss
+  the game-over path runs from pc `0x1e8d` with no lives left and returns to the
+  difficulty selector.
+- Level clearing, enemy sinking, scoring, the effect of the difficulty on the
+  AI and the later levels remain unverified.

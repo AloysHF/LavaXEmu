@@ -16434,3 +16434,314 @@ fn haidian_floating_life_name_menu_actions_and_save_round_trip() {
     }
     assert_eq!(exit_code, Some(0), "the exit entry halts");
 }
+
+#[test]
+#[ignore = "requires the local game corpus via LAVAX_GAME_ROOT"]
+fn pirate_ship_menus_help_credits_difficulty_and_sailing() {
+    let frame = |emulator: &Emulator| emulator.display().indexed_frame().to_vec();
+    let word = |emulator: &Emulator, address: usize| {
+        u16::from_le_bytes(
+            emulator.vm().memory()[address..address + 2]
+                .try_into()
+                .unwrap(),
+        )
+    };
+    let position = |emulator: &Emulator| (word(emulator, 0x2f10), word(emulator, 0x2f12));
+    let first_enemy = |emulator: &Emulator| (word(emulator, 0x2f28), word(emulator, 0x2f2a));
+
+    for (path, tag) in [
+        ("LAVA1 海盗船/打包/海盗船.pac", "pac"),
+        ("LAVA1 海盗船/未打包/海盗船.lav", "lav"),
+    ] {
+        let mut title = load(path);
+        advance(&mut title, 300);
+        assert_eq!(title.vm().pc(), 0x7d1, "the splash waits for a key");
+        capture(&title, &format!("pirate-splash-{tag}"));
+        press(&mut title, 13);
+        assert_eq!(title.vm().pc(), 0x83b, "the studio logo waits for a key");
+        press(&mut title, 13);
+        advance(&mut title, 300);
+        assert_eq!(title.vm().pc(), 0x8a1, "the title menu waits for a key");
+        capture(&title, &format!("pirate-menu-{tag}"));
+        assert_eq!(word(&title, 0x2f76), 1, "the first menu entry is selected");
+
+        for expected in [2, 3, 4, 1] {
+            press(&mut title, 21);
+            assert_eq!(word(&title, 0x2f76), expected, "down wraps the menu");
+        }
+        for expected in [4, 3, 2, 1] {
+            press(&mut title, 20);
+            assert_eq!(word(&title, 0x2f76), expected, "up wraps the menu");
+        }
+
+        press(&mut title, 21);
+        press(&mut title, 13);
+        advance(&mut title, 150);
+        assert_eq!(title.vm().pc(), 0x6be, "the help screen waits for a key");
+        capture(&title, &format!("pirate-help-{tag}"));
+        let mut page = frame(&title);
+        for _ in 0..9 {
+            press(&mut title, 21);
+            assert_ne!(frame(&title), page, "down scrolls the help text");
+            page = frame(&title);
+        }
+        press(&mut title, 21);
+        assert_eq!(frame(&title), page, "the help text stops at the end");
+        capture(&title, &format!("pirate-help-end-{tag}"));
+        press(&mut title, 27);
+        assert_eq!(title.vm().pc(), 0x12f, "escape leaves the help screen");
+        advance(&mut title, 300);
+        assert_eq!(title.vm().pc(), 0x8a1, "the title menu returns after help");
+
+        press(&mut title, 21);
+        press(&mut title, 21);
+        press(&mut title, 13);
+        advance(&mut title, 150);
+        assert_eq!(title.vm().pc(), 0x9a0, "the credits wait for a key");
+        capture(&title, &format!("pirate-credits-{tag}"));
+        for (pc, name) in [(0x9c8, "second"), (0x9f0, "third"), (0xa18, "fourth")] {
+            press(&mut title, 13);
+            assert_eq!(title.vm().pc(), pc, "the credits advance page by page");
+            capture(&title, &format!("pirate-credits-{name}-{tag}"));
+        }
+        press(&mut title, 13);
+        assert_eq!(title.vm().pc(), 0x12f, "the credits leave to the menu");
+        advance(&mut title, 300);
+        assert_eq!(
+            title.vm().pc(),
+            0x8a1,
+            "the title menu returns after credits"
+        );
+
+        for _ in 0..3 {
+            press(&mut title, 21);
+        }
+        press(&mut title, 13);
+        advance(&mut title, 150);
+        assert_eq!(title.vm().pc(), 0xa4d, "the exit screen waits for a key");
+        capture(&title, &format!("pirate-exit-{tag}"));
+        title.input_mut().set_keys([13]);
+        let mut exit_code = None;
+        for _ in 0..120 {
+            let result = title.run_frame().unwrap();
+            if let FrameStatus::Halted(code) = result.status {
+                exit_code = Some(code);
+                break;
+            }
+        }
+        assert_eq!(exit_code, Some(0), "the exit entry halts");
+    }
+
+    let navigate_to_difficulty = |emulator: &mut Emulator| {
+        advance(emulator, 300);
+        press(emulator, 13);
+        press(emulator, 13);
+        advance(emulator, 300);
+        press(emulator, 13);
+        advance(emulator, 150);
+    };
+
+    let mut difficulty = load("LAVA1 海盗船/打包/海盗船.pac");
+    navigate_to_difficulty(&mut difficulty);
+    assert_eq!(
+        difficulty.vm().pc(),
+        0xab4,
+        "the difficulty screen waits for a key"
+    );
+    assert_eq!(word(&difficulty, 0x2f76), 1, "the easiest ship is selected");
+    for expected in [2, 3, 1] {
+        press(&mut difficulty, 21);
+        assert_eq!(
+            word(&difficulty, 0x2f76),
+            expected,
+            "down wraps the difficulty choices"
+        );
+    }
+    for expected in [3, 2, 1] {
+        press(&mut difficulty, 20);
+        assert_eq!(
+            word(&difficulty, 0x2f76),
+            expected,
+            "up wraps the difficulty choices"
+        );
+    }
+
+    let mut normal = difficulty.clone();
+    press(&mut normal, 21);
+    press(&mut normal, 13);
+    advance(&mut normal, 240);
+    assert_eq!(normal.vm().pc(), 0x133d, "normal difficulty starts sailing");
+    assert_eq!(word(&normal, 0x2f4e), 2, "normal difficulty is recorded");
+    assert_eq!(word(&normal, 0x2f52), 3, "normal places three pirate ships");
+    assert_eq!(word(&normal, 0x2f54), 2, "normal places two islands");
+    assert_eq!(word(&normal, 0x2f58), 3, "normal keeps three harbors");
+    assert_eq!(word(&normal, 0x2f64), 3, "normal starts with three lives");
+    assert_eq!(word(&normal, 0x2f66), 1, "normal starts on level one");
+
+    let mut hard = difficulty.clone();
+    press(&mut hard, 21);
+    press(&mut hard, 21);
+    press(&mut hard, 13);
+    advance(&mut hard, 240);
+    assert_eq!(hard.vm().pc(), 0x133d, "hard difficulty starts sailing");
+    assert_eq!(word(&hard, 0x2f4e), 3, "hard difficulty is recorded");
+    assert_eq!(word(&hard, 0x2f52), 3, "hard places three pirate ships");
+    assert_eq!(word(&hard, 0x2f54), 3, "hard places three islands");
+    assert_eq!(word(&hard, 0x2f58), 2, "hard keeps two harbors");
+    assert_eq!(word(&hard, 0x2f64), 3, "hard starts with three lives");
+    assert_eq!(word(&hard, 0x2f66), 1, "hard starts on level one");
+    capture(&hard, "pirate-hard");
+    assert_ne!(
+        frame(&hard),
+        frame(&normal),
+        "each difficulty lays out its own sea"
+    );
+
+    let mut easy = difficulty.clone();
+    press(&mut easy, 13);
+    advance(&mut easy, 240);
+    assert_eq!(easy.vm().pc(), 0x133d, "easy difficulty starts sailing");
+    assert_eq!(word(&easy, 0x2f4e), 1, "easy difficulty is recorded");
+    assert_eq!(word(&easy, 0x2f52), 1, "easy places one pirate ship");
+    assert_eq!(word(&easy, 0x2f54), 1, "easy places one island");
+    assert_eq!(word(&easy, 0x2f58), 4, "easy keeps four harbors");
+    assert_eq!(word(&easy, 0x2f64), 3, "easy starts with three lives");
+    assert_eq!(word(&easy, 0x2f66), 1, "easy starts on level one");
+    assert_eq!(
+        position(&easy),
+        (4, 4),
+        "the main ship starts in the middle"
+    );
+    assert_eq!(first_enemy(&easy), (4, 1), "the pirate ship starts above");
+    capture(&easy, "pirate-easy");
+
+    for (key, expected) in [
+        (22, (5, 4)),
+        (23, (3, 4)),
+        (20, (4, 3)),
+        (21, (4, 5)),
+        (b'a', (3, 3)),
+        (b'z', (3, 5)),
+        (b's', (5, 3)),
+        (b'x', (5, 5)),
+    ] {
+        let mut moved = easy.clone();
+        press(&mut moved, key);
+        assert_eq!(moved.vm().pc(), 0x133d, "sailing keeps running");
+        assert_eq!(position(&moved), expected, "the key steers the main ship");
+    }
+
+    let mut fired = easy.clone();
+    press(&mut fired, 13);
+    assert_eq!(fired.vm().pc(), 0x133d, "firing keeps running");
+    assert_eq!(
+        position(&fired),
+        (4, 4),
+        "firing does not move the main ship"
+    );
+    assert_eq!(
+        first_enemy(&fired),
+        (4, 2),
+        "the pirate ship chases after a turn"
+    );
+
+    let mut quit = easy.clone();
+    press(&mut quit, 27);
+    assert_eq!(quit.vm().pc(), 0x1990, "escape asks to leave the game");
+    capture(&quit, "pirate-quit");
+    press(&mut quit, b'n');
+    assert_eq!(quit.vm().pc(), 0x133d, "declining resumes sailing");
+    press(&mut quit, 27);
+    press(&mut quit, b'y');
+    assert_eq!(quit.vm().pc(), 0x12f, "accepting leaves the game");
+    advance(&mut quit, 300);
+    assert_eq!(
+        quit.vm().pc(),
+        0xab4,
+        "leaving returns to the difficulty screen"
+    );
+
+    let mut death = easy.clone();
+    for _ in 0..3 {
+        press(&mut death, 20);
+    }
+    assert_eq!(
+        death.vm().pc(),
+        0x1e4f,
+        "sailing into a wreck sinks the ship"
+    );
+    assert_eq!(position(&death).1, 1, "the ship stopped on the wreck");
+    press(&mut death, 20);
+    assert_eq!(death.vm().pc(), 0x1e71, "the sinking animation runs");
+    press(&mut death, 20);
+    assert_eq!(death.vm().pc(), 0x12f, "the sunk message waits for a key");
+    capture(&death, "pirate-sunk");
+    advance(&mut death, 120);
+    press(&mut death, 13);
+    assert_eq!(death.vm().pc(), 0x133d, "the next ship starts sailing");
+    assert_eq!(word(&death, 0x2f64), 2, "a sunk ship costs one life");
+    assert_eq!(
+        position(&death),
+        (4, 4),
+        "the next ship starts in the middle"
+    );
+
+    for _ in 0..3 {
+        press(&mut death, 20);
+    }
+    assert_eq!(death.vm().pc(), 0x1e4f, "the wreck sinks the next ship");
+    press(&mut death, 20);
+    assert_eq!(death.vm().pc(), 0x1e71, "the second sinking animation runs");
+    press(&mut death, 20);
+    assert_eq!(death.vm().pc(), 0x12f, "the second sunk message waits");
+    advance(&mut death, 120);
+    press(&mut death, 13);
+    assert_eq!(death.vm().pc(), 0x133d, "the last ship starts sailing");
+    assert_eq!(word(&death, 0x2f64), 1, "the second loss leaves one life");
+
+    for _ in 0..3 {
+        press(&mut death, 20);
+    }
+    assert_eq!(death.vm().pc(), 0x1e4f, "the last ship hits the wreck");
+    press(&mut death, 20);
+    assert_eq!(death.vm().pc(), 0x1e71, "the last sinking animation runs");
+    press(&mut death, 20);
+    assert_eq!(
+        death.vm().pc(),
+        0x1e8d,
+        "the last loss starts the game over"
+    );
+    advance(&mut death, 120);
+    press(&mut death, 13);
+    assert_eq!(death.vm().pc(), 0x12f, "the game over screen waits");
+    assert_eq!(word(&death, 0x2f64), 0, "no lives remain");
+    capture(&death, "pirate-game-over");
+    advance(&mut death, 180);
+    assert_eq!(
+        death.vm().pc(),
+        0xab4,
+        "game over returns to the difficulty screen"
+    );
+
+    let mut unpacked = load("LAVA1 海盗船/未打包/海盗船.lav");
+    navigate_to_difficulty(&mut unpacked);
+    press(&mut unpacked, 13);
+    advance(&mut unpacked, 240);
+    assert_eq!(
+        unpacked.vm().pc(),
+        0x133d,
+        "the unpacked game starts sailing"
+    );
+    assert_eq!(
+        frame(&unpacked),
+        frame(&easy),
+        "both packages share the sea"
+    );
+    assert_eq!(
+        word(&unpacked, 0x2f28),
+        word(&easy, 0x2f28),
+        "same pirate ship"
+    );
+    assert_eq!(word(&unpacked, 0x2f64), word(&easy, 0x2f64), "same lives");
+    assert_eq!(word(&unpacked, 0x2f66), word(&easy, 0x2f66), "same level");
+}
