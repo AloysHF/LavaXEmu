@@ -290,12 +290,15 @@ without an execution error alone does not establish playability.
 
 ## New Hero (新英雄坛说)
 
-- Content: `LAVA1 新英雄坛说/非pac/Hero.lav`.
+- Content: `LAVA1 新英雄坛说/新英雄传说.pac` and its unpacked equivalent
+  `LAVA1 新英雄坛说/非pac/Hero.lav`.
 - Validation gap: the short batch replay only reached the long introductory
   dialogue and could not establish that the map accepted input.
 - Validation: advance 7,200 frames through the startup sequence into the village,
   then compare separate up/down branches with an equal-duration idle replay.
-  Up moves the player; down moves the player and scrolls the village map.
+  The dedicated workflow runs the same route for the packaged and unpacked
+  entries, which reach byte-identical memory and frames. Up moves the player;
+  down moves the player and scrolls the village map.
   The existing core and resource fixes suffice; this adds a gameplay regression
   rather than changing the game or emulator behavior.
 

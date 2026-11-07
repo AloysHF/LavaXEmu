@@ -27,9 +27,10 @@ do not satisfy this status.
 - Billiards checked on 2026-11-07: one dedicated release workflow enters the deterministic first rack, checks all seven ball coordinates, turns the aim with arrows and WASD, fires a shot, verifies the cue displacement and power fields, finishes the animation, and quits from the title.
 - Sudoku checked on 2026-11-07: one dedicated release workflow checks the title menu, all 81 given cells of level 1, cursor movement and wrapping, digit entry, the hint toggle, the unfinished-board dialog, the answer prompt and overlay, level switching both ways, the help screen and the exit path.
 - Circuit Simulator checked on 2026-11-07: one dedicated release workflow covers the unpacked and packaged entries, checks menu row/column navigation and wrapping, browses all seven chips in the auto-scrolling viewer, opens the notes and the five-entry trigger list, edits the waveform cursors and input cells, simulates a latch, returns from the result and exit prompts, and halts from the credits.
-- 132 dedicated release workflows passed in this audit.
-- 199 of 324 entry points were loaded by those successful workflows.
-- 125 entry points still need dedicated workflow verification.
+- New Hero checked on 2026-11-07: the dedicated village workflow now covers the packaged entry as well; both entries reach byte-identical memory and frames after the 7,200-frame startup route and respond identically to up/down movement.
+- 133 dedicated release workflows passed in this audit.
+- 200 of 324 entry points were loaded by those successful workflows.
+- 124 entry points still need dedicated workflow verification.
 - The historical [startup gallery](Game-Compatibility.md) is a separate check
   and must not be interpreted as this workflow audit.
 
@@ -223,7 +224,7 @@ an optional screenshot directory. Keep each test's logs and captures separate.
 | 170 | `LAVA1 数独1.3/sudoku.lav` | Game / game package | [Workflow passed: `sudoku_plays_a_level_fills_digits_and_switches_levels`](../crates/lavaxemu/tests/game_compatibility.rs#L13281) |
 | 171 | `LAVA1 数电模拟器/已打包的文件/数电模拟器.pac` | Circuit simulator | [Workflow passed: `circuit_simulator_browses_chips_edits_waveforms_and_exits`](../crates/lavaxemu/tests/game_compatibility.rs#L13440) |
 | 172 | `LAVA1 数电模拟器/未打包的文件/数电模拟器.lav` | Circuit simulator | [Workflow passed: `circuit_simulator_browses_chips_edits_waveforms_and_exits`](../crates/lavaxemu/tests/game_compatibility.rs#L13440) |
-| 173 | `LAVA1 新英雄坛说/新英雄传说.pac` | Game / game package | Pending |
+| 173 | `LAVA1 新英雄坛说/新英雄传说.pac` | Game / game package | [Workflow passed: `new_hero_reaches_the_village_and_scrolls_the_map`](../crates/lavaxemu/tests/game_compatibility.rs#L832) |
 | 174 | `LAVA1 新英雄坛说/非pac/Hero.lav` | Game / game package | [Workflow passed: `new_hero_reaches_the_village_and_scrolls_the_map`](../crates/lavaxemu/tests/game_compatibility.rs#L832) |
 | 175 | `LAVA1 旋转老虎机/旋转老虎机.lav` | Game / game package | Pending |
 | 176 | `LAVA1 无底洞/无底洞.lav` | Game / game package | Pending |

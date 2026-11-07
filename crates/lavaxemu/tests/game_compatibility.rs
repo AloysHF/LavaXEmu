@@ -830,23 +830,28 @@ fn magic_era_accepts_the_device_identifier_and_enters_gameplay() {
 #[test]
 #[ignore = "requires the local game corpus via LAVAX_GAME_ROOT"]
 fn new_hero_reaches_the_village_and_scrolls_the_map() {
-    let mut emulator = load("LAVA1 新英雄坛说/非pac/Hero.lav");
-    replay_start(&mut emulator, 7200);
-    let mut idle = emulator.clone();
-    advance(&mut idle, 60);
-    let moved = input_branch(&emulator, 20);
-    assert!(
-        moved.display().indexed_frame() != idle.display().indexed_frame(),
-        "up must move the player in the village"
-    );
-    let scrolled = input_branch(&emulator, 21);
-    assert!(
-        scrolled.display().indexed_frame() != idle.display().indexed_frame(),
-        "down must move the player and scroll the village"
-    );
-    capture(&emulator, "hero-village");
-    capture(&moved, "hero-movement");
-    capture(&scrolled, "hero-scroll");
+    for (name, path) in [
+        ("packed", "LAVA1 新英雄坛说/新英雄传说.pac"),
+        ("unpacked", "LAVA1 新英雄坛说/非pac/Hero.lav"),
+    ] {
+        let mut emulator = load(path);
+        replay_start(&mut emulator, 7200);
+        let mut idle = emulator.clone();
+        advance(&mut idle, 60);
+        let moved = input_branch(&emulator, 20);
+        assert!(
+            moved.display().indexed_frame() != idle.display().indexed_frame(),
+            "up must move the player in the village"
+        );
+        let scrolled = input_branch(&emulator, 21);
+        assert!(
+            scrolled.display().indexed_frame() != idle.display().indexed_frame(),
+            "down must move the player and scroll the village"
+        );
+        capture(&emulator, &format!("hero-{name}-village"));
+        capture(&moved, &format!("hero-{name}-movement"));
+        capture(&scrolled, &format!("hero-{name}-scroll"));
+    }
 }
 
 #[test]
