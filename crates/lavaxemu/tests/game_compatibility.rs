@@ -14320,3 +14320,155 @@ fn unnamed_village_map_walks_and_scrolls() {
         );
     }
 }
+
+#[test]
+#[ignore = "requires the local game corpus via LAVAX_GAME_ROOT"]
+fn dream_twenty_one_places_cards_into_the_selected_pile() {
+    let mut emulator = load("LAVA1 梦幻21点/梦幻21点.lav");
+    advance(&mut emulator, 300);
+    assert_eq!(emulator.vm().pc(), 0x18f4, "the splash waits for a key");
+    capture(&emulator, "21point-splash");
+
+    press(&mut emulator, 13);
+    assert_eq!(emulator.vm().pc(), 0x198c, "Enter starts the first round");
+    capture(&emulator, "21point-round");
+
+    let state = |emulator: &Emulator| {
+        let memory = emulator.vm().memory();
+        (
+            memory[0x2036],
+            [
+                memory[0x2037],
+                memory[0x2038],
+                memory[0x2039],
+                memory[0x203a],
+            ],
+            [
+                memory[0x203b],
+                memory[0x203c],
+                memory[0x203d],
+                memory[0x203e],
+            ],
+            u32::from_le_bytes([
+                memory[0x203f],
+                memory[0x2040],
+                memory[0x2041],
+                memory[0x2042],
+            ]),
+        )
+    };
+    assert_eq!(
+        state(&emulator),
+        (0, [0; 4], [0; 4], 0),
+        "a new round starts with an empty deck and no score"
+    );
+
+    let mut idle = emulator.clone();
+    advance(&mut idle, 120);
+    assert_eq!(idle.vm().pc(), 0x198c, "the round waits for input");
+    assert_eq!(
+        idle.display().indexed_frame(),
+        emulator.display().indexed_frame(),
+        "the round does not advance on its own"
+    );
+
+    let mut selected = emulator.clone();
+    press(&mut selected, 22);
+    assert_eq!(state(&selected).0, 1, "Right moves the pile cursor");
+    assert_ne!(
+        selected.display().indexed_frame(),
+        idle.display().indexed_frame(),
+        "the cursor is visible"
+    );
+    capture(&selected, "21point-cursor");
+
+    let mut far = selected.clone();
+    press(&mut far, 22);
+    assert_eq!(state(&far).0, 2, "Right moves to the third pile");
+    assert_ne!(
+        far.display().indexed_frame(),
+        selected.display().indexed_frame()
+    );
+
+    let mut back = far.clone();
+    press(&mut back, 23);
+    press(&mut back, 23);
+    assert_eq!(state(&back).0, 0, "Left returns to the first pile");
+    assert_eq!(
+        back.display().indexed_frame(),
+        idle.display().indexed_frame(),
+        "moving back restores the round view"
+    );
+
+    let mut left = emulator.clone();
+    press(&mut left, 23);
+    assert_eq!(state(&left).0, 0, "Left at the first pile keeps the cursor");
+    assert_eq!(
+        left.display().indexed_frame(),
+        idle.display().indexed_frame()
+    );
+
+    let mut placed = emulator.clone();
+    press(&mut placed, 13);
+    press(&mut placed, 13);
+    let (cursor, counts, totals, score) = state(&placed);
+    assert_eq!(cursor, 0, "placing cards keeps the cursor");
+    assert_eq!(counts, [2, 0, 0, 0], "two presses place two cards");
+    assert_eq!(totals, [12, 0, 0, 0], "the two aces total 12");
+    assert_eq!(score, 100, "every placed card scores 50 points");
+    assert_ne!(
+        placed.display().indexed_frame(),
+        idle.display().indexed_frame()
+    );
+    capture(&placed, "21point-pile");
+
+    let mut other = emulator.clone();
+    press(&mut other, 22);
+    press(&mut other, 13);
+    let (cursor, counts, totals, score) = state(&other);
+    assert_eq!(cursor, 1, "the cursor stays on the chosen pile");
+    assert_eq!(counts, [0, 1, 0, 0], "the card goes to the second pile");
+    assert_eq!(totals, [0, 11, 0, 0], "the ace is worth 11");
+    assert_eq!(score, 50);
+    capture(&other, "21point-other-pile");
+
+    let mut over = placed.clone();
+    over.input_mut().set_keys([27]);
+    let mut waiting = false;
+    for _ in 0..120 {
+        let result = over.run_frame().expect("game must execute without errors");
+        if over.vm().pc() == 0x1681 {
+            waiting = true;
+            break;
+        }
+        assert!(
+            !matches!(result.status, FrameStatus::Halted(_)),
+            "Escape reaches the game-over screen before leaving"
+        );
+    }
+    over.input_mut().set_keys([]);
+    assert!(
+        waiting,
+        "the game-over screen waits for a key (pc {:#x})",
+        over.vm().pc()
+    );
+    assert_eq!(state(&over).3, 100, "the game-over screen keeps the score");
+    capture(&over, "21point-game-over");
+
+    over.run_frame().expect("game must execute without errors");
+    over.input_mut().set_keys([13]);
+    let mut halted = false;
+    for _ in 0..60 {
+        let result = over.run_frame().expect("game must execute without errors");
+        if matches!(result.status, FrameStatus::Halted(_)) {
+            halted = true;
+            break;
+        }
+    }
+    assert!(
+        halted,
+        "a key on the game-over screen exits (pc {:#x})",
+        over.vm().pc()
+    );
+    assert_eq!(over.vm().pc(), 0x1686);
+}

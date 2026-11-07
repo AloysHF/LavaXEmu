@@ -2728,3 +2728,20 @@ without an execution error alone does not establish playability.
 - Enter, Space, Escape and letter keys have no visible effect on this map. The
   purpose of the companion `goldmap.dat`, dialogue, combat and events remain
   unverified.
+
+## Dream Twenty-One (梦幻21点)
+
+- Content: `LAVA1 梦幻21点/梦幻21点.lav`.
+- Startup-only evidence had not covered the card table.
+- The splash waits at pc `0x18f4`; `Enter` starts a round, which then waits at
+  pc `0x198c`.
+- The table shows the remaining deck (`Rest`) counting down from 54, the next
+  card, four pile totals and the score. Right and Left move the pile cursor and
+  `Enter` places the next card into the selected pile.
+- Each placed card scores 50 points. An ace is worth 11 or 1, so two aces total
+  12 rather than 22. Placement, deck accounting and score were confirmed
+  against the round state, not only against the rendered frame.
+- Escape ends the round. The GAME OVER screen keeps the score and waits for a
+  key at pc `0x1681`; another key press halts the program at pc `0x1686`.
+- How the round or the 54-card deck ends, the role of the four piles' limits,
+  and the meaning of the other header counters remain unverified.

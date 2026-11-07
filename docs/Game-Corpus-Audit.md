@@ -34,11 +34,12 @@ do not satisfy this status.
 - Fly 10000 Meters checked on 2026-11-07: the title starts the flight, F4 opens the speed adjustment, Up and Down change and restore the speed value, holding a key lifts the plane, and an unattended flight ends on credits that Escape closes.
 - Moon City checked on 2026-11-07: the packaged and loose entries render the same title, the load item reports a missing record and returns, a new game takes an empty name into the village with four-direction movement, and the exit item halts the program.
 - Unnamed Village checked on 2026-11-07: the map starts directly, Right walks and scrolls, Up and Left turn the character at the fenced spawn, Down is blocked there, and after walking east the character can leave the edge in the other directions.
+- Dream Twenty-One checked on 2026-11-07: the splash starts a round, the arrow keys move the pile cursor, Enter places the next card into the selected pile and scores 50 points, two aces total 12, and Escape shows the game-over screen with the score and waits for a key before halting.
 - Rotary Slot Machine checked on 2026-11-07: one dedicated release workflow checks the splash and menu with bidirectional wrapping, both pages of the instructions and version screens, starting a round with 20 credits, betting and withdrawing on two columns, a deterministic spin and result, the quit dialog cancel/confirm paths, and the menu exit item.
 - Bottomless Pit checked on 2026-11-07: one dedicated release workflow cycles the three difficulty levels, starts a fall, checks the horizontal-only steering, waits for the floor counter, saves the replay record through the `Yes?` prompt, replays it without input, and aborts with Escape.
-- 141 dedicated release workflows passed in this audit.
-- 209 of 324 entry points were loaded by those successful workflows.
-- 115 entry points still need dedicated workflow verification.
+- 142 dedicated release workflows passed in this audit.
+- 210 of 324 entry points were loaded by those successful workflows.
+- 114 entry points still need dedicated workflow verification.
 - The historical [startup gallery](Game-Compatibility.md) is a separate check
   and must not be interpreted as this workflow audit.
 
@@ -253,7 +254,7 @@ an optional screenshot directory. Keep each test's logs and captures separate.
 | 191 | `LAVA1 极限斗地主3.2/极限斗地主NC1020版.lav` | Game / game package | [Workflow passed: `extreme_landlord_versions_deal_select_play_and_save`](../crates/lavaxemu/tests/game_compatibility.rs#L1424) |
 | 192 | `LAVA1 极限斗地主3.2/极限斗地主tc800版.lav` | Game / game package | [Workflow passed: `extreme_landlord_versions_deal_select_play_and_save`](../crates/lavaxemu/tests/game_compatibility.rs#L1424) |
 | 193 | `LAVA1 梦中世界（更新6）/梦中世界.lav` | Game / game package | [Workflow passed: `dream_world_creates_an_account_loads_the_map_and_moves`](../crates/lavaxemu/tests/game_compatibility.rs#L1676) |
-| 194 | `LAVA1 梦幻21点/梦幻21点.lav` | Game / game package | Pending |
+| 194 | `LAVA1 梦幻21点/梦幻21点.lav` | Game / game package | [Workflow passed: `dream_twenty_one_places_cards_into_the_selected_pile`](../crates/lavaxemu/tests/game_compatibility.rs#L14326) |
 | 195 | `LAVA1 梦幻mario/梦幻mario.lav` | Game / game package | Pending |
 | 196 | `LAVA1 橡皮屋/橡皮屋.lav` | Game / game package | Pending |
 | 197 | `LAVA1 欢乐五子棋/欢乐五子棋.lav` | Game / game package | Pending |
