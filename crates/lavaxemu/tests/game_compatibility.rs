@@ -11902,3 +11902,115 @@ fn plane_shooter_enters_practice_and_accepts_board_controls() {
     );
     capture(&exit_prompt, "plane-shooter-exit-confirmation");
 }
+
+#[test]
+#[ignore = "requires the local game corpus via LAVAX_GAME_ROOT"]
+fn minesweeper_opens_cells_marks_and_moves_on_the_board() {
+    fn tap(e: &mut Emulator, key: u8) {
+        e.input_mut().release_all();
+        e.input_mut().set_keys([key]);
+        advance(e, 1);
+        e.input_mut().release_all();
+        advance(e, 59);
+    }
+    fn region(e: &Emulator, x0: usize, x1: usize, y0: usize, y1: usize) -> Vec<u8> {
+        let width = usize::from(e.display().width());
+        e.display()
+            .indexed_frame()
+            .chunks_exact(width)
+            .skip(y0)
+            .take(y1 - y0)
+            .flat_map(|row| row[x0..x1].iter().copied())
+            .collect()
+    }
+    let path = fixture_path_with_size("扫雷.lav", Some(33_229));
+    let mut splash = load(&path);
+    advance(&mut splash, 1200);
+    assert_eq!(splash.vm().pc(), 0x8153);
+    assert!(
+        splash
+            .display()
+            .indexed_frame()
+            .iter()
+            .any(|&pixel| pixel != splash.display().indexed_frame()[0]),
+        "the opening screen must render"
+    );
+    capture(&splash, "minesweeper-opening-screen");
+
+    let mut menu = splash;
+    tap(&mut menu, 13);
+    assert_eq!(menu.vm().pc(), 0x7ce4);
+    capture(&menu, "minesweeper-main-menu");
+
+    let mut difficulty = menu.clone();
+    tap(&mut difficulty, 13);
+    assert_eq!(difficulty.vm().pc(), 0x7ec3);
+    capture(&difficulty, "minesweeper-difficulty");
+
+    let mut board = difficulty.clone();
+    tap(&mut board, 13);
+    assert_eq!(board.vm().pc(), 0x56cd);
+    capture(&board, "minesweeper-board");
+
+    let mut idle = board.clone();
+    advance(&mut idle, 60);
+    let idle_board = region(&idle, 0, 72, 0, 72);
+    let mut directions = Vec::new();
+    for (index, key) in [20, 21, 22, 23].into_iter().enumerate() {
+        let mut moved = board.clone();
+        tap(&mut moved, key);
+        let board_image = region(&moved, 0, 72, 0, 72);
+        assert_ne!(
+            board_image, idle_board,
+            "direction key {key} must move the selected cell"
+        );
+        directions.push(board_image);
+        capture(&moved, &format!("minesweeper-direction-{index}"));
+    }
+    directions.sort();
+    directions.dedup();
+    assert_eq!(
+        directions.len(),
+        4,
+        "direction keys must select distinct cells"
+    );
+
+    let mut revealed = board.clone();
+    tap(&mut revealed, 13);
+    assert_ne!(
+        region(&revealed, 0, 72, 0, 72),
+        idle_board,
+        "Enter must reveal the selected cell"
+    );
+    capture(&revealed, "minesweeper-cell-revealed");
+
+    let mut marked = board.clone();
+    tap(&mut marked, 14);
+    assert_ne!(
+        region(&marked, 0, 72, 0, 72),
+        idle_board,
+        "the mark key must change the selected cell"
+    );
+    capture(&marked, "minesweeper-cell-marked");
+
+    let mut unmarked = marked;
+    tap(&mut unmarked, 14);
+    let mut idle_after_two = board.clone();
+    advance(&mut idle_after_two, 120);
+    assert_eq!(
+        region(&unmarked, 0, 72, 0, 72),
+        region(&idle_after_two, 0, 72, 0, 72),
+        "marking the selected cell twice must clear its marker"
+    );
+    capture(&unmarked, "minesweeper-cell-unmarked-after-toggle");
+
+    let mut returned = board;
+    tap(&mut returned, 27);
+    assert_eq!(returned.vm().pc(), 0x7ec3);
+    assert_ne!(
+        region(&returned, 35, 125, 8, 72),
+        region(&idle, 35, 125, 8, 72),
+        "Escape must return to the difficulty menu"
+    );
+    capture(&returned, "minesweeper-back-to-difficulty");
+}

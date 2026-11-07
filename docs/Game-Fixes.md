@@ -2366,3 +2366,14 @@ without an execution error alone does not establish playability.
   board display, and verifies Escape opens the in-game exit confirmation.
 - Two-player mode, complete plane attacks, and round outcomes remain
   unverified.
+
+## Minesweeper (扫雷)
+
+- Startup evidence had not covered the game board. No emulator runtime defect
+  was reproduced.
+- A dedicated release workflow checks the opening, main menu, default
+  difficulty and board. Arrow keys select four distinct cells, Enter reveals a
+  cell, key 14 toggles its marker on and off, and Escape returns to difficulty
+  selection.
+- Other difficulty settings, a complete round, and win/loss results remain
+  unverified.

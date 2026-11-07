@@ -176,6 +176,8 @@ Monkey River has a workflow for road placement, overlap rejection, failure and
 retry, an eight-placement successful crossing, instructions and normal exit.
 Plane Shooter reaches single-player practice and has a workflow for board
 cursor movement, selection and the in-game exit confirmation.
+Minesweeper has a workflow for opening cells, toggling a mark, moving the
+selection, and returning to the difficulty menu.
 
 ## Usage
 
