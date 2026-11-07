@@ -13979,3 +13979,58 @@ fn star_legend_package_registration_writes_a_usable_record() {
         "the packaged record must load a character that moves on the map"
     );
 }
+
+#[test]
+#[ignore = "requires the local game corpus via LAVAX_GAME_ROOT"]
+fn down_hundred_floors_steers_and_reaches_game_over() {
+    let mut emulator = load("LAVA1 是男人就下100层（模拟器可能不能运行）/是男人就下100层.lav");
+    advance(&mut emulator, 300);
+    assert_eq!(emulator.vm().pc(), 0x1189, "the title waits for a key");
+    capture(&emulator, "down100-title");
+    press(&mut emulator, 13);
+    assert_eq!(emulator.vm().pc(), 0x12b5, "the first credit screen waits");
+    capture(&emulator, "down100-first-splash");
+    press(&mut emulator, 13);
+    assert_eq!(emulator.vm().pc(), 0x1328, "the second credit screen waits");
+    capture(&emulator, "down100-second-splash");
+    press(&mut emulator, 13);
+    assert_eq!(emulator.vm().pc(), 0x19f7, "a demonstration run starts");
+    capture(&emulator, "down100-run");
+
+    let mut still = emulator.clone();
+    advance(&mut still, 33);
+    for key in [20, 21] {
+        let mut other = emulator.clone();
+        press(&mut other, key);
+        assert_eq!(
+            other.display().indexed_frame(),
+            still.display().indexed_frame(),
+            "up and down do not steer the character in this scene"
+        );
+    }
+    let mut right = emulator.clone();
+    press(&mut right, 22);
+    capture(&right, "down100-right");
+    assert!(
+        right.display().indexed_frame() != still.display().indexed_frame(),
+        "right steers the falling character"
+    );
+    let mut left = emulator.clone();
+    press(&mut left, 23);
+    capture(&left, "down100-left");
+    assert!(
+        left.display().indexed_frame() != still.display().indexed_frame()
+            && left.display().indexed_frame() != right.display().indexed_frame(),
+        "left steers the falling character in the other direction"
+    );
+
+    let mut idle = emulator.clone();
+    for _ in 0..400 {
+        if idle.vm().pc() == 0x1a1a {
+            break;
+        }
+        advance(&mut idle, 1);
+    }
+    assert_eq!(idle.vm().pc(), 0x1a1a, "the run ends in game over");
+    capture(&idle, "down100-game-over");
+}

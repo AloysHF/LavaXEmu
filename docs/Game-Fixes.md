@@ -2656,3 +2656,16 @@ without an execution error alone does not establish playability.
 - The effect of each difficulty level on level generation, the exact meaning
   of the panel `M` value, the other record slots inside the save file, and the
   score display remain unverified.
+
+## Down 100 Floors (是男人就下100层)
+
+- Content: `LAVA1 是男人就下100层（模拟器可能不能运行）/是男人就下100层.lav`.
+- Startup-only evidence had not covered the title, the run or the game-over
+  flow, and the entry name warns that the emulator may not run it.
+- The title waits at pc `0x1189`. `Enter` opens two credit screens that wait at
+  pc `0x12b5` and `0x1328`, and a third `Enter` starts a demonstration run at
+  pc `0x19f7`.
+- The character stands on platforms in a vertical shaft. Left and Right move it
+  horizontally; Up and Down leave the rendered frame unchanged at this point.
+- Leaving the run unattended ends it at pc `0x1a1a` with a GAME OVER screen.
+- No additional emulator behavior changes were required.

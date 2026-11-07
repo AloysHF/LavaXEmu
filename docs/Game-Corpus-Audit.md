@@ -29,11 +29,12 @@ do not satisfy this status.
 - Circuit Simulator checked on 2026-11-07: one dedicated release workflow covers the unpacked and packaged entries, checks menu row/column navigation and wrapping, browses all seven chips in the auto-scrolling viewer, opens the notes and the five-entry trigger list, edits the waveform cursors and input cells, simulates a latch, returns from the result and exit prompts, and halts from the credits.
 - New Hero checked on 2026-11-07: the dedicated village workflow now covers the packaged entry as well; both entries reach byte-identical memory and frames after the 7,200-frame startup route and respond identically to up/down movement.
 - Star Legend checked on 2026-11-07: the packaged entry runs its embedded registration program and writes the account record, and that record logs into the unpacked main program and moves on the map.
+- Down 100 Floors checked on 2026-11-07: the title and two credit screens gate the run, Left and Right steer the character while Up and Down leave the frame unchanged at that point, and an unattended run reaches the game-over screen.
 - Rotary Slot Machine checked on 2026-11-07: one dedicated release workflow checks the splash and menu with bidirectional wrapping, both pages of the instructions and version screens, starting a round with 20 credits, betting and withdrawing on two columns, a deterministic spin and result, the quit dialog cancel/confirm paths, and the menu exit item.
 - Bottomless Pit checked on 2026-11-07: one dedicated release workflow cycles the three difficulty levels, starts a fall, checks the horizontal-only steering, waits for the floor counter, saves the replay record through the `Yes?` prompt, replays it without input, and aborts with Escape.
-- 136 dedicated release workflows passed in this audit.
-- 203 of 324 entry points were loaded by those successful workflows.
-- 121 entry points still need dedicated workflow verification.
+- 137 dedicated release workflows passed in this audit.
+- 204 of 324 entry points were loaded by those successful workflows.
+- 120 entry points still need dedicated workflow verification.
 - The historical [startup gallery](Game-Compatibility.md) is a separate check
   and must not be interpreted as this workflow audit.
 
@@ -234,7 +235,7 @@ an optional screenshot directory. Keep each test's logs and captures separate.
 | 177 | `LAVA1 星剑传奇/打包的[星剑传奇]/星剑传奇.pac` | Game / game package | [Workflow passed: `star_legend_package_registration_writes_a_usable_record`](../crates/lavaxemu/tests/game_compatibility.rs#L13933) |
 | 178 | `LAVA1 星剑传奇/未打包的[星剑传奇]/星剑传奇.lav` | Game / game package | [Workflow passed: `star_legend_registers_a_character_and_loads_the_map`](../crates/lavaxemu/tests/game_compatibility.rs#L1214) |
 | 179 | `LAVA1 星剑传奇/未打包的[星剑传奇]/星剑注册.lav` | Account registration | [Workflow passed: `star_legend_registers_a_character_and_loads_the_map`](../crates/lavaxemu/tests/game_compatibility.rs#L1214) |
-| 180 | `LAVA1 是男人就下100层（模拟器可能不能运行）/是男人就下100层.lav` | Game / game package | Pending |
+| 180 | `LAVA1 是男人就下100层（模拟器可能不能运行）/是男人就下100层.lav` | Game / game package | [Workflow passed: `down_hundred_floors_steers_and_reaches_game_over`](../crates/lavaxemu/tests/game_compatibility.rs#L13985) |
 | 181 | `LAVA1 是男人就撑20秒正式版/是男人就撑20秒正式版.lav` | Game / game package | Pending |
 | 182 | `LAVA1 是男人就飞10000米/是男人就飞10000米.lav` | Game / game package | Pending |
 | 183 | `LAVA1 暗子象棋/暗子象棋.pac` | Game / game package | [Workflow passed: `dark_chess_loads_the_board_and_responds_to_moves`](../crates/lavaxemu/tests/game_compatibility.rs#L130) |
