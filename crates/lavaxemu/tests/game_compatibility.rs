@@ -21608,3 +21608,313 @@ fn secret_realm_rebirth_escapes_ten_generated_mazes() {
         "the ending writes nothing"
     );
 }
+
+#[test]
+#[ignore = "requires LAVAX_GAME_ROOT with the game corpus"]
+fn freecell_deals_moves_cards_and_walks_the_menus() {
+    let path = "LAVA1 空当接龙/空当接龙.lav";
+    let frame = |e: &Emulator| e.display().indexed_frame().to_vec();
+    let card = |e: &Emulator, row: usize, column: usize| e.vm().memory()[0x2092 + row * 8 + column];
+    let cursor = |e: &Emulator| e.vm().memory()[0x211a];
+    let selection = |e: &Emulator| e.vm().memory()[0x211d];
+    let deal =
+        |e: &Emulator| u16::from_le_bytes([e.vm().memory()[0x210d], e.vm().memory()[0x210e]]);
+    let halt_with = |e: &mut Emulator, key: u8| {
+        let mut halted = None;
+        for frame in 0..90 {
+            e.input_mut().set_keys([key]);
+            if frame == 3 {
+                e.input_mut().set_keys([]);
+            }
+            if let FrameStatus::Halted(code) = e.run_frame().unwrap().status {
+                halted = Some(code);
+                break;
+            }
+        }
+        halted
+    };
+
+    let mut board = load(path);
+    advance(&mut board, 30);
+    assert_eq!(board.vm().pc(), 0x17df, "the deal starts ready for input");
+    assert_eq!(deal(&board), 346, "the game opens its fixed deal");
+    assert_eq!(
+        &board.vm().memory()[0x2092..0x20c6],
+        &[
+            0xa2, 0x11, 0x12, 0x22, 0x82, 0xb0, 0xb2, 0x23, 0x71, 0x43, 0xc2, 0x91, 0x93, 0x80,
+            0x81, 0xd0, 0x53, 0x70, 0x40, 0x51, 0xb3, 0x20, 0x21, 0x32, 0x92, 0x31, 0xc0, 0x61,
+            0x73, 0x10, 0xc3, 0xa1, 0xa0, 0xd3, 0x33, 0x50, 0xd1, 0x62, 0xc1, 0x13, 0xa3, 0x42,
+            0x52, 0x90, 0x72, 0xd2, 0x63, 0x41, 0x30, 0xb1, 0x60, 0x83,
+        ],
+        "the deal fills the tableau"
+    );
+    assert_eq!(
+        &board.vm().memory()[0x20ee..0x20f6],
+        &[0, 0, 0, 0, 0, 0, 0, 0],
+        "the foundations and cells start empty"
+    );
+    assert_eq!(
+        &board.vm().memory()[0x20f6..0x20fe],
+        &[6, 6, 6, 6, 5, 5, 5, 5]
+    );
+    assert_eq!(
+        &board.vm().memory()[0x20fe..0x2106],
+        &[6, 6, 6, 5, 5, 5, 5, 5]
+    );
+    assert_eq!(
+        board.vm().memory()[0x2106],
+        200,
+        "the times value starts at 200"
+    );
+    assert_eq!(cursor(&board), 0);
+    assert_eq!(selection(&board), 0);
+    capture(&board, "freecell-board");
+
+    press(&mut board, 23);
+    assert_eq!(cursor(&board), 7, "left wraps from the first column");
+    press(&mut board, 23);
+    assert_eq!(cursor(&board), 6);
+    press(&mut board, 22);
+    assert_eq!(cursor(&board), 7);
+    press(&mut board, 22);
+    assert_eq!(cursor(&board), 0, "right wraps from the last column");
+
+    let idle = frame(&board);
+    press(&mut board, 13);
+    assert_eq!(selection(&board), 13, "enter selects the bottom card");
+    assert_ne!(frame(&board), idle, "the selection inverts the card");
+    capture(&board, "freecell-selected");
+    press(&mut board, 13);
+    assert_eq!(selection(&board), 0, "enter again drops the selection");
+    assert_eq!(
+        frame(&board),
+        idle,
+        "dropping the selection restores the frame"
+    );
+
+    press(&mut board, 13);
+    press(&mut board, 22);
+    let before = board.vm().memory()[0x2092..0x20c6].to_vec();
+    press(&mut board, 13);
+    assert_eq!(
+        &board.vm().memory()[0x2092..0x20c6],
+        before.as_slice(),
+        "moving a three onto a jack is refused"
+    );
+    assert_eq!(selection(&board), 13, "the refused card stays selected");
+    press(&mut board, 23);
+    press(&mut board, 13);
+    assert_eq!(
+        selection(&board),
+        0,
+        "returning to the source drops the selection"
+    );
+    assert!(
+        board.files_mut().take_dirty_files().is_empty(),
+        "the board writes nothing"
+    );
+
+    let mut moved = load(path);
+    advance(&mut moved, 30);
+    press(&mut moved, 13);
+    for _ in 0..7 {
+        press(&mut moved, 22);
+    }
+    press(&mut moved, 13);
+    assert_eq!(card(&moved, 6, 0), 0xff, "the three leaves its column");
+    assert_eq!(card(&moved, 6, 7), 0x30, "the three lands on the four");
+    assert_eq!(card(&moved, 5, 7), 0x41);
+    assert_eq!(
+        &moved.vm().memory()[0x20f6..0x20fe],
+        &[5, 6, 6, 6, 5, 5, 5, 6]
+    );
+    assert_eq!(selection(&moved), 0);
+    capture(&moved, "freecell-tableau-move");
+
+    let mut cells = load(path);
+    advance(&mut cells, 30);
+    for _ in 0..7 {
+        press(&mut cells, 22);
+    }
+    press(&mut cells, 19);
+    assert_eq!(
+        cells.vm().memory()[0x20f2],
+        0x41,
+        "key 19 parks the bottom card"
+    );
+    assert_eq!(
+        card(&cells, 4, 7),
+        0xff,
+        "the exposed ace leaves the column"
+    );
+    assert_eq!(
+        cells.vm().memory()[0x20f1],
+        0x13,
+        "the exposed ace reaches its foundation"
+    );
+    assert_eq!(&cells.vm().memory()[0x20ee..0x20f1], &[0, 0, 0]);
+    assert_eq!(cells.vm().memory()[0x20f6 + 7], 3);
+    assert_eq!(cells.vm().memory()[0x20fe + 7], 3);
+    press(&mut cells, 19);
+    assert_eq!(
+        cells.vm().memory()[0x20f3],
+        0xa1,
+        "the next card fills the second cell"
+    );
+    assert_eq!(cells.vm().memory()[0x20f6 + 7], 2);
+    assert_eq!(
+        cells.vm().memory()[0x20f1],
+        0x13,
+        "the foundation stays on the ace"
+    );
+    capture(&cells, "freecell-foundation");
+    let before = cells.vm().memory()[0x2092..0x20f6].to_vec();
+    press(&mut cells, 14);
+    assert_eq!(
+        &cells.vm().memory()[0x2092..0x20f6],
+        before.as_slice(),
+        "key 14 refuses a card that is not next on its foundation"
+    );
+    assert!(
+        cells.files_mut().take_dirty_files().is_empty(),
+        "the moves write nothing"
+    );
+
+    let mut pickup = load(path);
+    advance(&mut pickup, 30);
+    press(&mut pickup, 19);
+    assert_eq!(
+        pickup.vm().memory()[0x20f2],
+        0x30,
+        "the three waits in the first cell"
+    );
+    press(&mut pickup, 20);
+    assert_eq!(pickup.vm().pc(), 0x13e1, "up opens the free-cell row");
+    press(&mut pickup, 13);
+    assert_eq!(pickup.vm().pc(), 0x17df, "enter returns to the tableau");
+    assert_eq!(selection(&pickup), 20, "the cell card is held");
+    for _ in 0..7 {
+        press(&mut pickup, 22);
+    }
+    assert_eq!(
+        selection(&pickup),
+        20,
+        "moving the cursor keeps the held card"
+    );
+    press(&mut pickup, 13);
+    assert_eq!(pickup.vm().memory()[0x20f2], 0, "the cell is released");
+    assert_eq!(card(&pickup, 6, 7), 0x30, "the held card lands on the four");
+    assert_eq!(card(&pickup, 5, 7), 0x41);
+    assert_eq!(pickup.vm().memory()[0x20f6 + 7], 6);
+    assert_eq!(selection(&pickup), 0);
+    capture(&pickup, "freecell-cell-move");
+
+    let mut quit = load(path);
+    advance(&mut quit, 30);
+    press(&mut quit, 27);
+    assert_eq!(quit.vm().pc(), 0x15a3, "escape opens the menu");
+    capture(&quit, "freecell-menu");
+    press(&mut quit, 13);
+    assert_eq!(quit.vm().pc(), 0x17df, "enter resumes the game");
+    press(&mut quit, 27);
+    for _ in 0..4 {
+        press(&mut quit, 21);
+    }
+    press(&mut quit, 13);
+    assert_eq!(
+        quit.vm().pc(),
+        0x353,
+        "the exit entry asks for confirmation"
+    );
+    capture(&quit, "freecell-exit-confirm");
+    press(&mut quit, 22);
+    press(&mut quit, 13);
+    assert_eq!(quit.vm().pc(), 0x17df, "cancel returns to the game");
+    press(&mut quit, 27);
+    for _ in 0..4 {
+        press(&mut quit, 21);
+    }
+    press(&mut quit, 13);
+    assert_eq!(
+        halt_with(&mut quit, 13),
+        Some(0),
+        "confirming the exit halts"
+    );
+    assert_eq!(quit.vm().pc(), 0x1d02, "the game stops after the exit");
+
+    let mut replay = load(path);
+    advance(&mut replay, 30);
+    press(&mut replay, 28);
+    assert_eq!(replay.vm().pc(), 0x353, "replay asks to abandon the game");
+    capture(&replay, "freecell-abandon");
+    press(&mut replay, 23);
+    press(&mut replay, 13);
+    assert_eq!(replay.vm().pc(), 0x17df);
+    assert_eq!(deal(&replay), 346, "cancel keeps the deal");
+    press(&mut replay, 28);
+    press(&mut replay, 13);
+    assert_eq!(deal(&replay), 346, "replay keeps the same deal");
+    assert_eq!(
+        card(&replay, 6, 0),
+        0x30,
+        "replay restores the original tableau"
+    );
+    press(&mut replay, 29);
+    press(&mut replay, 13);
+    assert_ne!(deal(&replay), 346, "new game draws another deal");
+    assert_ne!(card(&replay, 6, 0), 0x30, "new game replaces the tableau");
+
+    let mut deals = load(path);
+    advance(&mut deals, 30);
+    press(&mut deals, 30);
+    assert_eq!(
+        deals.vm().pc(),
+        0x353,
+        "choosing a deal asks to abandon the game"
+    );
+    press(&mut deals, 13);
+    assert_eq!(deals.vm().pc(), 0x1df, "the deal selector opens");
+    capture(&deals, "freecell-deal-select");
+    press(&mut deals, 27);
+    assert_eq!(deals.vm().pc(), 0x17df, "escape cancels the deal selector");
+    assert_eq!(deal(&deals), 346);
+    press(&mut deals, 30);
+    press(&mut deals, 13);
+    press(&mut deals, 49);
+    assert_eq!(deals.vm().pc(), 0x2c0, "a digit is accepted");
+    press(&mut deals, 13);
+    assert_eq!(deals.vm().pc(), 0x17df);
+    assert_eq!(deal(&deals), 1, "the typed deal is loaded");
+    assert_eq!(
+        card(&deals, 6, 0),
+        0xd3,
+        "the first deal has its own tableau"
+    );
+
+    let mut times = load(path);
+    advance(&mut times, 30);
+    assert_eq!(times.vm().memory()[0x2106], 200);
+    press(&mut times, 99);
+    assert_eq!(times.vm().pc(), 0x1df, "c opens the times input");
+    capture(&times, "freecell-times");
+    press(&mut times, 49);
+    press(&mut times, 50);
+    press(&mut times, 13);
+    assert_eq!(times.vm().pc(), 0x17df);
+    assert_eq!(
+        times.vm().memory()[0x2106],
+        12,
+        "the typed times value is stored"
+    );
+    press(&mut times, 99);
+    press(&mut times, 27);
+    assert_eq!(
+        times.vm().memory()[0x2106],
+        12,
+        "escape keeps the times value"
+    );
+    assert!(
+        times.files_mut().take_dirty_files().is_empty(),
+        "the dialogs write nothing"
+    );
+}

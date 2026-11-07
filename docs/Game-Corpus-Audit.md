@@ -64,9 +64,10 @@ do not satisfy this status.
 - Instant Worms checked on 2026-11-08: one dedicated release workflow covers both builds — the standard build owns its title menu with the four entries, help pages and built-in map browser, walks and aims a worm through the letter keys, swaps to the next worm, fires, jumps and pauses with a frozen frame, opens the AI duel and its exit prompt, creates a blank map and an edited map in the manager and the editor, declines then accepts the quit prompt, and halts with code 0; the VS build loads its own map store, rejects its locked menu entries, starts a duel with two worms per team, steers and aims both directions, opens the rematch prompt, restarts and declines and halts with code 0 without writing files.
 - YoGames Collection checked on 2026-11-08: one dedicated release workflow covers both builds — the PC title opens the four-entry menu with wrapping in both directions, opens the credits and the farewell halt, plays the gift game through its rules, values and board screens, pauses and resumes it, finishes the right-throw round with the stored scores, scores nothing when the first round is quit from the pause, plays the kung fu tournament with five lives per fighter, both pause branches, the abort page and a twenty-punch result, plays the fishing round through three hundred casts with its stored scores, and halts with code 0 without writing files; the WQX build repeats the menu, credits, gift, kung fu, fishing and pause flows at its shifted addresses, halts with code 0, and writes nothing.
 - Secret Realm Rebirth checked on 2026-11-08: one dedicated release workflow leaves the title and key-help screens for the first generated maze, confirms the border blocks movement while right and down redraw the frame, checks the level timer death screen and its halt, exits with Escape, then walks ten solved maze levels with deterministic paths, reads the six-paragraph ending, and restarts a new game from the last page without writing files.
-- 170 dedicated release workflows passed in this audit.
-- 243 of 324 entry points were loaded by those successful workflows.
-- 81 entry points still need dedicated workflow verification.
+- FreeCell checked on 2026-11-08: one dedicated release workflow loads the fixed deal 346 with its exact 52-card tableau, wraps the column cursor in both directions, selects and deselects a card with a frame-identical drop, refuses an invalid three-onto-jack move, plays a valid tableau move, parks, picks up and places cards in both free cells, auto-plays an ace to the foundation, walks the Escape menu and the exit confirmation by cancel and halt, replays and re-deals with F1/F2/F3 including the deal-number and TIMES inputs, and writes no files.
+- 171 dedicated release workflows passed in this audit.
+- 244 of 324 entry points were loaded by those successful workflows.
+- 80 entry points still need dedicated workflow verification.
 - The historical [startup gallery](Game-Compatibility.md) is a separate check
   and must not be interpreted as this workflow audit.
 
@@ -326,7 +327,7 @@ an optional screenshot directory. Keep each test's logs and captures separate.
 | 236 | `LAVA1 神州/非pac/Magic.lav` | Game / game package | [Workflow passed: `magic_packaged_and_loose_versions_load_resources_and_move_on_the_map`](../crates/lavaxemu/tests/game_compatibility.rs#L720) |
 | 237 | `LAVA1 种金币/种金币.lav` | Game / game package | [Workflow passed: `planting_gold_moves_a_coin_and_restarts_the_level`](../crates/lavaxemu/tests/game_compatibility.rs#L1121) |
 | 238 | `LAVA1 秘境还生/秘境还生.lav` | Game / game package | [Workflow passed: `secret_realm_rebirth_escapes_ten_generated_mazes`](../crates/lavaxemu/tests/game_compatibility.rs#L21468) |
-| 239 | `LAVA1 空当接龙/空当接龙.lav` | Game / game package | Pending |
+| 239 | `LAVA1 空当接龙/空当接龙.lav` | Game / game package | [Workflow passed: `freecell_deals_moves_cards_and_walks_the_menus`](../crates/lavaxemu/tests/game_compatibility.rs#L21614) |
 | 240 | `LAVA1 空间战争/SpaceWar.lav` | Game / game package | Pending |
 | 241 | `LAVA1 类似十全十美/allout.lav` | Game / game package | Pending |
 | 242 | `LAVA1 精灵岛5-勇者之旅/精灵岛5.lav` | Game / game package | Pending |

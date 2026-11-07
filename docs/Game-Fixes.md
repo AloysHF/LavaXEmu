@@ -3606,3 +3606,38 @@ without an execution error alone does not establish playability.
 - Maze layout and palette are deterministic for a fixed frame timeline, so
   the fixed ten-level route reproduces the same ten mazes on every run.
   The game writes no files. No additional emulator changes were required.
+
+
+## FreeCell (LAVA1 空当接龙)
+
+- Content: `LAVA1 空当接龙/空当接龙.lav`, a single Bits16 program that draws
+  a 160x80 card table.
+- The tableau waits at pc `0x17df` and opens the fixed deal 346 in the word
+  at `0x210d`. The 52 cards live at `0x2092`; the eight columns run eight
+  bytes apart, with `0xff` marking an empty slot. The foundation slots start
+  at `0x20ee`, the two free cells at `0x20f2`, the bottom-row counters at
+  `0x20f6` and the face-up counters at `0x20fe`. The selected column is at
+  `0x211a`, the held card at `0x211d`, and the move counter at `0x2106`
+  starts at 200.
+- Left and Right move the column cursor and wrap `0 -> 7` and `7 -> 0`.
+  Enter picks up the bottom card of a column and draws it inverted; pressing
+  Enter on the same column drops it and restores the frame exactly. An
+  illegal move, such as a three onto a jack, leaves both the selection and
+  the tableau untouched.
+- A valid move moves the card byte to the target column and clears the
+  source slot; the bottom and face-up counters follow. Key 19 parks the
+  bottom card in the first free cell and then the second; key 14 plays a
+  card onto its foundation. After each move the auto-play at `0x1287`
+  promotes exposed aces, so parking an ace immediately fills foundation one.
+- Up opens the free-cell row at `0x13e1`; Enter there picks up a cell card
+  and returns to the tableau at `0x17df` with the card held, and a later
+  Enter places it on a valid column.
+- Escape opens the menu at `0x15a3`; Enter resumes the game. The fifth menu
+  entry opens the exit confirmation at `0x353`, where Enter confirms and
+  halts with code 0 at `0x1d02` while Right moves to cancel and returns to
+  the game.
+- F1 asks to abandon the round at `0x353` and then replays the same deal;
+  F2 starts a new deal; F3 opens the deal selector at `0x1df`, where digits
+  type a deal number and Enter loads it through `0x2c0`. The `c` key opens
+  the TIMES input at `0x1df` and Enter stores the typed value. The game
+  writes no files. No additional emulator changes were required.
