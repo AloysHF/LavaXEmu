@@ -13927,3 +13927,55 @@ fn bottomless_pit_selects_difficulty_descends_saves_and_replays() {
     assert_eq!(emulator.vm().pc(), 0x762, "escape leaves the run");
     capture(&emulator, "pit-escape");
 }
+
+#[test]
+#[ignore = "requires the local game corpus via LAVAX_GAME_ROOT"]
+fn star_legend_package_registration_writes_a_usable_record() {
+    let mut package = load("LAVA1 星剑传奇/打包的[星剑传奇]/星剑传奇.pac");
+    advance(&mut package, 300);
+    for key in [13]
+        .into_iter()
+        .chain(*b"lavaxx")
+        .chain([13])
+        .chain(*b"testxx")
+        .chain([13, b'y', 13])
+        .chain(*b"lava")
+        .chain([13])
+    {
+        press(&mut package, key);
+    }
+    capture(&package, "star-legend-pac-registration");
+    let (record_path, record) = package
+        .files_mut()
+        .take_dirty_files()
+        .into_iter()
+        .find(|(path, bytes)| path.ends_with("s-lavaxx.dat") && bytes.len() == 194)
+        .expect("the packaged registration entry writes the account record");
+
+    let mut emulator = load("LAVA1 星剑传奇/未打包的[星剑传奇]/星剑传奇.lav");
+    emulator.files_mut().import_file(&record_path, record);
+    advance(&mut emulator, 600);
+    press(&mut emulator, 13);
+    for key in b"lavaxx"
+        .iter()
+        .copied()
+        .chain([13])
+        .chain(*b"testxx")
+        .chain([13])
+    {
+        press(&mut emulator, key);
+    }
+    advance(&mut emulator, 1200);
+    capture(&emulator, "star-legend-pac-character");
+    press(&mut emulator, 13);
+    advance(&mut emulator, 600);
+    capture(&emulator, "star-legend-pac-map");
+    let mut idle = emulator.clone();
+    advance(&mut idle, 60);
+    let moved = input_branch(&emulator, 20);
+    capture(&moved, "star-legend-pac-movement");
+    assert!(
+        moved.display().indexed_frame() != idle.display().indexed_frame(),
+        "the packaged record must load a character that moves on the map"
+    );
+}

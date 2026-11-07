@@ -436,8 +436,8 @@ without an execution error alone does not establish playability.
 
 ## Star Legend (星剑传奇)
 
-- Content: `LAVA1 星剑传奇/未打包的[星剑传奇]/星剑注册.lav` and
-  `星剑传奇.lav`; the PAC starts its embedded registration program.
+- Content: `LAVA1 星剑传奇/未打包的[星剑传奇]/星剑注册.lav`,
+  `星剑传奇.lav`, and `LAVA1 星剑传奇/打包的[星剑传奇]/星剑传奇.pac`.
 - Validation gap: generic input stopped at account setup rather than proving
   that a registered character could enter the game. Both account and password
   must exceed five characters; the confirmation explicitly requires Y.
@@ -445,9 +445,13 @@ without an execution error alone does not establish playability.
   character, and enter a name. Registration writes a real 194-byte
   `LavaData/S-lavaxx.dat`. A fresh main-game instance reads that file, accepts
   the credentials, and displays the character summary. Enter opens the map;
-  Up moves the character relative to an equal-duration idle replay. The PAC
-  registration flow also reaches the success screen and writes the same file.
-  No additional emulator behavior changes were required.
+  Up moves the character relative to an equal-duration idle replay.
+- The package holds `LAVA/星剑注册.lav`, `LAVA/星剑传奇.lav`,
+  `LavaData/StarMap.dat` and `LavaData/StarPic.dat`. Loading it runs the first
+  program, so this entry performs the same registration flow and writes the
+  194-byte record. Importing that record into the main program accepts the
+  credentials and reaches the same map.
+- No additional emulator behavior changes were required.
 
 | Registration | Loaded character | Map movement |
 | --- | --- | --- |
