@@ -3464,3 +3464,42 @@ without an execution error alone does not establish playability.
 - The packaged build ships no progress file, so the first level-list entry
   creates `/lavadata/bbkpv.dat` with byte 0; the loose build ships that file
   and only reads it. The menus and the stage write nothing else.
+
+## Platinum Snake (LAVA1 白金贪吃蛇)
+
+- Content: `LAVA1 白金贪吃蛇/白金贪吃蛇.lav`.
+- The title waits at pc `0x17f7` with the banner at `0x1c16`, the save path
+  `/LavaData/snake.sav` at `0x1c00`, and the three entries 新游戏, 速度设置,
+  排行榜 at `0x1c31`, `0x1c3c` and `0x1c47`. The selection word `0x336e`
+  starts at 1, wraps 1→2→3→1 with Down and 3→2→1 with Up.
+- 速度设置 opens at pc `0x1874` with the speed byte `0x3337` at 5. Down
+  raises it 5→6→7→8→9→10→1 and Up lowers it 1→10→9→8→7→6→5. Enter returns to
+  the title with the entry still selected and the speed kept.
+- 新游戏 starts the board at pc `0x3219`/`0x3262` with the score word `0x3368`
+  empty, the head words `0x333d`/`0x333f` and the move counter `0x3343`. The
+  counter advances eight times in sixty frames at speed five and sixty times
+  at speed ten.
+- The head starts at `(0x16, 0)` and reaches `(0x1f, 0)` after sixty frames.
+  Down keeps the column and moves to row 8, Right wraps the column to 0, and
+  Up returns the head to row 0 without ending the round.
+- A scripted four-turn sequence eats one food for five points at
+  `(0x22, 0x13)`.
+- `p` (`0x70`) pauses at pc `0x172b`: the counter, head and score stay frozen,
+  the board region is pixel-identical over ninety frames, and the scratch
+  buffer carries `PAUSE`. Another `p` resumes the board.
+- F5 opens the controls page at pc `0x161c` (direction text at `0x1407`), a
+  key opens the rules page at pc `0x168f` (`0x1418`), a key opens the author
+  page at pc `0x1711` (`制作:海成` at `0x1437`, `策划:dudu` at `0x1441`), and a
+  key returns to the board with the score kept.
+- Escape on the board waits at pc `0x3254`; Space fades through `0x10ae` into
+  the congratulations page at pc `0x1114` (`恭喜你,上榜了!` at `0x1c6b`), and
+  Space opens the name form at pc `0xe2c` (`你的大名(8字以内):_` at `0x1400`).
+  An eight-letter name and Enter open the rank board at pc `0x14f7` with the
+  name at `0x3384` and the score at `0x337a`, and the game writes
+  `/lavadata/snake.sav` (55 bytes: the score, six zero bytes, the name and
+  zero padding). Escape leaves the board for the title.
+- 排行榜 opens the same board from the title with the rank labels `第1名:` at
+  `0x1cb1` and `第5名:` at `0x1d15`.
+- Escape on the title opens the credits at pc `0x159a` (`再  见`, `制作:海成`,
+  `策划:dudu`); any key fades through `0x10ae` and halts at pc `0x15a2` with
+  code 1.

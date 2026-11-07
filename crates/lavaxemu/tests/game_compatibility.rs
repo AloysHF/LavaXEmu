@@ -20026,3 +20026,447 @@ fn bai_bai_kuai_pao_versions_walk_menus_start_the_stage_and_scroll_back() {
         );
     }
 }
+
+#[test]
+#[ignore = "requires LAVAX_GAME_ROOT with the game corpus"]
+fn platinum_snake_walks_menus_sets_speed_steers_pauses_and_saves_a_score() {
+    let path = "LAVA1 白金贪吃蛇/白金贪吃蛇.lav";
+    let byte = |emulator: &Emulator, address: usize| emulator.vm().memory()[address];
+    let word = |emulator: &Emulator, address: usize| {
+        u16::from_le_bytes([byte(emulator, address), byte(emulator, address + 1)])
+    };
+    let region = |emulator: &Emulator, x0: usize, y0: usize, x1: usize, y1: usize| {
+        let stride = usize::from(emulator.display().width());
+        let frame = emulator.display().indexed_frame();
+        (y0..y1)
+            .flat_map(|y| frame[y * stride + x0..y * stride + x1].to_vec())
+            .collect::<Vec<u8>>()
+    };
+    let playing = |emulator: &Emulator| matches!(emulator.vm().pc(), 0x3219 | 0x3262);
+    let contains = |emulator: &Emulator, needle: &[u8]| {
+        emulator
+            .vm()
+            .memory()
+            .windows(needle.len())
+            .any(|window| window == needle)
+    };
+    let score = |emulator: &Emulator| emulator.vm().memory()[0x3368..0x336c].to_vec();
+    let start = |emulator: &mut Emulator| {
+        advance(emulator, 30);
+        assert_eq!(emulator.vm().pc(), 0x17f7, "the title waits for input");
+        press(emulator, 13);
+        advance(emulator, 180);
+        assert_eq!(emulator.vm().pc(), 0x3219, "the new game starts");
+    };
+    let eat_five = |emulator: &mut Emulator| {
+        press(emulator, 20);
+        advance(emulator, 12);
+        press(emulator, 23);
+        advance(emulator, 12);
+        press(emulator, 21);
+        advance(emulator, 12);
+        press(emulator, 22);
+        advance(emulator, 12);
+        advance(emulator, 80);
+    };
+
+    let mut emulator = load(path);
+    advance(&mut emulator, 30);
+    assert_eq!(emulator.vm().pc(), 0x17f7, "the title waits for input");
+    assert_eq!(
+        &emulator.vm().memory()[0x1c00..0x1c13],
+        b"/LavaData/snake.sav",
+        "the title names the score file"
+    );
+    assert_eq!(
+        &emulator.vm().memory()[0x1c16..0x1c30],
+        &[
+            0x20, 0x2d, 0x2d, 0x2d, 0x2d, 0xcc, 0xb0, 0x20, 0xb3, 0xd4, 0x20, 0xc9, 0xdf, 0x20,
+            0xb0, 0xd7, 0x20, 0xbd, 0xf0, 0x20, 0xb0, 0xe6, 0x2d, 0x2d, 0x2d, 0x2d,
+        ],
+        "the title banner names the game"
+    );
+    assert_eq!(
+        &emulator.vm().memory()[0x1c31..0x1c3b],
+        &[0x31, 0x2e, 0xd0, 0xc2, 0xd3, 0xce, 0xcf, 0xb7, 0x20, 0x20],
+        "the menu lists a new game"
+    );
+    assert_eq!(
+        &emulator.vm().memory()[0x1c3c..0x1c46],
+        &[0x32, 0x2e, 0xcb, 0xd9, 0xb6, 0xc8, 0xc9, 0xe8, 0xd6, 0xc3],
+        "the menu lists the speed setting"
+    );
+    assert_eq!(
+        &emulator.vm().memory()[0x1c47..0x1c51],
+        &[0x33, 0x2e, 0xd3, 0xa2, 0xd0, 0xdb, 0xb0, 0xf1, 0x20, 0x20],
+        "the menu lists the score board"
+    );
+    assert_eq!(
+        word(&emulator, 0x336e),
+        1,
+        "the first menu item starts selected"
+    );
+    capture(&emulator, "platinum-snake-title");
+    for expected in [2, 3, 1] {
+        press(&mut emulator, 21);
+        assert_eq!(
+            word(&emulator, 0x336e),
+            expected,
+            "down walks the menu and wraps"
+        );
+    }
+    for expected in [3, 2, 1] {
+        press(&mut emulator, 20);
+        assert_eq!(
+            word(&emulator, 0x336e),
+            expected,
+            "up walks the menu and wraps"
+        );
+    }
+
+    press(&mut emulator, 21);
+    press(&mut emulator, 13);
+    advance(&mut emulator, 180);
+    assert_eq!(
+        emulator.vm().pc(),
+        0x1874,
+        "the speed screen waits for input"
+    );
+    assert_eq!(byte(&emulator, 0x3337), 5, "the speed starts at five");
+    capture(&emulator, "platinum-snake-speed");
+    for expected in [6, 7, 8, 9, 10, 1] {
+        press(&mut emulator, 21);
+        assert_eq!(
+            byte(&emulator, 0x3337),
+            expected,
+            "down raises the speed and wraps"
+        );
+    }
+    for expected in [10, 9, 8, 7, 6, 5] {
+        press(&mut emulator, 20);
+        assert_eq!(byte(&emulator, 0x3337), expected, "up lowers the speed");
+    }
+    press(&mut emulator, 13);
+    assert_eq!(emulator.vm().pc(), 0x17f7, "enter returns to the title");
+    assert_eq!(word(&emulator, 0x336e), 2, "the speed item stays selected");
+    assert_eq!(byte(&emulator, 0x3337), 5, "the chosen speed is kept");
+
+    press(&mut emulator, 20);
+    press(&mut emulator, 13);
+    advance(&mut emulator, 180);
+    assert_eq!(emulator.vm().pc(), 0x3219, "the new game starts");
+    assert_eq!(byte(&emulator, 0x3337), 5, "the game uses the stored speed");
+    assert_eq!(word(&emulator, 0x3343), 7, "the move counter starts here");
+    assert_eq!(word(&emulator, 0x333d), 0x16, "the snake starts mid board");
+    assert_eq!(
+        word(&emulator, 0x333f),
+        0,
+        "the snake starts on the top row"
+    );
+    assert_eq!(score(&emulator), [0, 0, 0, 0], "the score starts empty");
+    capture(&emulator, "platinum-snake-start");
+    advance(&mut emulator, 60);
+    assert_eq!(
+        word(&emulator, 0x3343),
+        16,
+        "speed five advances eight steps a second"
+    );
+    assert_eq!(
+        word(&emulator, 0x333d),
+        0x1f,
+        "the snake crosses to the right half"
+    );
+    advance(&mut emulator, 60);
+    assert_eq!(
+        word(&emulator, 0x3343),
+        24,
+        "the move counter keeps the speed"
+    );
+
+    let mut emulator = load(path);
+    advance(&mut emulator, 30);
+    press(&mut emulator, 21);
+    press(&mut emulator, 13);
+    advance(&mut emulator, 180);
+    assert_eq!(emulator.vm().pc(), 0x1874, "the speed screen reopens");
+    for _ in 0..5 {
+        press(&mut emulator, 21);
+    }
+    assert_eq!(byte(&emulator, 0x3337), 10, "the speed can reach ten");
+    press(&mut emulator, 13);
+    press(&mut emulator, 20);
+    press(&mut emulator, 13);
+    advance(&mut emulator, 240);
+    assert!(playing(&emulator), "the fast game starts");
+    assert_eq!(
+        word(&emulator, 0x3343),
+        118,
+        "speed ten counts moves every frame"
+    );
+    advance(&mut emulator, 60);
+    assert_eq!(
+        word(&emulator, 0x3343),
+        178,
+        "speed ten advances sixty moves a second"
+    );
+
+    let mut emulator = load(path);
+    start(&mut emulator);
+    advance(&mut emulator, 60);
+    assert_eq!(
+        word(&emulator, 0x333d),
+        0x1f,
+        "the snake reaches the right edge"
+    );
+    assert_eq!(word(&emulator, 0x333f), 0, "the snake stays on the top row");
+    capture(&emulator, "platinum-snake-right-edge");
+    hold(&mut emulator, 21, 30);
+    assert_eq!(word(&emulator, 0x333d), 0x1f, "down keeps the column");
+    assert_eq!(
+        word(&emulator, 0x333f),
+        8,
+        "down moves the snake down the board"
+    );
+    hold(&mut emulator, 22, 30);
+    assert_eq!(
+        word(&emulator, 0x333d),
+        0,
+        "right wraps the snake to the left edge"
+    );
+    assert_eq!(word(&emulator, 0x333f), 8, "right keeps the row");
+    hold(&mut emulator, 20, 30);
+    assert_eq!(word(&emulator, 0x333d), 0, "up keeps the column");
+    assert_eq!(
+        word(&emulator, 0x333f),
+        0,
+        "up returns the snake to the top row"
+    );
+    assert!(playing(&emulator), "the snake survives the turns");
+    assert_eq!(score(&emulator), [0, 0, 0, 0], "the snake scores nothing");
+    assert!(
+        emulator.files_mut().take_dirty_files().is_empty(),
+        "steering writes nothing"
+    );
+    capture(&emulator, "platinum-snake-steered");
+
+    let mut emulator = load(path);
+    start(&mut emulator);
+    eat_five(&mut emulator);
+    assert!(playing(&emulator), "the snake keeps playing after eating");
+    assert_eq!(score(&emulator), [5, 0, 0, 0], "one food is worth five");
+    assert_eq!(word(&emulator, 0x333d), 0x22, "the snake ate at the cell");
+    assert_eq!(word(&emulator, 0x333f), 0x13, "the snake ate at the row");
+    capture(&emulator, "platinum-snake-after-eating");
+    assert!(
+        !contains(&emulator, b"PAUSE"),
+        "the pause label is not written before pausing"
+    );
+
+    press(&mut emulator, 112);
+    assert_eq!(emulator.vm().pc(), 0x172b, "p pauses the game");
+    let frozen_field = region(&emulator, 2, 22, 120, 76);
+    advance(&mut emulator, 90);
+    assert_eq!(emulator.vm().pc(), 0x172b, "the paused screen waits");
+    assert_eq!(
+        word(&emulator, 0x3343),
+        0x2c,
+        "the pause freezes the move counter"
+    );
+    assert_eq!(word(&emulator, 0x333d), 0x22, "the pause freezes the snake");
+    assert_eq!(word(&emulator, 0x333f), 0x13, "the pause freezes the snake");
+    assert_eq!(
+        score(&emulator),
+        [5, 0, 0, 0],
+        "the pause freezes the score"
+    );
+    assert!(contains(&emulator, b"PAUSE"), "the pause label is visible");
+    assert_eq!(
+        region(&emulator, 2, 22, 120, 76),
+        frozen_field,
+        "the board is frozen"
+    );
+    capture(&emulator, "platinum-snake-paused");
+    press(&mut emulator, 112);
+    assert!(playing(&emulator), "p resumes the game");
+    advance(&mut emulator, 60);
+    assert!(
+        word(&emulator, 0x3343) > 0x2c,
+        "the game moves again after the pause"
+    );
+
+    press(&mut emulator, 25);
+    assert_eq!(
+        emulator.vm().pc(),
+        0x161c,
+        "help opens on the controls page"
+    );
+    assert_eq!(
+        &emulator.vm().memory()[0x1407..0x1412],
+        &[
+            0xd3, 0xce, 0x20, 0xcf, 0xb7, 0x20, 0xb0, 0xef, 0x20, 0xd6, 0xfa
+        ],
+        "help shows the direction keys"
+    );
+    assert_eq!(score(&emulator), [5, 0, 0, 0], "help freezes the score");
+    capture(&emulator, "platinum-snake-help-controls");
+    press(&mut emulator, 97);
+    assert_eq!(emulator.vm().pc(), 0x168f, "a key opens the rules page");
+    assert_eq!(
+        &emulator.vm().memory()[0x1418..0x1424],
+        &[
+            0x20, 0x20, 0xd4, 0xda, 0xd3, 0xce, 0xcf, 0xb7, 0xd6, 0xd0, 0xb2, 0xbb,
+        ],
+        "the rules warn about the snake body"
+    );
+    capture(&emulator, "platinum-snake-help-rules");
+    press(&mut emulator, 97);
+    assert_eq!(emulator.vm().pc(), 0x1711, "a key opens the author page");
+    assert_eq!(
+        &emulator.vm().memory()[0x1437..0x1441],
+        &[0xd6, 0xc6, 0xd7, 0xf7, 0x3a, 0xba, 0xa3, 0xb3, 0xc9, 0x20],
+        "the author page names the author"
+    );
+    assert_eq!(
+        &emulator.vm().memory()[0x1441..0x144a],
+        &[0xb2, 0xdf, 0xbb, 0xae, 0x3a, 0x64, 0x75, 0x64, 0x75],
+        "the author page names the designer"
+    );
+    capture(&emulator, "platinum-snake-help-author");
+    press(&mut emulator, 97);
+    assert!(playing(&emulator), "a key closes the help");
+
+    let mut emulator = load(path);
+    start(&mut emulator);
+    eat_five(&mut emulator);
+    assert_eq!(score(&emulator), [5, 0, 0, 0], "the snake ate once");
+    press(&mut emulator, 27);
+    assert_eq!(emulator.vm().pc(), 0x3254, "escape asks to leave");
+    press(&mut emulator, 32);
+    assert_eq!(emulator.vm().pc(), 0x10ae, "space starts the farewell");
+    advance(&mut emulator, 60);
+    assert_eq!(
+        emulator.vm().pc(),
+        0x1114,
+        "the game congratulates the player"
+    );
+    assert_eq!(
+        &emulator.vm().memory()[0x1c6b..0x1c7a],
+        &[
+            0xb9, 0xa7, 0xcf, 0xb2, 0xc4, 0xfa, 0x2c, 0xc9, 0xcf, 0xb0, 0xf1, 0xc1, 0xcb, 0x21,
+            0x00,
+        ],
+        "the game announces a high score"
+    );
+    capture(&emulator, "platinum-snake-congratulations");
+    press(&mut emulator, 32);
+    assert_eq!(emulator.vm().pc(), 0xe2c, "the name form waits for input");
+    assert_eq!(
+        &emulator.vm().memory()[0x1400..0x1415],
+        &[
+            0xc4, 0xfa, 0xb5, 0xc4, 0xb4, 0xf3, 0xc3, 0xfb, 0x28, 0x38, 0xd7, 0xd6, 0xbd, 0xda,
+            0xd2, 0xd4, 0xc4, 0xda, 0x29, 0x3a, 0x5f,
+        ],
+        "the form asks for an eight letter name"
+    );
+    capture(&emulator, "platinum-snake-name-entry");
+    for key in b"ABCDEFGH" {
+        press(&mut emulator, *key);
+        assert_eq!(
+            emulator.vm().pc(),
+            0xe2c,
+            "the form keeps accepting letters"
+        );
+    }
+    press(&mut emulator, 13);
+    assert_eq!(emulator.vm().pc(), 0x14f7, "enter opens the score board");
+    assert_eq!(
+        &emulator.vm().memory()[0x3384..0x338c],
+        b"ABCDEFGH",
+        "the board stores the name"
+    );
+    assert_eq!(
+        &emulator.vm().memory()[0x337a..0x337e],
+        [5, 0, 0, 0],
+        "the board stores the score"
+    );
+    let mut saved = vec![5, 0, 0, 0];
+    saved.extend([0u8; 6]);
+    saved.extend(b"ABCDEFGH");
+    saved.extend([0u8; 37]);
+    assert_eq!(
+        emulator.files_mut().take_dirty_files(),
+        vec![("/lavadata/snake.sav".to_owned(), saved)],
+        "the board writes one saved score"
+    );
+    capture(&emulator, "platinum-snake-score-board");
+    press(&mut emulator, 27);
+    assert_eq!(emulator.vm().pc(), 0x10ae, "escape leaves the board");
+    advance(&mut emulator, 60);
+    assert_eq!(emulator.vm().pc(), 0x17f7, "the title returns");
+    assert!(
+        emulator.files_mut().take_dirty_files().is_empty(),
+        "leaving the board writes nothing"
+    );
+
+    press(&mut emulator, 27);
+    assert_eq!(emulator.vm().pc(), 0x159a, "escape opens the credits");
+    assert!(
+        contains(&emulator, &[0xd4, 0xd9, 0x20, 0x20, 0xbc, 0xfb]),
+        "the credits say goodbye"
+    );
+    assert!(
+        contains(
+            &emulator,
+            &[0xd6, 0xc6, 0xd7, 0xf7, 0x3a, 0xba, 0xa3, 0xb3, 0xc9]
+        ),
+        "the credits name the author"
+    );
+    assert!(
+        contains(
+            &emulator,
+            &[0xb2, 0xdf, 0xbb, 0xae, 0x3a, 0x64, 0x75, 0x64, 0x75]
+        ),
+        "the credits name the designer"
+    );
+    capture(&emulator, "platinum-snake-credits");
+    let mut halted = None;
+    emulator.input_mut().set_keys([97]);
+    for frame in 0..90 {
+        if frame == 3 {
+            emulator.input_mut().set_keys([]);
+        }
+        if let FrameStatus::Halted(code) = emulator.run_frame().unwrap().status {
+            halted = Some(code);
+            break;
+        }
+    }
+    assert_eq!(halted, Some(1), "a key on the credits ends the program");
+    assert_eq!(emulator.vm().pc(), 0x15a2, "the exit path runs");
+
+    let mut emulator = load(path);
+    advance(&mut emulator, 30);
+    press(&mut emulator, 21);
+    press(&mut emulator, 21);
+    press(&mut emulator, 13);
+    advance(&mut emulator, 240);
+    assert_eq!(
+        emulator.vm().pc(),
+        0x14f7,
+        "the score board waits for input"
+    );
+    assert_eq!(
+        &emulator.vm().memory()[0x1cb1..0x1cb7],
+        &[0xb5, 0xda, 0x31, 0xc3, 0xfb, 0x3a],
+        "the board starts at rank one"
+    );
+    assert_eq!(
+        &emulator.vm().memory()[0x1d15..0x1d1b],
+        &[0xb5, 0xda, 0x35, 0xc3, 0xfb, 0x3a],
+        "the board ends at rank five"
+    );
+    capture(&emulator, "platinum-snake-empty-board");
+    press(&mut emulator, 27);
+    assert_eq!(emulator.vm().pc(), 0x10ae, "escape leaves the board");
+    advance(&mut emulator, 60);
+    assert_eq!(emulator.vm().pc(), 0x17f7, "the title returns");
+}
