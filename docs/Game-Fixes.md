@@ -2884,3 +2884,22 @@ without an execution error alone does not establish playability.
 - 豹隐山林 fades the title out and halts the program with code 0.
 - Saving, the remaining intro pages, character creation, combat and the story
   after the field remain unverified.
+
+## Jianghu: Chaos (江湖-混沌初开)
+
+- Content: `LAVA1 江湖-混沌初开/world.lav` with the companion data file
+  `world_SC.dat`.
+- The title waits at pc `0x2ef` with 新的征程, 再续前缘 and 退隐江湖. Down and
+  Right select the next entry and Up and Left select the previous entry; both
+  directions wrap, and the selected entry is drawn as an inverted box over the
+  title artwork.
+- 新的征程 starts the same intro as the pirate episode. The first page reads
+  雷恩：咦，这是什么地方？, every key advances one page, and the seventh key press
+  reaches the field at pc `0x8b20`. The field redraws nothing while idle; Right
+  and Left move the sprite along its rows and Up moves it to a higher row.
+- 再续前缘 opens the two-slot load menu (`读取进度一` / `读取进度二`) at pc
+  `0x11fa`. Selecting an empty slot draws a 存档读取失败 overlay over the menu;
+  any key returns to the title with 再续前缘 still selected.
+- 退隐江湖 fades the title out and halts the program with code 0.
+- Saving, character creation, combat and the story after the field remain
+  unverified.

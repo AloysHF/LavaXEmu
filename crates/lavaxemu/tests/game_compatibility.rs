@@ -15685,3 +15685,110 @@ fn jianghu_pirate_title_intro_field_and_episode_branches() {
     assert!(top < 30, "Up moves the player to an upper row");
     capture(&up, "jianghu-pirate-up");
 }
+
+#[test]
+#[ignore = "requires the local LavaX game corpus"]
+fn jianghu_chaos_title_intro_field_and_save_branches() {
+    let frame = |emulator: &Emulator| emulator.display().indexed_frame().to_vec();
+    let mut menu = load("LAVA1 江湖-混沌初开/world.lav");
+    advance(&mut menu, 400);
+    assert_eq!(menu.vm().pc(), 0x2ef, "the title waits for a key");
+    let width = usize::from(menu.display().width());
+    let title = frame(&menu);
+    capture(&menu, "jianghu-chaos-title");
+
+    let mut navigation = menu.clone();
+    press(&mut navigation, 21);
+    let second = frame(&navigation);
+    assert_ne!(second, title, "Down selects 再续前缘");
+    press(&mut navigation, 21);
+    let third = frame(&navigation);
+    assert_ne!(third, second, "Down selects 退隐江湖");
+    press(&mut navigation, 21);
+    assert_eq!(frame(&navigation), title, "Down wraps to 新的征程");
+    press(&mut navigation, 20);
+    assert_eq!(frame(&navigation), third, "Up wraps to 退隐江湖");
+    press(&mut navigation, 23);
+    assert_eq!(frame(&navigation), second, "Left returns to 再续前缘");
+    press(&mut navigation, 22);
+    assert_eq!(frame(&navigation), third, "Right returns to 退隐江湖");
+
+    let mut loading = menu.clone();
+    press(&mut loading, 21);
+    press(&mut loading, 13);
+    assert_eq!(loading.vm().pc(), 0x11fa, "再续前缘 opens the save slots");
+    let slots = frame(&loading);
+    assert_ne!(slots, second, "the slot menu replaces the title");
+    press(&mut loading, 13);
+    let failure = frame(&loading);
+    assert_ne!(failure, slots, "the missing save is reported over the menu");
+    capture(&loading, "jianghu-chaos-save-failure");
+    advance(&mut loading, 180);
+    assert_eq!(frame(&loading), failure, "the report waits for a key");
+    press(&mut loading, 13);
+    assert_eq!(frame(&loading), second, "a key returns to the title");
+
+    let mut quit = menu.clone();
+    press(&mut quit, 21);
+    press(&mut quit, 21);
+    for _ in 0..3 {
+        quit.input_mut().set_keys([13]);
+        quit.run_frame().unwrap();
+    }
+    quit.input_mut().set_keys([]);
+    let mut exit_code = None;
+    for _ in 0..400 {
+        let result = quit.run_frame().unwrap();
+        if let FrameStatus::Halted(code) = result.status {
+            exit_code = Some(code);
+            break;
+        }
+    }
+    assert_eq!(exit_code, Some(0), "退隐江湖 fades out and exits");
+
+    let mut game = menu.clone();
+    press(&mut game, 13);
+    assert_eq!(game.vm().pc(), 0x2ef, "the intro dialog waits for a key");
+    let first_page = frame(&game);
+    assert_ne!(first_page, title, "新的征程 opens the intro scene");
+    capture(&game, "jianghu-chaos-dialog");
+    press(&mut game, 13);
+    assert_ne!(frame(&game), first_page, "Enter advances the dialog");
+    let mut presses = 2;
+    while game.vm().pc() == 0x2ef {
+        assert!(presses < 12, "the intro must reach the field");
+        press(&mut game, 13);
+        presses += 1;
+    }
+    assert_eq!(game.vm().pc(), 0x8b20, "the intro reaches the field");
+    let field = frame(&game);
+    capture(&game, "jianghu-chaos-field");
+
+    let mut idle = game.clone();
+    advance(&mut idle, 60);
+    assert_eq!(frame(&idle), field, "the field waits for input");
+
+    let mut moved = game.clone();
+    moved.input_mut().set_keys([22]);
+    advance(&mut moved, 20);
+    moved.input_mut().set_keys([]);
+    advance(&mut moved, 10);
+    let right = frame(&moved);
+    let (count, top, bottom) = changed_region(&field, &right, width);
+    assert!(count > 0 && count < 400, "Right moves the player sprite");
+    assert!(
+        top >= 30 && bottom <= 50,
+        "Right keeps the player on the same rows"
+    );
+    capture(&moved, "jianghu-chaos-right");
+
+    let mut up = game.clone();
+    up.input_mut().set_keys([20]);
+    advance(&mut up, 20);
+    up.input_mut().set_keys([]);
+    advance(&mut up, 10);
+    let (count, top, _) = changed_region(&field, &frame(&up), width);
+    assert!(count > 0 && count < 400, "Up moves the player sprite");
+    assert!(top < 30, "Up moves the player to an upper row");
+    capture(&up, "jianghu-chaos-up");
+}
