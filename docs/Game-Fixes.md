@@ -3543,3 +3543,42 @@ without an execution error alone does not establish playability.
   duel at `0x105f` with the worms reset, and `n` returns to the title. Escape
   on the title halts with code 0 at pc `0x11dc`. The VS build writes no files.
 
+## YoGames Collection (LAVA1 礼物大作战)
+
+- Content: `LAVA1 礼物大作战/YoGamesPC.lav` and
+  `LAVA1 礼物大作战/YoGamesWQX.lav`.
+- The PC title waits at pc `0x5674`; any key opens the four-entry menu at
+  `0x5cef` with 礼物大作战, 功夫擂台赛, 捕鱼小能手, 制作者名单 at `0x2000`,
+  `0x200c`, `0x2018` and `0x2024`. The selection word at `0x1b04` wraps
+  `1..4` in both directions. The credits open at `0x5e57`, and Escape shows
+  the farewell at `0x5e8b` that halts with code 0 at `0x5e8f`.
+- 礼物大作战 runs its rules at `0x308c`, the gift values at `0x31a8`, the
+  player board at `0x31d4` and the rounds at `0x3205`. `p` pauses at `0x2b3a`
+  and Enter resumes at `0x3205`. The first Right throw starts the rounds;
+  three hundred Right presses end them at `0x2eb1`, scoring
+  `0, 3625, 2175, 3025` in the four little-endian words at `0x46a7`.
+  Quitting from the board pause before the first round ends at `0x2eb1`
+  with zero scores.
+- 功夫擂台赛 runs its rules at `0x4515`, the controls at `0x4565` and the
+  arena at `0x4574`; the four lives start as `5, 5, 5, 5` in the words at
+  `0x46dd`. `p` pauses at `0x35cf`, Enter resumes at `0x45a0`, and Escape
+  from the pause opens the abort page at `0x4243`. Twenty `q` punches end
+  the match at `0x432f` with lives `0, 2, 0, 0`.
+- 捕鱼小能手 runs its rules at `0x5587`, the pond at `0x5596` and the turn
+  at `0x55e8`. Three hundred Right casts end the round at `0x53d7`, scoring
+  `0, 122, 143, 170` at `0x46a7`.
+- Enter on each result screen returns to the menu with that entry still
+  selected. Escape on the menu halts with code 0, and the PC build writes
+  no files.
+- The WQX title waits at `0x566e` and opens the menu at `0x5ce9` with the
+  same four strings; its Down/Up animation runs at `0x5b3b`. The credits
+  open at `0x5e51`, and Escape shows the farewell at `0x5e85` that halts
+  with code 0 at `0x5e89`.
+- The WQX minigames share the gift rules, values and board at `0x308c`,
+  `0x31a8` and `0x31d4`, but its rounds start at `0x31fe`; the pause stays
+  at `0x2b3a` and the gift result at `0x2eb1`. Kung fu uses `0x4512`,
+  `0x4562` and `0x4571` with the pause at `0x35cc`, resume at `0x4586` and
+  abort at `0x4240`, ending at `0x432c`. Fishing uses `0x5581`, `0x5590`
+  and `0x55e2` and ends at `0x53d1`. The scores and lives match the PC
+  build, and the WQX build writes no files.
+

@@ -20965,3 +20965,500 @@ fn instant_worms_builds_walk_menus_edit_maps_and_fight_duels() {
     assert_eq!(halted, Some(0), "escape on the title ends the program");
     assert_eq!(emulator.vm().pc(), 0x11dc, "the exit path runs");
 }
+
+#[test]
+#[ignore = "requires LAVAX_GAME_ROOT with the game corpus"]
+fn yo_games_collection_plays_all_minigames_and_scores_them() {
+    let pc_path = "LAVA1 礼物大作战/YoGamesPC.lav";
+    let wqx_path = "LAVA1 礼物大作战/YoGamesWQX.lav";
+    let word = |emulator: &Emulator, address: usize| {
+        let memory = emulator.vm().memory();
+        u16::from_le_bytes([memory[address], memory[address + 1]])
+    };
+    let selection = |emulator: &Emulator| word(emulator, 0x1b04);
+    let scores = |emulator: &Emulator| {
+        (0..4)
+            .map(|index| word(emulator, 0x46a7 + index * 2))
+            .collect::<Vec<u16>>()
+    };
+    let lives = |emulator: &Emulator| {
+        (0..4)
+            .map(|index| word(emulator, 0x46dd + index * 2))
+            .collect::<Vec<u16>>()
+    };
+    let walk = |emulator: &mut Emulator, key: u8, expected: u16, message: &str| {
+        press(emulator, key);
+        advance(emulator, 1200);
+        assert_eq!(selection(emulator), expected, "{message}");
+    };
+    let menu = |path: &str, menu_pc: usize| {
+        let mut emulator = load(path);
+        advance(&mut emulator, 300);
+        press(&mut emulator, 13);
+        advance(&mut emulator, 1200);
+        assert_eq!(emulator.vm().pc(), menu_pc, "any key opens the menu");
+        emulator
+    };
+
+    let mut emulator = load(pc_path);
+    advance(&mut emulator, 300);
+    assert_eq!(emulator.vm().pc(), 0x5674, "the pc title waits for input");
+    for (address, text) in [
+        (
+            0x2000,
+            &[0xc0, 0xf1, 0xce, 0xef, 0xb4, 0xf3, 0xd7, 0xf7, 0xd5, 0xbd],
+        ),
+        (
+            0x200c,
+            &[0xb9, 0xa6, 0xb7, 0xf2, 0xc0, 0xde, 0xcc, 0xa8, 0xc8, 0xfc],
+        ),
+        (
+            0x2018,
+            &[0xb2, 0xb6, 0xd3, 0xe3, 0xd0, 0xa1, 0xc4, 0xdc, 0xca, 0xd6],
+        ),
+        (
+            0x2024,
+            &[0xd6, 0xc6, 0xd7, 0xf7, 0xd7, 0xe9, 0xc3, 0xfb, 0xb5, 0xa5],
+        ),
+    ] {
+        assert_eq!(
+            &emulator.vm().memory()[address..address + text.len()],
+            text,
+            "the menu lists all four entries"
+        );
+    }
+    press(&mut emulator, 13);
+    advance(&mut emulator, 1200);
+    assert_eq!(emulator.vm().pc(), 0x5cef, "any key opens the menu");
+    assert_eq!(selection(&emulator), 1, "the first entry starts selected");
+    capture(&emulator, "yo-games-menu");
+    for expected in [2, 3, 4, 1] {
+        walk(&mut emulator, 21, expected, "down walks the menu and wraps");
+    }
+    for expected in [4, 3, 2, 1] {
+        walk(&mut emulator, 20, expected, "up walks the menu and wraps");
+    }
+    press(&mut emulator, 20);
+    advance(&mut emulator, 1200);
+    assert_eq!(selection(&emulator), 4, "up selects the credits");
+    press(&mut emulator, 13);
+    assert_eq!(emulator.vm().pc(), 0x5e57, "the credits open");
+    press(&mut emulator, 32);
+    advance(&mut emulator, 1200);
+    assert_eq!(emulator.vm().pc(), 0x5cef, "a key returns to the menu");
+    press(&mut emulator, 27);
+    assert_eq!(emulator.vm().pc(), 0x5e8b, "escape shows the farewell");
+    let mut halted = None;
+    emulator.input_mut().set_keys([32]);
+    for frame in 0..90 {
+        if frame == 3 {
+            emulator.input_mut().set_keys([]);
+        }
+        if let FrameStatus::Halted(code) = emulator.run_frame().unwrap().status {
+            halted = Some(code);
+            break;
+        }
+    }
+    assert_eq!(halted, Some(0), "the farewell ends the pc build");
+    assert_eq!(emulator.vm().pc(), 0x5e8f, "the pc exit path runs");
+    assert!(
+        emulator.files_mut().take_dirty_files().is_empty(),
+        "the pc build writes nothing"
+    );
+
+    let mut gift = menu(pc_path, 0x5cef);
+    press(&mut gift, 13);
+    advance(&mut gift, 1200);
+    assert_eq!(gift.vm().pc(), 0x308c, "the gift game explains its rules");
+    press(&mut gift, 13);
+    advance(&mut gift, 1200);
+    assert_eq!(gift.vm().pc(), 0x31a8, "a key shows the gift values");
+    press(&mut gift, 32);
+    advance(&mut gift, 1200);
+    assert_eq!(gift.vm().pc(), 0x31d4, "a key seats the four players");
+    capture(&gift, "yo-games-gift-board");
+    press(&mut gift, 22);
+    assert_eq!(
+        gift.vm().pc(),
+        0x3205,
+        "the first right throw starts the rounds"
+    );
+    for _ in 0..299 {
+        press(&mut gift, 22);
+    }
+    advance(&mut gift, 600);
+    assert_eq!(gift.vm().pc(), 0x2eb1, "three hundred rounds end the game");
+    assert_eq!(
+        scores(&gift),
+        vec![0, 3625, 2175, 3025],
+        "the right pile scores the gift game"
+    );
+    capture(&gift, "yo-games-gift-result");
+    press(&mut gift, 13);
+    advance(&mut gift, 1200);
+    assert_eq!(gift.vm().pc(), 0x5cef, "enter returns to the menu");
+    assert!(
+        gift.files_mut().take_dirty_files().is_empty(),
+        "the gift game writes nothing"
+    );
+
+    let mut gift_pause = menu(pc_path, 0x5cef);
+    press(&mut gift_pause, 13);
+    advance(&mut gift_pause, 1200);
+    press(&mut gift_pause, 13);
+    advance(&mut gift_pause, 1200);
+    press(&mut gift_pause, 32);
+    advance(&mut gift_pause, 1200);
+    assert_eq!(gift_pause.vm().pc(), 0x31d4, "the gift board reopens");
+    press(&mut gift_pause, 13);
+    advance(&mut gift_pause, 1200);
+    assert_eq!(gift_pause.vm().pc(), 0x3205, "enter starts a gift round");
+    press(&mut gift_pause, 112);
+    advance(&mut gift_pause, 1200);
+    assert_eq!(gift_pause.vm().pc(), 0x2b3a, "p pauses the gift game");
+    press(&mut gift_pause, 13);
+    advance(&mut gift_pause, 1200);
+    assert_eq!(gift_pause.vm().pc(), 0x3205, "enter resumes the gift game");
+    press(&mut gift_pause, 112);
+    advance(&mut gift_pause, 1200);
+    assert_eq!(gift_pause.vm().pc(), 0x2b3a, "p pauses the gift game again");
+    press(&mut gift_pause, 27);
+    advance(&mut gift_pause, 1200);
+    assert_eq!(
+        gift_pause.vm().pc(),
+        0x2eb1,
+        "escape from the pause ends the game"
+    );
+    press(&mut gift_pause, 13);
+    advance(&mut gift_pause, 1200);
+    assert_eq!(gift_pause.vm().pc(), 0x5cef, "enter returns to the menu");
+
+    let mut gift_quit = menu(pc_path, 0x5cef);
+    press(&mut gift_quit, 13);
+    advance(&mut gift_quit, 1200);
+    press(&mut gift_quit, 32);
+    advance(&mut gift_quit, 1200);
+    press(&mut gift_quit, 13);
+    advance(&mut gift_quit, 1200);
+    assert_eq!(
+        gift_quit.vm().pc(),
+        0x31d4,
+        "the gift board waits before the first round"
+    );
+    press(&mut gift_quit, 112);
+    advance(&mut gift_quit, 1200);
+    assert_eq!(
+        gift_quit.vm().pc(),
+        0x2b3a,
+        "p pauses before the first round"
+    );
+    press(&mut gift_quit, 27);
+    advance(&mut gift_quit, 1200);
+    assert_eq!(
+        gift_quit.vm().pc(),
+        0x2eb1,
+        "escape before the first round ends the game"
+    );
+    assert_eq!(
+        scores(&gift_quit),
+        vec![0, 0, 0, 0],
+        "an unplayed gift game scores nothing"
+    );
+    press(&mut gift_quit, 13);
+    advance(&mut gift_quit, 1200);
+    assert_eq!(gift_quit.vm().pc(), 0x5cef, "enter returns to the menu");
+
+    let mut kung_fu = menu(pc_path, 0x5cef);
+    press(&mut kung_fu, 21);
+    advance(&mut kung_fu, 1200);
+    assert_eq!(selection(&kung_fu), 2, "down selects the kung fu game");
+    press(&mut kung_fu, 13);
+    advance(&mut kung_fu, 1200);
+    assert_eq!(
+        kung_fu.vm().pc(),
+        0x4515,
+        "the kung fu game explains its rules"
+    );
+    press(&mut kung_fu, 13);
+    advance(&mut kung_fu, 1200);
+    assert_eq!(kung_fu.vm().pc(), 0x4565, "a key lists the controls");
+    press(&mut kung_fu, 13);
+    advance(&mut kung_fu, 1200);
+    assert_eq!(kung_fu.vm().pc(), 0x4574, "a key enters the arena");
+    assert_eq!(
+        lives(&kung_fu),
+        vec![5, 5, 5, 5],
+        "each fighter has five lives"
+    );
+    advance(&mut kung_fu, 1200);
+    capture(&kung_fu, "yo-games-kung-fu");
+    for _ in 0..20 {
+        press(&mut kung_fu, 113);
+    }
+    advance(&mut kung_fu, 1200);
+    assert_eq!(kung_fu.vm().pc(), 0x432f, "twenty punches end the match");
+    assert_eq!(
+        lives(&kung_fu),
+        vec![0, 2, 0, 0],
+        "the second fighter wins the match"
+    );
+    capture(&kung_fu, "yo-games-kung-fu-result");
+    press(&mut kung_fu, 13);
+    advance(&mut kung_fu, 1200);
+    assert_eq!(kung_fu.vm().pc(), 0x5cef, "enter returns to the menu");
+    assert!(
+        kung_fu.files_mut().take_dirty_files().is_empty(),
+        "the kung fu game writes nothing"
+    );
+
+    let mut kung_fu_pause = menu(pc_path, 0x5cef);
+    press(&mut kung_fu_pause, 21);
+    advance(&mut kung_fu_pause, 1200);
+    press(&mut kung_fu_pause, 13);
+    advance(&mut kung_fu_pause, 1200);
+    press(&mut kung_fu_pause, 13);
+    advance(&mut kung_fu_pause, 1200);
+    press(&mut kung_fu_pause, 13);
+    advance(&mut kung_fu_pause, 1200);
+    assert_eq!(kung_fu_pause.vm().pc(), 0x4574, "the arena reopens");
+    press(&mut kung_fu_pause, 112);
+    advance(&mut kung_fu_pause, 1200);
+    assert_eq!(kung_fu_pause.vm().pc(), 0x35cf, "p pauses the match");
+    press(&mut kung_fu_pause, 13);
+    advance(&mut kung_fu_pause, 1200);
+    assert_eq!(kung_fu_pause.vm().pc(), 0x45a0, "enter resumes the match");
+    press(&mut kung_fu_pause, 112);
+    advance(&mut kung_fu_pause, 1200);
+    assert_eq!(kung_fu_pause.vm().pc(), 0x35cf, "p pauses the match again");
+    press(&mut kung_fu_pause, 27);
+    advance(&mut kung_fu_pause, 1200);
+    assert_eq!(kung_fu_pause.vm().pc(), 0x4243, "escape aborts the match");
+    press(&mut kung_fu_pause, 13);
+    advance(&mut kung_fu_pause, 1200);
+    assert_eq!(kung_fu_pause.vm().pc(), 0x5cef, "enter returns to the menu");
+
+    let mut fishing = menu(pc_path, 0x5cef);
+    press(&mut fishing, 21);
+    advance(&mut fishing, 1200);
+    press(&mut fishing, 21);
+    advance(&mut fishing, 1200);
+    assert_eq!(selection(&fishing), 3, "down selects the fishing game");
+    press(&mut fishing, 13);
+    advance(&mut fishing, 1200);
+    assert_eq!(
+        fishing.vm().pc(),
+        0x5587,
+        "the fishing game explains its rules"
+    );
+    press(&mut fishing, 13);
+    advance(&mut fishing, 1200);
+    assert_eq!(fishing.vm().pc(), 0x5596, "a key shows the pond");
+    press(&mut fishing, 13);
+    advance(&mut fishing, 1200);
+    assert_eq!(fishing.vm().pc(), 0x55e8, "a key casts the first line");
+    advance(&mut fishing, 1200);
+    capture(&fishing, "yo-games-fishing");
+    for _ in 0..300 {
+        press(&mut fishing, 22);
+    }
+    advance(&mut fishing, 1200);
+    assert_eq!(
+        fishing.vm().pc(),
+        0x53d7,
+        "three hundred casts end the round"
+    );
+    assert_eq!(
+        scores(&fishing),
+        vec![0, 122, 143, 170],
+        "the right casts score the fishing game"
+    );
+    press(&mut fishing, 13);
+    advance(&mut fishing, 1200);
+    assert_eq!(fishing.vm().pc(), 0x5cef, "enter returns to the menu");
+    assert!(
+        fishing.files_mut().take_dirty_files().is_empty(),
+        "the fishing game writes nothing"
+    );
+
+    let mut wqx = load(wqx_path);
+    advance(&mut wqx, 300);
+    assert_eq!(wqx.vm().pc(), 0x566e, "the wqx title waits for input");
+    press(&mut wqx, 13);
+    advance(&mut wqx, 1200);
+    assert_eq!(wqx.vm().pc(), 0x5ce9, "any key opens the wqx menu");
+    assert_eq!(selection(&wqx), 1, "the wqx menu starts selected");
+    capture(&wqx, "yo-games-wqx-menu");
+    press(&mut wqx, 20);
+    advance(&mut wqx, 1200);
+    assert_eq!(selection(&wqx), 4, "up selects the wqx credits");
+    press(&mut wqx, 13);
+    assert_eq!(wqx.vm().pc(), 0x5e51, "the wqx credits open");
+    press(&mut wqx, 32);
+    advance(&mut wqx, 1200);
+    assert_eq!(wqx.vm().pc(), 0x5ce9, "a key returns to the wqx menu");
+    press(&mut wqx, 27);
+    assert_eq!(wqx.vm().pc(), 0x5e85, "escape shows the wqx farewell");
+    let mut halted = None;
+    wqx.input_mut().set_keys([32]);
+    for frame in 0..90 {
+        if frame == 3 {
+            wqx.input_mut().set_keys([]);
+        }
+        if let FrameStatus::Halted(code) = wqx.run_frame().unwrap().status {
+            halted = Some(code);
+            break;
+        }
+    }
+    assert_eq!(halted, Some(0), "the farewell ends the wqx build");
+    assert_eq!(wqx.vm().pc(), 0x5e89, "the wqx exit path runs");
+    assert!(
+        wqx.files_mut().take_dirty_files().is_empty(),
+        "the wqx build writes nothing"
+    );
+
+    let mut wqx_gift = menu(wqx_path, 0x5ce9);
+    press(&mut wqx_gift, 13);
+    advance(&mut wqx_gift, 1200);
+    assert_eq!(
+        wqx_gift.vm().pc(),
+        0x308c,
+        "the wqx gift game explains its rules"
+    );
+    press(&mut wqx_gift, 13);
+    advance(&mut wqx_gift, 1200);
+    assert_eq!(wqx_gift.vm().pc(), 0x31a8, "a key shows the gift values");
+    press(&mut wqx_gift, 32);
+    advance(&mut wqx_gift, 1200);
+    assert_eq!(wqx_gift.vm().pc(), 0x31d4, "a key seats the players");
+    press(&mut wqx_gift, 22);
+    assert_eq!(
+        wqx_gift.vm().pc(),
+        0x31fe,
+        "the first right throw starts the wqx rounds"
+    );
+    for _ in 0..299 {
+        press(&mut wqx_gift, 22);
+    }
+    advance(&mut wqx_gift, 600);
+    assert_eq!(wqx_gift.vm().pc(), 0x2eb1, "the wqx gift game ends");
+    assert_eq!(
+        scores(&wqx_gift),
+        vec![0, 3625, 2175, 3025],
+        "the wqx gift game scores the same"
+    );
+    press(&mut wqx_gift, 13);
+    advance(&mut wqx_gift, 1200);
+    assert_eq!(wqx_gift.vm().pc(), 0x5ce9, "enter returns to the wqx menu");
+    assert!(
+        wqx_gift.files_mut().take_dirty_files().is_empty(),
+        "the wqx gift game writes nothing"
+    );
+
+    let mut wqx_kung_fu = menu(wqx_path, 0x5ce9);
+    press(&mut wqx_kung_fu, 21);
+    advance(&mut wqx_kung_fu, 1200);
+    press(&mut wqx_kung_fu, 13);
+    advance(&mut wqx_kung_fu, 1200);
+    assert_eq!(
+        wqx_kung_fu.vm().pc(),
+        0x4512,
+        "the wqx kung fu game explains its rules"
+    );
+    press(&mut wqx_kung_fu, 13);
+    advance(&mut wqx_kung_fu, 1200);
+    assert_eq!(wqx_kung_fu.vm().pc(), 0x4562, "a key lists the controls");
+    press(&mut wqx_kung_fu, 13);
+    advance(&mut wqx_kung_fu, 1200);
+    assert_eq!(wqx_kung_fu.vm().pc(), 0x4571, "a key enters the wqx arena");
+    assert_eq!(
+        lives(&wqx_kung_fu),
+        vec![5, 5, 5, 5],
+        "each wqx fighter has five lives"
+    );
+    advance(&mut wqx_kung_fu, 1200);
+    for _ in 0..20 {
+        press(&mut wqx_kung_fu, 113);
+    }
+    advance(&mut wqx_kung_fu, 1200);
+    assert_eq!(wqx_kung_fu.vm().pc(), 0x432c, "the wqx match ends");
+    assert_eq!(
+        lives(&wqx_kung_fu),
+        vec![0, 2, 0, 0],
+        "the second wqx fighter wins"
+    );
+    press(&mut wqx_kung_fu, 13);
+    advance(&mut wqx_kung_fu, 1200);
+    assert_eq!(
+        wqx_kung_fu.vm().pc(),
+        0x5ce9,
+        "enter returns to the wqx menu"
+    );
+    assert!(
+        wqx_kung_fu.files_mut().take_dirty_files().is_empty(),
+        "the wqx kung fu game writes nothing"
+    );
+
+    let mut wqx_fishing = menu(wqx_path, 0x5ce9);
+    press(&mut wqx_fishing, 21);
+    advance(&mut wqx_fishing, 1200);
+    press(&mut wqx_fishing, 21);
+    advance(&mut wqx_fishing, 1200);
+    press(&mut wqx_fishing, 13);
+    advance(&mut wqx_fishing, 1200);
+    assert_eq!(
+        wqx_fishing.vm().pc(),
+        0x5581,
+        "the wqx fishing game explains its rules"
+    );
+    press(&mut wqx_fishing, 13);
+    advance(&mut wqx_fishing, 1200);
+    assert_eq!(wqx_fishing.vm().pc(), 0x5590, "a key shows the wqx pond");
+    press(&mut wqx_fishing, 13);
+    advance(&mut wqx_fishing, 1200);
+    assert_eq!(wqx_fishing.vm().pc(), 0x55e2, "a key casts the wqx line");
+    advance(&mut wqx_fishing, 1200);
+    for _ in 0..300 {
+        press(&mut wqx_fishing, 22);
+    }
+    advance(&mut wqx_fishing, 1200);
+    assert_eq!(wqx_fishing.vm().pc(), 0x53d1, "the wqx fishing round ends");
+    assert_eq!(
+        scores(&wqx_fishing),
+        vec![0, 122, 143, 170],
+        "the wqx fishing game scores the same"
+    );
+    press(&mut wqx_fishing, 13);
+    advance(&mut wqx_fishing, 1200);
+    assert_eq!(
+        wqx_fishing.vm().pc(),
+        0x5ce9,
+        "enter returns to the wqx menu"
+    );
+    assert!(
+        wqx_fishing.files_mut().take_dirty_files().is_empty(),
+        "the wqx fishing game writes nothing"
+    );
+
+    let mut wqx_pause = menu(wqx_path, 0x5ce9);
+    press(&mut wqx_pause, 21);
+    advance(&mut wqx_pause, 1200);
+    press(&mut wqx_pause, 13);
+    advance(&mut wqx_pause, 1200);
+    press(&mut wqx_pause, 13);
+    advance(&mut wqx_pause, 1200);
+    press(&mut wqx_pause, 13);
+    advance(&mut wqx_pause, 1200);
+    assert_eq!(wqx_pause.vm().pc(), 0x4571, "the wqx arena reopens");
+    press(&mut wqx_pause, 112);
+    advance(&mut wqx_pause, 1200);
+    assert_eq!(wqx_pause.vm().pc(), 0x35cc, "p pauses the wqx match");
+    press(&mut wqx_pause, 13);
+    assert_eq!(wqx_pause.vm().pc(), 0x4586, "enter resumes the wqx match");
+    press(&mut wqx_pause, 112);
+    assert_eq!(wqx_pause.vm().pc(), 0x35cc, "p pauses the wqx match again");
+    press(&mut wqx_pause, 27);
+    assert_eq!(wqx_pause.vm().pc(), 0x4240, "escape aborts the wqx match");
+    press(&mut wqx_pause, 13);
+    advance(&mut wqx_pause, 1200);
+    assert_eq!(wqx_pause.vm().pc(), 0x5ce9, "enter returns to the wqx menu");
+}
