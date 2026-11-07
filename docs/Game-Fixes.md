@@ -2954,3 +2954,44 @@ without an execution error alone does not establish playability.
   halts the program with code 0.
 - Combat depth, enemies, the effect of the difficulty level, the energy-gated
   attacks and saving remain unverified.
+
+## Haidian Floating Life (海淀浮生记)
+
+- Content: `LAVA1 海淀浮生记/海淀浮生记.lav` with the companion data file
+  `hd.dat`.
+- The title waits at pc `0x61d`. Enter opens the name prompt at pc `0x761`;
+  typed letters are echoed, and Enter starts the life menu at pc `0x153a`.
+  The name is stored at `0x247f` (`abc\r` plus zero padding) together with the
+  starting values at `0x2488`: 5000 cash, 5000 debt, health 85, morality 80,
+  happiness 75, day index 0 (shown as 第1天).
+- The eight menu entries are selected by the LavaX key codes of their printed
+  number keys, `1`..`8` = `b`, `n`, `m`, `g`, `h`, `j`, `t`, `y`:
+  ①状态 (`0xb5e`), ②银行 (`0xb71`), ③市场 (`0xc66`), ④赌场, ⑤医院 (`0xe20`),
+  ⑥酒吧 (`0xefb`), ⑦睡觉 and ⑧系统 (`0x12d5`). The status page redraws with the
+  current name and values, and any key returns to the menu.
+- 市场 lists six goods (①电脑 30030, ②窃听器 290, ③色情杂志 1517, ④发票 2015,
+  ⑤毕业证 7526, ⑥盗版光盘 83). Selecting a good opens ①买入 / ②卖出 / ③离开 at
+  pc `0xcaa`; buying or selling asks for a quantity at pc `0x6a7` and reports
+  the result at pc `0xd4e` / `0xe00`. Two discs cost 166 and selling one refunds
+  its full price of 83; a quantity of the 30030 computer is rejected at
+  pc `0xd68` when the cash is short.
+- 医院 offers ①献血 (pc `0xe76`) and ②治疗 (pc `0xecf`). Donation costs 5 health
+  and raises morality by 5; treatment costs 1000 cash and restores 5 health.
+  酒吧 (pc `0xefb`) charges 1000 cash, 1 health and raises happiness by 5 on the
+  first key press at pc `0xf69`.
+- 银行 offers ①贷款 and ②还贷. Both ask for an amount at pc `0x6a7`; a 5000
+  loan adds cash and debt, and a repayment subtracts the same amount from both.
+- 赌场 refuses a stake below 10000 and returns to the menu from pc `0x1007`
+  with the 没有钱 message.
+- ⑦睡觉 advances the calendar by one day, charges 5000 cash, adds ten percent
+  interest to the debt and costs 5 health. The finished night redraws the menu
+  at pc `0x153a` with the next 第 N天.
+- ⑧系统 opens ①存档 / ②取档 / ③离开 / ④退出 at pc `0x12d5`. Saving shows
+  pc `0x1322` / `0x132b` and writes a 31-byte `/lavadata/hd.sav` record holding
+  the 9-byte name field, cash, debt, health, morality, happiness and day.
+  Loading shows pc `0x137b` / `0x1384` and restores that record; ④退出 halts
+  the program with code 0 at pc `0x15e8`.
+- The registry round trip is checked by saving, donating blood (health 79 to
+  74, morality 85 to 90) and loading the record back to the saved values.
+- Multi-day progression, the casino's random outcome after a large stake,
+  other goods and the story consequences of the statistics remain unverified.

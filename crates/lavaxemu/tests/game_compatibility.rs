@@ -16103,3 +16103,334 @@ fn meteor_butterfly_sword_title_pages_difficulty_and_arena() {
     }
     assert_eq!(quit_code, Some(0), "q quits the arena");
 }
+
+#[test]
+#[ignore = "requires the local LavaX game corpus"]
+fn haidian_floating_life_name_menu_actions_and_save_round_trip() {
+    let frame = |emulator: &Emulator| emulator.display().indexed_frame().to_vec();
+    let money = |emulator: &Emulator| {
+        u32::from_le_bytes(emulator.vm().memory()[0x2488..0x248c].try_into().unwrap())
+    };
+    let debt = |emulator: &Emulator| {
+        u32::from_le_bytes(emulator.vm().memory()[0x248c..0x2490].try_into().unwrap())
+    };
+    let health = |emulator: &Emulator| {
+        u16::from_le_bytes(emulator.vm().memory()[0x2490..0x2492].try_into().unwrap())
+    };
+    let morality = |emulator: &Emulator| {
+        u16::from_le_bytes(emulator.vm().memory()[0x2492..0x2494].try_into().unwrap())
+    };
+    let happiness = |emulator: &Emulator| {
+        u16::from_le_bytes(emulator.vm().memory()[0x2494..0x2496].try_into().unwrap())
+    };
+    let day = |emulator: &Emulator| {
+        u16::from_le_bytes(emulator.vm().memory()[0x2496..0x2498].try_into().unwrap())
+    };
+    let inventory = |emulator: &Emulator| {
+        u16::from_le_bytes(emulator.vm().memory()[0x24ae..0x24b0].try_into().unwrap())
+    };
+
+    let mut title = load("LAVA1 海淀浮生记/海淀浮生记.lav");
+    advance(&mut title, 300);
+    assert_eq!(title.vm().pc(), 0x61d, "the title waits for a key");
+    let title_frame = frame(&title);
+    capture(&title, "haidian-title");
+
+    let mut menu = title.clone();
+    press(&mut menu, 13);
+    assert_eq!(menu.vm().pc(), 0x761, "Enter opens the name prompt");
+    assert_ne!(
+        frame(&menu),
+        title_frame,
+        "the name prompt replaces the title"
+    );
+    capture(&menu, "haidian-name");
+    for key in *b"abc" {
+        press(&mut menu, key);
+    }
+    assert_eq!(menu.vm().pc(), 0x761, "the name prompt waits");
+    press(&mut menu, 13);
+    assert_eq!(menu.vm().pc(), 0x153a, "the menu waits for a selection");
+    assert_eq!(
+        &menu.vm().memory()[0x247f..0x2488],
+        b"abc\r\0\0\0\0\0",
+        "the entered name is stored for saving"
+    );
+    assert_eq!(money(&menu), 5000, "a new life starts with cash");
+    assert_eq!(debt(&menu), 5000, "a new life starts in debt");
+    assert_eq!(health(&menu), 85, "a new life starts healthy");
+    assert_eq!(morality(&menu), 80, "a new life starts moral");
+    assert_eq!(happiness(&menu), 75, "a new life starts content");
+    assert_eq!(day(&menu), 0, "a new life starts on the first day");
+    capture(&menu, "haidian-menu");
+
+    // Number keys arrive as their LavaX letter codes: 1..8 = b, n, m, g, h, j, t, y.
+    let mut status = menu.clone();
+    press(&mut status, b'b');
+    assert_eq!(
+        status.vm().pc(),
+        0xb5e,
+        "the first entry opens the status page"
+    );
+    assert_ne!(
+        frame(&status),
+        frame(&menu),
+        "the status page replaces the menu"
+    );
+    capture(&status, "haidian-status");
+    press(&mut status, 32);
+    assert_eq!(status.vm().pc(), 0x153a, "any key leaves the status page");
+
+    let mut market = menu.clone();
+    press(&mut market, b'm');
+    assert_eq!(market.vm().pc(), 0xc66, "the third entry opens the market");
+    let market_frame = frame(&market);
+    capture(&market, "haidian-market");
+    press(&mut market, b'j');
+    assert_eq!(
+        market.vm().pc(),
+        0xcaa,
+        "the sixth item opens its trade prompt"
+    );
+    let trade_frame = frame(&market);
+    assert_ne!(
+        trade_frame, market_frame,
+        "the trade prompt replaces the list"
+    );
+    press(&mut market, b'b');
+    assert_eq!(market.vm().pc(), 0x6a7, "buying asks for a quantity");
+    assert_eq!(money(&market), 5000, "asking does not charge yet");
+    capture(&market, "haidian-market-buy");
+    press(&mut market, 50);
+    press(&mut market, 13);
+    assert_eq!(market.vm().pc(), 0xd4e, "the purchase reports its result");
+    assert_eq!(money(&market), 4834, "two discs cost 166");
+    assert_eq!(inventory(&market), 2, "two discs are held");
+    press(&mut market, 32);
+    assert_eq!(market.vm().pc(), 0x153a, "the menu returns after buying");
+
+    let mut sell = market.clone();
+    press(&mut sell, b'm');
+    press(&mut sell, b'j');
+    press(&mut sell, b'n');
+    assert_eq!(sell.vm().pc(), 0x6a7, "selling asks for a quantity");
+    press(&mut sell, 49);
+    press(&mut sell, 13);
+    assert_eq!(sell.vm().pc(), 0xe00, "the sale reports its result");
+    assert_eq!(money(&sell), 4917, "one disc sells for its full price");
+    assert_eq!(inventory(&sell), 1, "one disc remains");
+    press(&mut sell, 32);
+    assert_eq!(sell.vm().pc(), 0x153a, "the menu returns after selling");
+
+    let mut donate = sell.clone();
+    press(&mut donate, b'h');
+    assert_eq!(
+        donate.vm().pc(),
+        0xe20,
+        "the fifth entry opens the hospital"
+    );
+    capture(&donate, "haidian-hospital");
+    press(&mut donate, b'b');
+    assert_eq!(donate.vm().pc(), 0xe76, "donation shows the blood drive");
+    press(&mut donate, 32);
+    assert_eq!(donate.vm().pc(), 0xe7f, "donation reports its effect");
+    assert_eq!(health(&donate), 80, "donation costs health");
+    assert_eq!(morality(&donate), 85, "donation raises morality");
+    assert_eq!(money(&donate), 4917, "donation is free");
+    press(&mut donate, 32);
+    assert_eq!(donate.vm().pc(), 0x153a, "the menu returns after donating");
+
+    let mut treat = donate.clone();
+    press(&mut treat, b'h');
+    press(&mut treat, b'n');
+    assert_eq!(treat.vm().pc(), 0xecf, "treatment shows the nurse");
+    press(&mut treat, 32);
+    assert_eq!(treat.vm().pc(), 0xee3, "treatment reports its effect");
+    assert_eq!(health(&treat), 85, "treatment restores health");
+    assert_eq!(money(&treat), 3917, "treatment costs 1000");
+    assert_eq!(morality(&treat), 85, "treatment leaves morality unchanged");
+    press(&mut treat, 32);
+    assert_eq!(treat.vm().pc(), 0x153a, "the menu returns after treatment");
+
+    let mut bar = treat.clone();
+    press(&mut bar, b'j');
+    assert_eq!(bar.vm().pc(), 0xefb, "the sixth entry opens the bar");
+    let bar_art = frame(&bar);
+    capture(&bar, "haidian-bar");
+    press(&mut bar, 32);
+    assert_eq!(bar.vm().pc(), 0xf69, "the first drink reports the bill");
+    assert_eq!(money(&bar), 2917, "a night at the bar costs 1000");
+    assert_eq!(health(&bar), 84, "drinking costs health");
+    assert_eq!(happiness(&bar), 80, "drinking raises happiness");
+    assert_ne!(frame(&bar), bar_art, "the bill replaces the bar scene");
+    press(&mut bar, 32);
+    assert_eq!(bar.vm().pc(), 0x153a, "the menu returns after the bill");
+
+    let mut expensive = bar.clone();
+    press(&mut expensive, b'm');
+    press(&mut expensive, b'b');
+    press(&mut expensive, b'b');
+    assert_eq!(
+        expensive.vm().pc(),
+        0x6a7,
+        "the computer asks for a quantity"
+    );
+    press(&mut expensive, 49);
+    press(&mut expensive, 13);
+    assert_eq!(expensive.vm().pc(), 0xd68, "the purchase is rejected");
+    assert_eq!(money(&expensive), 2917, "a rejected purchase is free");
+    press(&mut expensive, 32);
+    assert_eq!(
+        expensive.vm().pc(),
+        0x153a,
+        "the menu returns after rejection"
+    );
+
+    let mut bank = expensive.clone();
+    press(&mut bank, b'n');
+    assert_eq!(bank.vm().pc(), 0xb71, "the second entry opens the bank");
+    capture(&bank, "haidian-bank");
+    press(&mut bank, b'b');
+    assert_eq!(bank.vm().pc(), 0x6a7, "a loan asks for an amount");
+    capture(&bank, "haidian-loan");
+    for key in [53, 48, 48, 48] {
+        press(&mut bank, key);
+    }
+    press(&mut bank, 13);
+    assert_eq!(bank.vm().pc(), 0x153a, "the menu returns after the loan");
+    assert_eq!(money(&bank), 7917, "the loan adds 5000");
+    assert_eq!(debt(&bank), 10000, "the loan adds 5000 of debt");
+
+    let mut repay = bank.clone();
+    press(&mut repay, b'n');
+    press(&mut repay, b'n');
+    assert_eq!(repay.vm().pc(), 0x6a7, "a repayment asks for an amount");
+    for key in [50, 48, 48, 48] {
+        press(&mut repay, key);
+    }
+    press(&mut repay, 13);
+    assert_eq!(repay.vm().pc(), 0x153a, "the menu returns after repayment");
+    assert_eq!(money(&repay), 5917, "repayment subtracts 2000");
+    assert_eq!(debt(&repay), 8000, "repayment subtracts 2000 of debt");
+
+    let mut casino = repay.clone();
+    press(&mut casino, b'g');
+    assert_eq!(
+        casino.vm().pc(),
+        0x1007,
+        "the casino turns away a small stake"
+    );
+    capture(&casino, "haidian-casino");
+    press(&mut casino, 32);
+    assert_eq!(
+        casino.vm().pc(),
+        0x153a,
+        "the menu returns after the refusal"
+    );
+
+    let mut night = casino.clone();
+    let evening = frame(&night);
+    press(&mut night, b't');
+    advance(&mut night, 150);
+    assert_eq!(night.vm().pc(), 0x153a, "the menu returns after the night");
+    assert_ne!(frame(&night), evening, "the calendar redraws");
+    assert_eq!(money(&night), 917, "a night costs 5000");
+    assert_eq!(debt(&night), 8800, "the night adds ten percent interest");
+    assert_eq!(health(&night), 79, "a night costs health");
+    assert_eq!(day(&night), 1, "the calendar advances to the second day");
+    capture(&night, "haidian-sleep");
+
+    let mut save = night.clone();
+    press(&mut save, b'y');
+    assert_eq!(
+        save.vm().pc(),
+        0x12d5,
+        "the eighth entry opens the system menu"
+    );
+    press(&mut save, b'b');
+    assert_eq!(save.vm().pc(), 0x1322, "saving shows progress");
+    advance(&mut save, 60);
+    press(&mut save, 32);
+    assert_eq!(save.vm().pc(), 0x132b, "saving reports completion");
+    capture(&save, "haidian-saved");
+    let dirty = save.files_mut().take_dirty_files();
+    let (_, bytes) = dirty
+        .iter()
+        .find(|(path, _)| path == "/lavadata/hd.sav")
+        .expect("the save record is written");
+    assert_eq!(bytes.len(), 31, "the save record has a fixed size");
+    assert_eq!(&bytes[..9], b"abc\r\0\0\0\0\0", "the record keeps the name");
+    assert_eq!(
+        u32::from_le_bytes(bytes[9..13].try_into().unwrap()),
+        917,
+        "the record keeps the cash"
+    );
+    assert_eq!(
+        u32::from_le_bytes(bytes[13..17].try_into().unwrap()),
+        8800,
+        "the record keeps the debt"
+    );
+    assert_eq!(
+        u16::from_le_bytes(bytes[17..19].try_into().unwrap()),
+        79,
+        "the record keeps health"
+    );
+    assert_eq!(
+        u16::from_le_bytes(bytes[19..21].try_into().unwrap()),
+        85,
+        "the record keeps morality"
+    );
+    assert_eq!(
+        u16::from_le_bytes(bytes[21..23].try_into().unwrap()),
+        80,
+        "the record keeps happiness"
+    );
+    assert_eq!(
+        u16::from_le_bytes(bytes[23..25].try_into().unwrap()),
+        1,
+        "the record keeps the day"
+    );
+    press(&mut save, 32);
+    assert_eq!(save.vm().pc(), 0x153a, "the menu returns after saving");
+
+    let mut reload = save.clone();
+    press(&mut reload, b'h');
+    press(&mut reload, b'b');
+    advance(&mut reload, 60);
+    press(&mut reload, 32);
+    advance(&mut reload, 60);
+    assert_eq!(health(&reload), 74, "the second donation costs health");
+    assert_eq!(morality(&reload), 90, "the second donation raises morality");
+    press(&mut reload, 32);
+    assert_eq!(reload.vm().pc(), 0x153a, "the menu returns after donating");
+
+    press(&mut reload, b'y');
+    press(&mut reload, b'n');
+    assert_eq!(reload.vm().pc(), 0x137b, "loading shows progress");
+    advance(&mut reload, 60);
+    press(&mut reload, 32);
+    assert_eq!(reload.vm().pc(), 0x1384, "loading reports completion");
+    capture(&reload, "haidian-loaded");
+    advance(&mut reload, 60);
+    press(&mut reload, 32);
+    assert_eq!(reload.vm().pc(), 0x153a, "the menu returns after loading");
+    assert_eq!(health(&reload), 79, "loading restores health");
+    assert_eq!(morality(&reload), 85, "loading restores morality");
+    assert_eq!(money(&reload), 917, "loading restores cash");
+    assert_eq!(debt(&reload), 8800, "loading restores debt");
+    assert_eq!(day(&reload), 1, "loading restores the day");
+
+    let mut exit = reload.clone();
+    press(&mut exit, b'y');
+    assert_eq!(exit.vm().pc(), 0x12d5, "the system menu waits again");
+    exit.input_mut().set_keys(*b"g");
+    let mut exit_code = None;
+    for _ in 0..120 {
+        let result = exit.run_frame().unwrap();
+        if let FrameStatus::Halted(code) = result.status {
+            exit_code = Some(code);
+            break;
+        }
+    }
+    assert_eq!(exit_code, Some(0), "the exit entry halts");
+}
