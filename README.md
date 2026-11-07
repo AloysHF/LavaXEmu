@@ -9,6 +9,8 @@
   <a href="https://github.com/AloysHF/LavaXEmu/releases/latest"><img src="https://img.shields.io/github/v/release/AloysHF/LavaXEmu" alt="Release"></a>
   <a href="https://github.com/AloysHF/LavaXEmu/releases"><img src="https://img.shields.io/github/downloads/AloysHF/LavaXEmu/total" alt="Downloads"></a>
   <a href="LICENSE"><img src="https://img.shields.io/badge/License-GPL%202.0-blue.svg" alt="License: GPL 2.0"></a>
+  <a href="https://discord.gg/E4SQjXUkZy"><img src="https://img.shields.io/badge/Discord-Join%20Us-5865F2?logo=discord&logoColor=white" alt="Discord"></a>
+  <a href="https://qm.qq.com/q/LAO7DKAWUC"><img src="https://img.shields.io/badge/QQ%E7%BE%A4-Join%20Us-12B7F5?logo=tencent-qq&logoColor=white" alt="QQ Group"></a>
 </p>
 
 LavaXEmu is a cross-platform LavaX virtual machine written in Rust. It loads
