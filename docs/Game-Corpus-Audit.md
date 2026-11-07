@@ -31,11 +31,12 @@ do not satisfy this status.
 - Star Legend checked on 2026-11-07: the packaged entry runs its embedded registration program and writes the account record, and that record logs into the unpacked main program and moves on the map.
 - Down 100 Floors checked on 2026-11-07: the title and two credit screens gate the run, Left and Right steer the character while Up and Down leave the frame unchanged at that point, and an unattended run reaches the game-over screen.
 - Hold 20 Seconds checked on 2026-11-07: the title menu starts a survival run, all four arrow keys move the player to distinct positions, steering into the falling field ends the run with a result overlay, and Enter starts the next run.
+- Fly 10000 Meters checked on 2026-11-07: the title starts the flight, F4 opens the speed adjustment, Up and Down change and restore the speed value, holding a key lifts the plane, and an unattended flight ends on credits that Escape closes.
 - Rotary Slot Machine checked on 2026-11-07: one dedicated release workflow checks the splash and menu with bidirectional wrapping, both pages of the instructions and version screens, starting a round with 20 credits, betting and withdrawing on two columns, a deterministic spin and result, the quit dialog cancel/confirm paths, and the menu exit item.
 - Bottomless Pit checked on 2026-11-07: one dedicated release workflow cycles the three difficulty levels, starts a fall, checks the horizontal-only steering, waits for the floor counter, saves the replay record through the `Yes?` prompt, replays it without input, and aborts with Escape.
-- 138 dedicated release workflows passed in this audit.
-- 205 of 324 entry points were loaded by those successful workflows.
-- 119 entry points still need dedicated workflow verification.
+- 139 dedicated release workflows passed in this audit.
+- 206 of 324 entry points were loaded by those successful workflows.
+- 118 entry points still need dedicated workflow verification.
 - The historical [startup gallery](Game-Compatibility.md) is a separate check
   and must not be interpreted as this workflow audit.
 
@@ -238,7 +239,7 @@ an optional screenshot directory. Keep each test's logs and captures separate.
 | 179 | `LAVA1 星剑传奇/未打包的[星剑传奇]/星剑注册.lav` | Account registration | [Workflow passed: `star_legend_registers_a_character_and_loads_the_map`](../crates/lavaxemu/tests/game_compatibility.rs#L1214) |
 | 180 | `LAVA1 是男人就下100层（模拟器可能不能运行）/是男人就下100层.lav` | Game / game package | [Workflow passed: `down_hundred_floors_steers_and_reaches_game_over`](../crates/lavaxemu/tests/game_compatibility.rs#L13985) |
 | 181 | `LAVA1 是男人就撑20秒正式版/是男人就撑20秒正式版.lav` | Game / game package | [Workflow passed: `hold_twenty_seconds_moves_the_player_and_shows_the_result`](../crates/lavaxemu/tests/game_compatibility.rs#L14040) |
-| 182 | `LAVA1 是男人就飞10000米/是男人就飞10000米.lav` | Game / game package | Pending |
+| 182 | `LAVA1 是男人就飞10000米/是男人就飞10000米.lav` | Game / game package | [Workflow passed: `fly_ten_thousand_meters_adjusts_speed_and_climbs`](../crates/lavaxemu/tests/game_compatibility.rs#L14109) |
 | 183 | `LAVA1 暗子象棋/暗子象棋.pac` | Game / game package | [Workflow passed: `dark_chess_loads_the_board_and_responds_to_moves`](../crates/lavaxemu/tests/game_compatibility.rs#L130) |
 | 184 | `LAVA1 暗子象棋/未打包/暗子象棋.lav` | Game / game package | [Workflow passed: `dark_chess_loads_the_board_and_responds_to_moves`](../crates/lavaxemu/tests/game_compatibility.rs#L130) |
 | 185 | `LAVA1 月光城/Moon.pac` | Game / game package | Pending |

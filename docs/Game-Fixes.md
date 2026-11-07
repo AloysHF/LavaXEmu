@@ -2684,3 +2684,19 @@ without an execution error alone does not establish playability.
   pc `0x1bdb`.
 - The level shown in this scene is `L:2`; how the level value advances and what
   the settings, recording and ranking menus do remain unverified.
+
+## Fly 10000 Meters (是男人就飞10000米)
+
+- Content: `LAVA1 是男人就飞10000米/是男人就飞10000米.lav`.
+- Startup-only evidence had not covered the settings screen, the flight or the
+  end-of-flight flow.
+- The title waits at pc `0x9a7`. The screen only advertises F4; `Enter` starts
+  the flight and F4 opens the speed adjustment at pc `0x8d0`.
+- The speed adjustment shows `Current speed: 5` and asks for Up/Down. Up raises
+  the value and Down lowers it, so Up followed by Down restores the frame.
+- The plane climbs while any key is held and sinks without input; the distance
+  counter and obstacles keep advancing. An unattended flight ends on the
+  credits screen at pc `0xbc6`, which waits for Escape and then halts at
+  pc `0xbd7`.
+- The speed value's effect on obstacle speed, the 10000-meter goal, scoring,
+  the LIFE counter and how altitude affects collisions remain unverified.

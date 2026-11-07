@@ -14103,3 +14103,85 @@ fn hold_twenty_seconds_moves_the_player_and_shows_the_result() {
         run.vm().pc()
     );
 }
+
+#[test]
+#[ignore = "requires the local game corpus via LAVAX_GAME_ROOT"]
+fn fly_ten_thousand_meters_adjusts_speed_and_climbs() {
+    let mut emulator = load("LAVA1 是男人就飞10000米/是男人就飞10000米.lav");
+    advance(&mut emulator, 300);
+    assert_eq!(emulator.vm().pc(), 0x9a7, "the title waits for a key");
+    capture(&emulator, "fly10000-title");
+
+    let mut setup = emulator.clone();
+    press(&mut setup, 31);
+    assert_eq!(setup.vm().pc(), 0x8d0, "F4 opens the speed adjustment");
+    capture(&setup, "fly10000-settings");
+
+    let initial = setup.display().indexed_frame().to_vec();
+    let mut faster = setup.clone();
+    hold(&mut faster, 20, 3);
+    capture(&faster, "fly10000-speed-up");
+    assert_ne!(
+        faster.display().indexed_frame(),
+        initial,
+        "Up raises the speed value"
+    );
+    let mut restored = faster.clone();
+    hold(&mut restored, 21, 3);
+    assert_eq!(
+        restored.display().indexed_frame(),
+        initial,
+        "Down lowers the speed value back"
+    );
+
+    press(&mut emulator, 13);
+    assert_eq!(emulator.vm().pc(), 0xaab, "Enter starts the flight");
+    capture(&emulator, "fly10000-run");
+
+    let mut still = emulator.clone();
+    advance(&mut still, 90);
+    let mut climbed = emulator.clone();
+    hold(&mut climbed, 20, 60);
+    capture(&climbed, "fly10000-climb");
+    assert!(
+        climbed.display().indexed_frame() != still.display().indexed_frame(),
+        "holding a key lifts the plane"
+    );
+
+    let mut first = emulator.clone();
+    advance(&mut first, 60);
+    let mut later = first.clone();
+    advance(&mut later, 60);
+    assert!(
+        first.display().indexed_frame() != later.display().indexed_frame(),
+        "the flight keeps moving without input"
+    );
+
+    let mut crashed = emulator.clone();
+    let mut credits = false;
+    for _ in 0..1200 {
+        if crashed.vm().pc() == 0xbc6 {
+            credits = true;
+            break;
+        }
+        advance(&mut crashed, 1);
+    }
+    assert!(credits, "an unattended flight ends on the credits screen");
+    capture(&crashed, "fly10000-credits");
+
+    let mut halted = false;
+    for _ in 0..60 {
+        crashed.input_mut().set_keys([27]);
+        if matches!(
+            crashed
+                .run_frame()
+                .expect("game must execute without errors")
+                .status,
+            FrameStatus::Halted(_)
+        ) {
+            halted = true;
+            break;
+        }
+    }
+    assert!(halted, "Escape exits from the credits screen");
+}
