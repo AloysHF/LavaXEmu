@@ -5,9 +5,12 @@
 </p>
 
 <p align="center">
+  <a href="https://aloyshf.github.io/LavaXEmu/"><img src="https://img.shields.io/badge/Website-LavaXEmu-00D4FF?logo=githubpages&logoColor=white" alt="Website"></a>
   <a href="https://github.com/AloysHF/LavaXEmu/actions/workflows/ci.yml"><img src="https://github.com/AloysHF/LavaXEmu/actions/workflows/ci.yml/badge.svg" alt="CI"></a>
+  <a href="https://git.libretro.com/libretro/lavaxemu/-/pipelines"><img src="https://img.shields.io/badge/dynamic/json?url=https%3A%2F%2Fgit.libretro.com%2Fapi%2Fv4%2Fprojects%2Flibretro%252Flavaxemu%2Fpipelines%3Fref%3Dmaster%26per_page%3D1&query=%24%5B0%5D.status&label=Pipeline%20Status&logo=gitlab&cacheSeconds=300" alt="Gitlab Pipeline Status" ></a>
   <a href="https://github.com/AloysHF/LavaXEmu/releases/latest"><img src="https://img.shields.io/github/v/release/AloysHF/LavaXEmu" alt="Release"></a>
   <a href="https://github.com/AloysHF/LavaXEmu/releases"><img src="https://img.shields.io/github/downloads/AloysHF/LavaXEmu/total" alt="Downloads"></a>
+  <a href="https://sonarcloud.io/dashboard?id=AloysHF_LavaXEmu"><img src="https://sonarcloud.io/api/project_badges/measure?project=AloysHF_LavaXEmu&metric=alert_status" alt="Quality Gate Status"></a>
   <a href="LICENSE"><img src="https://img.shields.io/badge/License-GPL%202.0-blue.svg" alt="License: GPL 2.0"></a>
   <a href="https://discord.gg/E4SQjXUkZy"><img src="https://img.shields.io/badge/Discord-Join%20Us-5865F2?logo=discord&logoColor=white" alt="Discord"></a>
   <a href="https://qm.qq.com/q/LAO7DKAWUC"><img src="https://img.shields.io/badge/QQ%E7%BE%A4-Join%20Us-12B7F5?logo=tencent-qq&logoColor=white" alt="QQ Group"></a>
@@ -102,6 +105,9 @@ The binary is produced at `target/release/lavaxemu.dll`
 (`liblavaxemu.so` on Linux, `liblavaxemu.dylib` on macOS). Rename it to
 `lavaxemu_libretro.<ext>` before placing it in RetroArch's `cores/`
 directory.
+
+For Android cross-compilation, see [Android Libretro Core](docs/Android-Libretro-Core.md).
+For iOS, see [iOS Libretro Core](docs/iOS-Libretro-Core.md).
 
 ### EmulatorJS Core (for the browser)
 

@@ -1,236 +1,417 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="zh-CN">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <meta name="description" content="A cross-platform LavaX virtual machine and emulator. Play LavaX games in your browser, no install required.">
-    <meta name="theme-color" content="#16213e">
-    <title>LavaXEmu</title>
-    <style>
-        * {
-            margin: 0;
-            padding: 0;
-            box-sizing: border-box;
-        }
-        html {
-            scroll-behavior: smooth;
-        }
-        body {
-            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, sans-serif;
-            min-height: 100vh;
-            background: linear-gradient(135deg, #1a1a2e 0%, #16213e 100%);
-            color: #e6e6e6;
-            line-height: 1.6;
-        }
-        a {
-            color: #00d4ff;
-            text-decoration: none;
-        }
-        .nav {
-            display: flex;
-            flex-wrap: wrap;
-            align-items: center;
-            gap: 1.5rem;
-            max-width: 1100px;
-            margin: 0 auto;
-            padding: 1.25rem 2rem;
-            font-size: 0.95rem;
-        }
-        .nav .brand {
-            margin-right: auto;
-            font-weight: 700;
-            font-size: 1.2rem;
-            background: linear-gradient(90deg, #00d4ff, #7b2cbf);
-            -webkit-background-clip: text;
-            -webkit-text-fill-color: transparent;
-            background-clip: text;
-        }
-        .nav a:hover {
-            text-decoration: underline;
-        }
-        .nav a.nav-play {
-            color: #ffd700;
-            font-weight: 600;
-        }
-        .nav a.nav-play:hover {
-            color: #00d4ff;
-            text-decoration: none;
-        }
-        .hero {
-            max-width: 900px;
-            margin: 0 auto;
-            padding: 5rem 2rem 4.5rem;
-            text-align: center;
-        }
-        h1 {
-            font-size: 3rem;
-            margin-bottom: 1rem;
-            background: linear-gradient(90deg, #00d4ff, #7b2cbf);
-            -webkit-background-clip: text;
-            -webkit-text-fill-color: transparent;
-            background-clip: text;
-        }
-        .status {
-            font-size: 1.5rem;
-            color: #ffd700;
-            margin-bottom: 1rem;
-            animation: pulse 2s infinite;
-        }
-        @keyframes pulse {
-            0%, 100% { opacity: 1; }
-            50% { opacity: 0.5; }
-        }
-        .hero p {
-            font-size: 1.1rem;
-            color: #a0a0a0;
-            max-width: 600px;
-            margin: 0 auto;
-        }
-        .hero-actions {
-            display: flex;
-            flex-wrap: wrap;
-            justify-content: center;
-            gap: 0.9rem;
-            margin-top: 2rem;
-        }
-        .btn {
-            display: inline-flex;
-            align-items: center;
-            gap: 0.5rem;
-            padding: 0.7rem 1.4rem;
-            border: 1px solid transparent;
-            border-radius: 8px;
-            font-size: 0.95rem;
-            font-weight: 600;
-            transition: background 0.2s, border-color 0.2s, color 0.2s, filter 0.2s;
-        }
-        .btn-primary {
-            background: linear-gradient(90deg, #00a8cc, #6a1fb0);
-            color: #fff;
-        }
-        .btn-primary:hover {
-            filter: brightness(1.12);
-        }
-        .btn-play {
-            background: rgba(0, 212, 255, 0.1);
-            border-color: rgba(0, 212, 255, 0.45);
-            color: #00d4ff;
-        }
-        .btn-play:hover {
-            background: rgba(0, 212, 255, 0.18);
-            border-color: #00d4ff;
-        }
-        .btn-ghost {
-            border-color: rgba(255, 255, 255, 0.18);
-            color: #e6e6e6;
-        }
-        .btn-ghost:hover {
-            border-color: rgba(0, 212, 255, 0.5);
-            color: #00d4ff;
-        }
-        .play-section {
-            max-width: 1100px;
-            margin: 0 auto 5rem;
-            padding: 0 2rem;
-        }
-        .play-cta {
-            display: grid;
-            grid-template-columns: 0.9fr 1.1fr;
-            gap: 2rem;
-            align-items: center;
-            padding: 2rem;
-            background: linear-gradient(135deg, rgba(0, 212, 255, 0.1), rgba(123, 44, 191, 0.1));
-            border: 1px solid rgba(0, 212, 255, 0.22);
-            border-radius: 16px;
-        }
-        .play-cta-cover img {
-            display: block;
-            width: 100%;
-            border: 1px solid rgba(0, 212, 255, 0.25);
-            border-radius: 10px;
-            image-rendering: pixelated;
-        }
-        .play-cta-badge {
-            display: inline-block;
-            padding: 0.3rem 0.75rem;
-            border-radius: 999px;
-            background: rgba(0, 212, 255, 0.12);
-            color: #00d4ff;
-            font-size: 0.8rem;
-            font-weight: 600;
-        }
-        .play-cta-body h2 {
-            font-size: clamp(1.5rem, 3vw, 2rem);
-            margin: 0.9rem 0 0.6rem;
-        }
-        .play-cta-body p {
-            color: #a0a0a0;
-            font-size: 0.98rem;
-            margin-bottom: 1.4rem;
-        }
-        @media (max-width: 720px) {
-            .nav {
-                gap: 1rem;
-                padding: 1rem 1.5rem;
-            }
-            .hero {
-                padding: 3.5rem 1.5rem 3rem;
-            }
-            .play-section {
-                padding: 0 1.5rem;
-            }
-            .play-cta {
-                grid-template-columns: 1fr;
-                gap: 1.5rem;
-                padding: 1.5rem;
-            }
-        }
-    </style>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>LavaXEmu — 让字节码游戏重获新生</title>
+  <meta name="description" content="用 Rust 编写的 LavaX 虚拟机与模拟器，支持 160×240 索引色屏上的经典 .lav 程序，兼容 RetroArch">
+  <meta name="theme-color" content="#0b1020">
+  <link rel="icon" type="image/png" href="res/logo.png">
+  <link rel="stylesheet" href="css/style.css">
 </head>
 <body>
-    <nav class="nav">
-        <a href="index.html" class="brand">LavaXEmu</a>
-        <a href="play.html" class="nav-play">Play Online</a>
-        <a href="https://github.com/AloysHF/LavaXEmu">GitHub</a>
-        <a href="https://github.com/AloysHF/LavaXEmu/releases">Downloads</a>
-        <a href="https://discord.gg/E4SQjXUkZy" target="_blank" rel="noopener">Discord</a>
-        <a href="https://qm.qq.com/q/LAO7DKAWUC" target="_blank" rel="noopener">QQ Group</a>
-    </nav>
 
-    <main>
-        <section class="hero">
-            <h1>LavaXEmu</h1>
-            <div class="status">🚧 Under Development 🚧</div>
-            <p>
-                A cross-platform LavaX virtual machine and emulator.
-                This project is currently in active development.
-            </p>
-            <div class="hero-actions">
-                <a href="play.html" class="btn btn-play">
-                    <svg width="16" height="16" viewBox="0 0 16 16" fill="currentColor" aria-hidden="true"><path d="M4 2.5v11a.5.5 0 00.77.42l8.5-5.5a.5.5 0 000-.84l-8.5-5.5A.5.5 0 004 2.5z"/></svg>
-                    <span>Play Online</span>
-                </a>
-                <a href="https://github.com/AloysHF/LavaXEmu" class="btn btn-ghost">GitHub</a>
-                <a href="https://github.com/AloysHF/LavaXEmu/releases" class="btn btn-ghost">Downloads</a>
-            </div>
-        </section>
+  <!-- ====== NAV ====== -->
+  <nav id="navbar">
+    <div class="nav-inner">
+      <a href="#hero" class="nav-logo">
+        <img src="res/logo.png" alt="LavaXEmu" width="32" height="32">
+        <span>LavaXEmu</span>
+      </a>
+      <div class="nav-links">
+        <a href="#features" data-i18n="nav-features">核心特性</a>
+        <a href="#gallery" data-i18n="nav-games">游戏库</a>
+        <a href="#architecture" data-i18n="nav-arch">技术架构</a>
+        <a href="#quickstart" data-i18n="nav-quickstart">快速开始</a>
+        <a href="play.html" class="nav-play" data-i18n="nav-play">在线体验</a>
+        <button id="lang-toggle" class="lang-toggle" aria-label="Switch language">EN</button>
+        <a href="https://github.com/AloysHF/LavaXEmu" class="nav-github" target="_blank">
+          <svg width="20" height="20" viewBox="0 0 16 16" fill="currentColor"><path d="M8 0C3.58 0 0 3.58 0 8c0 3.54 2.29 6.53 5.47 7.59.4.07.55-.17.55-.38 0-.19-.01-.82-.01-1.49-2.01.37-2.53-.49-2.69-.94-.09-.23-.48-.94-.82-1.13-.28-.15-.68-.52-.01-.53.63-.01 1.08.58 1.23.82.72 1.21 1.87.87 2.33.66.07-.52.28-.87.51-1.07-1.78-.2-3.64-.89-3.64-3.95 0-.87.31-1.59.82-2.15-.08-.2-.36-1.02.08-2.12 0 0 .67-.21 2.2.82.64-.18 1.32-.27 2-.27.68 0 1.36.09 2 .27 1.53-1.04 2.2-.82 2.2-.82.44 1.1.16 1.92.08 2.12.51.56.82 1.27.82 2.15 0 3.07-1.87 3.75-3.65 3.95.29.25.54.73.54 1.48 0 1.07-.01 1.93-.01 2.2 0 .21.15.46.55.38A8.013 8.013 0 0016 8c0-4.42-3.58-8-8-8z"/></svg>
+        </a>
+      </div>
+      <button class="nav-toggle" aria-label="Toggle menu">
+        <span></span><span></span><span></span>
+      </button>
+    </div>
+  </nav>
 
-        <section id="play" class="play-section">
-            <div class="play-cta">
-                <div class="play-cta-cover">
-                    <img src="docs/images/allout.png" alt="LavaX game screenshot" loading="lazy">
-                </div>
-                <div class="play-cta-body">
-                    <span class="play-cta-badge">No install · runs in your browser</span>
-                    <h2>Play LavaX Games Online</h2>
-                    <p>Pick a LavaX program from your device and run it right in the browser. Keyboard and touch controls are supported, and files never leave your machine.</p>
-                    <a href="play.html" class="btn btn-primary">
-                        <svg width="16" height="16" viewBox="0 0 16 16" fill="currentColor" aria-hidden="true"><path d="M4 2.5v11a.5.5 0 00.77.42l8.5-5.5a.5.5 0 000-.84l-8.5-5.5A.5.5 0 004 2.5z"/></svg>
-                        <span>Start Playing</span>
-                    </a>
-                </div>
+  <!-- ====== HERO ====== -->
+  <section id="hero">
+    <div class="hero-bg">
+      <canvas id="circuit-canvas"></canvas>
+    </div>
+    <div class="hero-content">
+      <div class="hero-chip">
+        <img src="res/logo.png" alt="LavaXEmu Logo" class="hero-logo">
+      </div>
+      <h1 class="hero-title">
+        <span class="hero-title-line">LavaX</span>
+        <span class="hero-title-line accent">Emulator</span>
+      </h1>
+      <p class="hero-subtitle" data-i18n="hero-subtitle">让字节码游戏重获新生</p>
+      <p class="hero-desc" data-i18n="hero-desc">用 Rust 编写的 LavaX 虚拟机与模拟器，完整运行电子词典上的经典 .lav 程序</p>
+      <div class="hero-badges">
+        <img src="https://img.shields.io/github/v/release/AloysHF/LavaXEmu?style=for-the-badge" alt="Release">
+        <img src="https://img.shields.io/badge/license-GPL%202.0-blue?style=for-the-badge" alt="License">
+        <img src="https://img.shields.io/github/downloads/AloysHF/LavaXEmu/total?style=for-the-badge&label=downloads" alt="Downloads">
+        <img src="https://sonarcloud.io/api/project_badges/measure?project=AloysHF_LavaXEmu&metric=alert_status&style=for-the-badge" alt="Quality Gate">
+      </div>
+      <div class="hero-actions">
+        <a href="https://github.com/AloysHF/LavaXEmu/releases/latest" class="btn btn-primary" target="_blank">
+          <svg width="16" height="16" viewBox="0 0 16 16" fill="currentColor"><path d="M2.75 14A1.75 1.75 0 011 12.25v-2.5a.75.75 0 011.5 0v2.5c0 .138.112.25.25.25h10.5a.25.25 0 00.25-.25v-2.5a.75.75 0 011.5 0v2.5A1.75 1.75 0 0113.25 14H2.75z"/><path d="M7.25 7.689V2a.75.75 0 011.5 0v5.689l1.97-1.969a.749.749 0 111.06 1.06l-3.25 3.25a.749.749 0 01-1.06 0L4.22 6.78a.749.749 0 111.06-1.06l1.97 1.969z"/></svg>
+          <span data-i18n="hero-download">下载</span>
+        </a>
+        <a href="https://github.com/AloysHF/LavaXEmu" class="btn btn-secondary" target="_blank">
+          <svg width="16" height="16" viewBox="0 0 16 16" fill="currentColor"><path d="M8 0C3.58 0 0 3.58 0 8c0 3.54 2.29 6.53 5.47 7.59.4.07.55-.17.55-.38 0-.19-.01-.82-.01-1.49-2.01.37-2.53-.49-2.69-.94-.09-.23-.48-.94-.82-1.13-.28-.15-.68-.52-.01-.53.63-.01 1.08.58 1.23.82.72 1.21 1.87.87 2.33.66.07-.52.28-.87.51-1.07-1.78-.2-3.64-.89-3.64-3.95 0-.87.31-1.59.82-2.15-.08-.2-.36-1.02.08-2.12 0 0 .67-.21 2.2.82.64-.18 1.32-.27 2-.27.68 0 1.36.09 2 .27 1.53-1.04 2.2-.82 2.2-.82.44 1.1.16 1.92.08 2.12.51.56.82 1.27.82 2.15 0 3.07-1.87 3.75-3.65 3.95.29.25.54.73.54 1.48 0 1.07-.01 1.93-.01 2.2 0 .21.15.46.55.38A8.013 8.013 0 0016 8c0-4.42-3.58-8-8-8z"/></svg>
+          <span data-i18n="hero-github">查看源码</span>
+        </a>
+        <a href="play.html" class="btn btn-play">
+          <svg width="16" height="16" viewBox="0 0 16 16" fill="currentColor"><path d="M4 2.5v11a.5.5 0 00.77.42l8.5-5.5a.5.5 0 000-.84l-8.5-5.5A.5.5 0 004 2.5z"/></svg>
+          <span data-i18n="hero-play">在线试玩</span>
+        </a>
+      </div>
+    </div>
+    <div class="hero-scroll">
+      <span data-i18n="hero-scroll">向下滚动探索</span>
+      <div class="scroll-arrow"></div>
+    </div>
+  </section>
+
+  <!-- ====== ABOUT ====== -->
+  <section id="about" class="section">
+    <div class="container">
+      <div class="about-grid">
+        <div class="about-text fade-in-up">
+          <h2 data-i18n="about-title">什么是 LavaX？</h2>
+          <p data-i18n="about-p1">LavaX 是早期电子词典与学习机上流行的 <strong>LAVA 字节码应用平台</strong>。游戏以 .lav 程序分发，运行在设备内置的栈式虚拟机上，使用索引色屏幕与按键/触摸交互。</p>
+          <p data-i18n="about-p2">这些曾经只能在专用硬件上运行的游戏，如今通过 LavaXEmu 在现代设备上重获新生。</p>
+        </div>
+        <div class="about-diagram fade-in-up">
+          <div class="diagram-flow">
+            <div class="diagram-node">
+              <div class="diagram-icon chip-icon"></div>
+              <span data-i18n="about-chip">电子词典设备</span>
+              <small data-i18n="about-chip-sub">内置 LAVA 运行时</small>
             </div>
-        </section>
-    </main>
+            <div class="diagram-arrow">→</div>
+            <div class="diagram-node">
+              <div class="diagram-icon game-icon"></div>
+              <span>.lav 程序</span>
+              <small data-i18n="about-game-sub">LavaX 游戏</small>
+            </div>
+            <div class="diagram-arrow">→</div>
+            <div class="diagram-node highlight">
+              <div class="diagram-icon emu-icon"></div>
+              <span>LavaXEmu</span>
+              <small data-i18n="about-emu-sub">Rust 模拟器</small>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ====== STATS ====== -->
+  <section id="stats" class="section section-dark">
+    <div class="container">
+      <div class="stats-grid">
+        <div class="stat-item fade-in-up">
+          <div class="stat-number" data-target="266">0</div>
+          <div class="stat-label" data-i18n="stat-games">通过启动验证</div>
+          <div class="stat-sub" data-i18n="stat-games-sub">含完整兼容性截图</div>
+        </div>
+        <div class="stat-item fade-in-up">
+          <div class="stat-number" data-target="117">0</div>
+          <div class="stat-label" data-i18n="stat-opcodes">VM 指令</div>
+          <div class="stat-sub" data-i18n="stat-opcodes-sub">栈式字节码虚拟机</div>
+        </div>
+        <div class="stat-item fade-in-up">
+          <div class="stat-number" data-target="87">0</div>
+          <div class="stat-label" data-i18n="stat-apis">系统 API</div>
+          <div class="stat-sub" data-i18n="stat-apis-sub">固件服务桥接</div>
+        </div>
+        <div class="stat-item fade-in-up">
+          <div class="stat-number" data-target="256">0</div>
+          <div class="stat-label" data-i18n="stat-colors">同屏颜色</div>
+          <div class="stat-sub" data-i18n="stat-colors-sub">160×240 索引色</div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ====== PLAY ONLINE ====== -->
+  <section id="play" class="section section-dark">
+    <div class="container">
+      <div class="play-cta fade-in-up">
+        <div class="play-cta-cover">
+          <img src="docs/images/SpaceWar.png" alt="LavaX game screenshot">
+        </div>
+        <div class="play-cta-body">
+          <span class="play-cta-badge" data-i18n="play-badge">无需安装 · 浏览器直接运行</span>
+          <h2 data-i18n="play-title">在线试玩 LavaX 游戏</h2>
+          <p data-i18n="play-desc">选择本机的 .lav 程序或打包好的 ZIP，即可在浏览器中运行，支持键盘、手柄和手机触屏。</p>
+          <a href="play.html" class="btn btn-primary">
+            <svg width="16" height="16" viewBox="0 0 16 16" fill="currentColor"><path d="M4 2.5v11a.5.5 0 00.77.42l8.5-5.5a.5.5 0 000-.84l-8.5-5.5A.5.5 0 004 2.5z"/></svg>
+            <span data-i18n="play-cta">开始试玩</span>
+          </a>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ====== FEATURES ====== -->
+  <section id="features" class="section">
+    <div class="container">
+      <h2 class="section-title fade-in-up" data-i18n="feat-title">核心特性</h2>
+      <p class="section-subtitle fade-in-up" data-i18n="feat-subtitle">从字节码虚拟机到虚拟文件系统，全栈 Rust 实现</p>
+      <div class="features-grid">
+        <div class="feature-card fade-in-up">
+          <div class="feature-icon">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="4" y="4" width="16" height="16" rx="2"/><path d="M9 9l3 3-3 3"/><path d="M15 15l-3-3 3-3"/></svg>
+          </div>
+          <h3 data-i18n="feat-vm-title">LAV 字节码虚拟机</h3>
+          <p data-i18n="feat-vm-desc">117 个操作码的栈式虚拟机，覆盖算术、控制流、内存访问和系统调用，纯 Rust 实现。</p>
+        </div>
+        <div class="feature-card fade-in-up">
+          <div class="feature-icon">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 2L2 7l10 5 10-5-10-5z"/><path d="M2 17l10 5 10-5"/><path d="M2 12l10 5 10-5"/></svg>
+          </div>
+          <h3 data-i18n="feat-api-title">系统 API 桥</h3>
+          <p data-i18n="feat-api-desc">87 项固件服务分派，覆盖显示、输入、文件、内存、音频与工具函数，完整还原运行时行为。</p>
+        </div>
+        <div class="feature-card fade-in-up">
+          <div class="feature-icon">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="2" y="3" width="20" height="14" rx="2"/><path d="M8 21h8"/><path d="M12 17v4"/></svg>
+          </div>
+          <h3 data-i18n="feat-color-title">索引色显示</h3>
+          <p data-i18n="feat-color-desc">160×240 分辨率、256 色调色板的帧缓冲管理，还原掌上屏幕的观感。</p>
+        </div>
+        <div class="feature-card fade-in-up">
+          <div class="feature-icon">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>
+          </div>
+          <h3 data-i18n="feat-vfs-title">沙箱虚拟文件系统</h3>
+          <p data-i18n="feat-vfs-desc">受限路径访问与选择性写回，游戏数据文件与存档安全落盘，不会逃出沙箱。</p>
+        </div>
+        <div class="feature-card fade-in-up">
+          <div class="feature-icon">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
+          </div>
+          <h3 data-i18n="feat-headless-title">无头确定性模式</h3>
+          <p data-i18n="feat-headless-desc">无窗口运行 N 帧并截图，配套确定性时钟，方便批量截图与回归测试。</p>
+        </div>
+        <div class="feature-card fade-in-up">
+          <div class="feature-icon">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="2" y="6" width="20" height="12" rx="2"/><path d="M6 12h4"/><path d="M14 12h4"/><path d="M8 10v4"/><path d="M16 10v4"/></svg>
+          </div>
+          <h3 data-i18n="feat-frontends-title">多前端支持</h3>
+          <p data-i18n="feat-frontends-desc">Standalone 桌面端、RetroArch libretro 核心与 EmulatorJS 浏览器核心共享同一套核心逻辑。</p>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ====== GAME GALLERY ====== -->
+  <section id="gallery" class="section section-dark">
+    <div class="container">
+      <h2 class="section-title fade-in-up" data-i18n="gallery-title">游戏库</h2>
+      <p class="section-subtitle fade-in-up" data-i18n="gallery-subtitle">启动验证通过的 LavaX 程序精选，完整列表见兼容性文档</p>
+      <div id="gallery-dynamic" class="fade-in-up"></div>
+    </div>
+  </section>
+
+  <!-- ====== ARCHITECTURE ====== -->
+  <section id="architecture" class="section">
+    <div class="container">
+      <h2 class="section-title fade-in-up" data-i18n="arch-title">技术架构</h2>
+      <p class="section-subtitle fade-in-up" data-i18n="arch-subtitle">清晰的三层架构，平台无关的核心引擎</p>
+      <div class="arch-diagram fade-in-up">
+        <div class="arch-layer arch-frontend">
+          <div class="arch-label" data-i18n="arch-frontends">前端</div>
+          <div class="arch-boxes">
+            <div class="arch-box">
+              <strong>lavaxemu</strong>
+              <small data-i18n="arch-standalone-sub">minifb 窗口 + 键盘/指针</small>
+            </div>
+            <div class="arch-box">
+              <strong>lavaxemu-libretro</strong>
+              <small data-i18n="arch-libretro-sub">RetroArch 核心 · wasm 浏览器核心</small>
+            </div>
+          </div>
+        </div>
+        <div class="arch-connector">
+          <svg viewBox="0 0 100 40" preserveAspectRatio="none">
+            <path d="M20 0 L20 20 L50 40" stroke="#7B2CBF" stroke-width="2" fill="none"/>
+            <path d="M80 0 L80 20 L50 40" stroke="#7B2CBF" stroke-width="2" fill="none"/>
+          </svg>
+        </div>
+        <div class="arch-layer arch-core">
+          <div class="arch-label" data-i18n="arch-core">核心引擎</div>
+          <div class="arch-boxes">
+            <div class="arch-box core-box">
+              <strong>lavaxemu-core</strong>
+              <small data-i18n="arch-core-sub">平台无关的库</small>
+              <div class="core-modules">
+                <span>LAV Loader</span>
+                <span>Bytecode VM</span>
+                <span>System API</span>
+                <span>Display &amp; Palette</span>
+                <span>Input</span>
+                <span>Virtual FS</span>
+                <span>Save State</span>
+              </div>
+            </div>
+          </div>
+        </div>
+        <div class="arch-connector">
+          <svg viewBox="0 0 100 40" preserveAspectRatio="none">
+            <path d="M50 0 L50 40" stroke="#FFD700" stroke-width="2" fill="none" stroke-dasharray="4,4"/>
+          </svg>
+        </div>
+        <div class="arch-layer arch-platform">
+          <div class="arch-label" data-i18n="arch-platforms">目标平台</div>
+          <div class="arch-boxes">
+            <div class="arch-box small-box">Windows</div>
+            <div class="arch-box small-box">macOS</div>
+            <div class="arch-box small-box">Linux</div>
+            <div class="arch-box small-box">RetroArch</div>
+            <div class="arch-box small-box">Web</div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ====== QUICK START ====== -->
+  <section id="quickstart" class="section">
+    <div class="container">
+      <h2 class="section-title fade-in-up" data-i18n="qs-title">快速开始</h2>
+      <p class="section-subtitle fade-in-up" data-i18n="qs-subtitle">几行命令，即刻体验</p>
+      <div class="quickstart-grid">
+        <div class="quickstart-card fade-in-up">
+          <div class="qs-header">
+            <span class="qs-icon">🖥️</span>
+            <h3 data-i18n="qs-standalone">Standalone</h3>
+          </div>
+          <div class="qs-steps">
+            <div class="qs-step">
+              <span class="qs-num">1</span>
+              <div>
+                <p data-i18n="qs-standalone-1">下载最新版本</p>
+                <code data-i18n="qs-standalone-1-sub">从 Releases 页面下载对应平台的二进制文件</code>
+              </div>
+            </div>
+            <div class="qs-step">
+              <span class="qs-num">2</span>
+              <div>
+                <p data-i18n="qs-standalone-2">运行游戏</p>
+                <code>lavaxemu game.lav</code>
+              </div>
+            </div>
+            <div class="qs-step">
+              <span class="qs-num">3</span>
+              <div>
+                <p data-i18n="qs-standalone-3">或使用无头模式截图</p>
+                <code>lavaxemu --headless --frames 300 game.lav</code>
+              </div>
+            </div>
+          </div>
+        </div>
+        <div class="quickstart-card fade-in-up">
+          <div class="qs-header">
+            <span class="qs-icon">🎮</span>
+            <h3>RetroArch</h3>
+          </div>
+          <div class="qs-steps">
+            <div class="qs-step">
+              <span class="qs-num">1</span>
+              <div>
+                <p data-i18n="qs-retro-1">下载 libretro 核心</p>
+                <code data-i18n="qs-retro-1-sub">从 Releases 页面下载对应平台的核心文件</code>
+              </div>
+            </div>
+            <div class="qs-step">
+              <span class="qs-num">2</span>
+              <div>
+                <p data-i18n="qs-retro-2">安装核心</p>
+                <code data-i18n="qs-retro-2-sub">重命名为 lavaxemu_libretro 并放入 cores/ 目录</code>
+              </div>
+            </div>
+            <div class="qs-step">
+              <span class="qs-num">3</span>
+              <div>
+                <p data-i18n="qs-retro-3">加载核心并启动</p>
+                <code>Load Core → LavaXEmu → Load Content</code>
+              </div>
+            </div>
+          </div>
+        </div>
+        <div class="quickstart-card fade-in-up">
+          <div class="qs-header">
+            <span class="qs-icon">🔨</span>
+            <h3 data-i18n="qs-build">从源码编译</h3>
+          </div>
+          <div class="qs-steps">
+            <div class="qs-step">
+              <span class="qs-num">1</span>
+              <div>
+                <p data-i18n="qs-build-1">克隆仓库</p>
+                <code>git clone https://github.com/AloysHF/LavaXEmu.git</code>
+              </div>
+            </div>
+            <div class="qs-step">
+              <span class="qs-num">2</span>
+              <div>
+                <p data-i18n="qs-build-2">编译 Standalone</p>
+                <code>cargo build -p lavaxemu --release</code>
+              </div>
+            </div>
+            <div class="qs-step">
+              <span class="qs-num">3</span>
+              <div>
+                <p data-i18n="qs-build-3">或编译 RetroArch 核心</p>
+                <code>cargo build -p lavaxemu-libretro --release</code>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ====== FOOTER ====== -->
+  <footer id="footer">
+    <div class="container">
+      <div class="footer-grid">
+        <div class="footer-brand">
+          <img src="res/logo.png" alt="LavaXEmu" width="40" height="40">
+          <span class="footer-name">LavaXEmu</span>
+          <p data-i18n="footer-desc">用 Rust 编写的 LavaX 虚拟机与模拟器</p>
+        </div>
+        <div class="footer-links">
+          <h4 data-i18n="footer-project">项目</h4>
+          <a href="https://github.com/AloysHF/LavaXEmu" target="_blank">GitHub</a>
+          <a href="https://github.com/AloysHF/LavaXEmu/releases" target="_blank">Releases</a>
+          <a href="https://github.com/AloysHF/LavaXEmu/blob/master/docs/CONTRIBUTING.md" target="_blank" data-i18n="footer-contributing">贡献指南</a>
+        </div>
+        <div class="footer-links">
+          <h4 data-i18n="footer-community">社区</h4>
+          <a href="https://discord.gg/E4SQjXUkZy" target="_blank">Discord</a>
+          <a href="https://qm.qq.com/q/LAO7DKAWUC" target="_blank">QQ Group</a>
+        </div>
+        <div class="footer-links">
+          <h4 data-i18n="footer-docs">文档</h4>
+          <a href="https://github.com/AloysHF/LavaXEmu/blob/master/docs/Standalone-Emulator.md" target="_blank" data-i18n="footer-cli">独立模拟器</a>
+          <a href="https://github.com/AloysHF/LavaXEmu/blob/master/docs/RetroArch-Core.md" target="_blank" data-i18n="footer-core">RetroArch Core</a>
+          <a href="https://github.com/AloysHF/LavaXEmu/blob/master/docs/Game-Compatibility.md" target="_blank" data-i18n="footer-gamelist">游戏列表</a>
+        </div>
+      </div>
+      <div class="footer-bottom">
+        <p data-i18n="footer-copy">GPL-2.0-or-later License &copy; 2026 Aloys. Built with 🦀 Rust.</p>
+      </div>
+    </div>
+  </footer>
+
+  <script src="js/main.js"></script>
 </body>
 </html>
