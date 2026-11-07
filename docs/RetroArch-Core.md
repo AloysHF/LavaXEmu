@@ -63,6 +63,18 @@ The core maps RetroPad inputs to LavaX keys:
 
 Keyboard input is also available when using RetroArch with a keyboard.
 
+## Core Options
+
+The core exposes one option, available under RetroArch's **Quick Menu → Core
+Options** while content is running:
+
+| Option | Values | Default | Description |
+| --- | --- | --- | --- |
+| Monochrome color scheme | `Classic (green LCD)`, `White (black text)` | `Classic (green LCD)` | Color scheme used by monochrome programs. `White` shows black text on a white background; color programs are unaffected. |
+
+The option is applied immediately when changed and also survives save-state
+loads and resets.
+
 ## Features
 
 - **RGB565 video output** — 160×240 native resolution at 60 Hz

@@ -16,6 +16,7 @@ fn main() -> Result<()> {
     env_logger::init();
     let cli = Cli::parse();
     let mut emulator = load_emulator(&cli.program, &cli.arguments)?;
+    emulator.set_display_theme(cli.theme);
 
     if cli.info {
         println!("{:#?}", emulator.vm().program().header());
