@@ -2788,3 +2788,29 @@ without an execution error alone does not establish playability.
   level and `Y` returns to the title menu.
 - The other built-in scenes, the level clear condition, saving and the wider
   game flow remain unverified.
+
+## Happy Gomoku (欢乐五子棋)
+
+- Content: `LAVA1 欢乐五子棋/欢乐五子棋.lav`.
+- The title menu waits at pc `0x1269` with 人机对战 and 双人游戏. Up and Down
+  both move to the other entry and wrap back, while Left and Right leave the
+  menu unchanged.
+- Both modes share the same 13-by-13 board. The cursor starts at screen
+  `(42, 36)`, moves six pixels per arrow press and wraps at the edges
+  (`6 -> 78` horizontally and `72 -> 0` vertically). `Enter` places a stone and
+  an occupied point rejects another one.
+- Board cells are stored from `0x21b4`, two bytes per point, with a 30-byte
+  column stride and a two-byte row stride. The last placed column and row are at
+  `0x21b6` and `0x21b8`; the first move from the centre lands on column 8, row 8.
+- 人机对战 plays black, and the AI answers the opening move up-left at column 7,
+  row 7. The cursor then moves to the AI stone, so the next `Right` places the
+  player's second stone at column 8, row 7 with the reply at column 8, row 6.
+- `H` removes the last round (the player stone and the AI reply, or the black
+  and white stones in 双人游戏). `R` clears the board back to the fresh
+  position.
+- In 双人游戏 the stones alternate black and white without an AI move. Five
+  black stones in a row end the game at pc `0x288d` with a `黑棋win!` overlay;
+  keys are ignored during the win animation, and a later key starts an empty
+  rematch that keeps `win:1` and gives white the first move.
+- White wins, draws, later AI replies, saving and the menu exit remain
+  unverified.

@@ -14793,3 +14793,177 @@ fn rubber_house_menu_settings_and_level_one() {
     press(&mut quit, b'y');
     assert_eq!(quit.vm().pc(), 0x377a, "Y returns to the title menu");
 }
+
+#[test]
+#[ignore = "requires the local game corpus via LAVAX_GAME_ROOT"]
+fn happy_gomoku_menu_places_stones_undoes_restarts_and_detects_a_win() {
+    let stone = |emulator: &Emulator, col: usize, row: usize| {
+        emulator.vm().memory()[0x21b4 + col * 30 + row * 2]
+    };
+
+    let mut menu = load("LAVA1 欢乐五子棋/欢乐五子棋.lav");
+    advance(&mut menu, 300);
+    assert_eq!(menu.vm().pc(), 0x1269, "the title menu waits for input");
+    capture(&menu, "gomoku-menu");
+
+    let mut second = menu.clone();
+    press(&mut second, 21);
+    assert_ne!(
+        second.display().indexed_frame(),
+        menu.display().indexed_frame(),
+        "Down moves the selection to the second mode"
+    );
+    let mut up = menu.clone();
+    press(&mut up, 20);
+    assert_eq!(
+        up.display().indexed_frame(),
+        second.display().indexed_frame(),
+        "Up selects the same second mode"
+    );
+    press(&mut second, 21);
+    assert_eq!(
+        second.display().indexed_frame(),
+        menu.display().indexed_frame(),
+        "Down wraps back to the first mode"
+    );
+    for key in [22, 23] {
+        let mut sideways = menu.clone();
+        press(&mut sideways, key);
+        assert_eq!(
+            sideways.display().indexed_frame(),
+            menu.display().indexed_frame(),
+            "Left and Right do not change the menu selection"
+        );
+    }
+
+    let mut solo = menu.clone();
+    press(&mut solo, 13);
+    assert_eq!(solo.vm().pc(), 0x71f, "the solo board waits for the cursor");
+    assert_eq!(solo.vm().memory()[0x21ac], 42, "the cursor starts at x 42");
+    assert_eq!(solo.vm().memory()[0x21ae], 36, "the cursor starts at y 36");
+    capture(&solo, "gomoku-board");
+
+    for (key, expected) in [
+        (23u8, (78u8, 36u8)),
+        (22, (6, 36)),
+        (20, (42, 72)),
+        (21, (42, 0)),
+    ] {
+        let mut moved = solo.clone();
+        for _ in 0..7 {
+            press(&mut moved, key);
+        }
+        let memory = moved.vm().memory();
+        assert_eq!(
+            (memory[0x21ac], memory[0x21ae]),
+            expected,
+            "seven steps wrap the cursor around the 13-point board"
+        );
+        assert_ne!(
+            moved.display().indexed_frame(),
+            solo.display().indexed_frame()
+        );
+    }
+
+    let mut first = solo.clone();
+    press(&mut first, 13);
+    assert_eq!(
+        first.vm().memory()[0x21b6],
+        8,
+        "the stone lands in column 8"
+    );
+    assert_eq!(first.vm().memory()[0x21b8], 8, "the stone lands in row 8");
+    assert_eq!(stone(&first, 8, 8), 1, "the player places a black stone");
+    assert_eq!(stone(&first, 7, 7), 2, "the AI answers up-left");
+    capture(&first, "gomoku-first");
+
+    let mut occupied = first.clone();
+    press(&mut occupied, 13);
+    assert_eq!(
+        occupied.display().indexed_frame(),
+        first.display().indexed_frame(),
+        "an occupied point rejects another stone"
+    );
+
+    let mut undo_first = first.clone();
+    press(&mut undo_first, b'h');
+    assert_eq!(stone(&undo_first, 8, 8), 0, "undo removes the player stone");
+    assert_eq!(stone(&undo_first, 7, 7), 0, "undo removes the AI reply too");
+    capture(&undo_first, "gomoku-undo");
+
+    let mut second_round = first.clone();
+    press(&mut second_round, 22);
+    press(&mut second_round, 13);
+    assert_eq!(
+        stone(&second_round, 8, 7),
+        1,
+        "the second player stone follows the AI cursor"
+    );
+    assert_eq!(stone(&second_round, 8, 6), 2, "the AI answers above it");
+    let mut undo_second = second_round.clone();
+    press(&mut undo_second, b'h');
+    assert_eq!(stone(&undo_second, 8, 8), 1, "undo keeps the earlier round");
+    assert_eq!(stone(&undo_second, 7, 7), 2);
+    assert_eq!(stone(&undo_second, 8, 7), 0);
+    assert_eq!(stone(&undo_second, 8, 6), 0);
+
+    let mut restart = second_round.clone();
+    press(&mut restart, b'r');
+    assert_eq!(
+        restart.display().indexed_frame(),
+        solo.display().indexed_frame(),
+        "R clears the board back to the fresh position"
+    );
+    assert_eq!(restart.vm().memory()[0x21ac], 42);
+
+    let mut duo = menu.clone();
+    press(&mut duo, 21);
+    press(&mut duo, 13);
+    assert_eq!(
+        duo.vm().pc(),
+        0x71f,
+        "the two-player board waits for the cursor"
+    );
+    let moves: [&[u8]; 9] = [
+        &[23, 23, 23, 23, 13],
+        &[20, 20, 20, 20, 13],
+        &[21, 21, 21, 21, 22, 13],
+        &[20, 20, 20, 20, 13],
+        &[21, 21, 21, 21, 22, 13],
+        &[20, 20, 20, 20, 13],
+        &[21, 21, 21, 21, 22, 13],
+        &[20, 20, 20, 20, 13],
+        &[21, 21, 21, 21, 22, 13],
+    ];
+    for keys in moves {
+        for &key in keys {
+            press(&mut duo, key);
+        }
+    }
+    assert_eq!(duo.vm().pc(), 0x288d, "five black stones end the game");
+    assert_eq!(stone(&duo, 8, 8), 1, "the winning stone stays on the board");
+    let text = duo.vm().memory();
+    assert_eq!(
+        &text[0x1c7a..0x1c82],
+        b"\xba\xda\xc6\xe5win!",
+        "the board announces a black win"
+    );
+    capture(&duo, "gomoku-win");
+
+    advance(&mut duo, 200);
+    press(&mut duo, 13);
+    assert_eq!(
+        duo.vm().pc(),
+        0x71f,
+        "a key after the win starts a new game"
+    );
+    assert_eq!(stone(&duo, 8, 8), 0, "the new game starts empty");
+    assert_eq!(
+        &duo.vm().memory()[0x1c83..0x1c88],
+        b"win:1",
+        "the black win counter is kept for the rematch"
+    );
+    press(&mut duo, 13);
+    assert_eq!(stone(&duo, 8, 8), 2, "white starts the next game");
+    capture(&duo, "gomoku-rematch");
+}
