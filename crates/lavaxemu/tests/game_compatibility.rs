@@ -13275,3 +13275,162 @@ fn billiards_racks_aims_fires_and_quits_from_the_title() {
     assert!(halted, "escape on the title leaves the program");
     assert!(!emulator.vm().is_running());
 }
+
+#[test]
+#[ignore = "requires the local game corpus via LAVAX_GAME_ROOT"]
+fn sudoku_plays_a_level_fills_digits_and_switches_levels() {
+    fn tap(emulator: &mut Emulator, key: u8) {
+        emulator.input_mut().set_keys([key]);
+        advance(emulator, 3);
+        emulator.input_mut().release_all();
+        advance(emulator, 40);
+    }
+    fn cell(emulator: &Emulator, index: usize) -> u8 {
+        emulator.vm().memory()[0x2383 + index]
+    }
+    const GIVEN: [u8; 81] = [
+        4, 0, 0, 1, 0, 8, 2, 9, 3, 9, 2, 0, 3, 6, 0, 5, 0, 1, 0, 7, 1, 0, 0, 5, 4, 0, 0, 2, 3, 0,
+        0, 8, 0, 9, 5, 4, 0, 0, 7, 5, 0, 9, 0, 3, 2, 0, 0, 0, 6, 3, 0, 0, 1, 8, 7, 0, 0, 2, 0, 6,
+        0, 0, 0, 0, 4, 9, 8, 1, 0, 3, 0, 5, 1, 5, 2, 0, 9, 0, 0, 0, 0,
+    ];
+
+    let mut emulator = load("LAVA1 数独1.3/sudoku.lav");
+    advance(&mut emulator, 60);
+    assert_eq!(emulator.vm().pc(), 0x26f3, "the title menu waits for input");
+    capture(&emulator, "sudoku-menu");
+
+    tap(&mut emulator, 21);
+    assert_eq!(emulator.vm().memory()[0x262e], 2, "down moves the cursor");
+    tap(&mut emulator, 20);
+    assert_eq!(emulator.vm().memory()[0x262e], 1, "up restores the cursor");
+    tap(&mut emulator, 13);
+    assert_eq!(emulator.vm().pc(), 0x1823, "enter starts the first level");
+    assert_eq!(emulator.vm().memory()[0x237d], 1);
+    for (index, value) in GIVEN.iter().enumerate() {
+        assert_eq!(cell(&emulator, index), *value, "given cell {index}");
+    }
+    capture(&emulator, "sudoku-level-1");
+
+    assert_eq!(
+        emulator.vm().memory()[0x2008],
+        4,
+        "the cursor starts centered"
+    );
+    assert_eq!(emulator.vm().memory()[0x200a], 4);
+    for expected in [5, 6, 7, 8, 0] {
+        tap(&mut emulator, 22);
+        assert_eq!(emulator.vm().memory()[0x2008], expected, "right wraps");
+    }
+    for expected in [5, 6, 7, 8, 0] {
+        tap(&mut emulator, 21);
+        assert_eq!(emulator.vm().memory()[0x200a], expected, "down wraps");
+    }
+    for _ in 0..5 {
+        tap(&mut emulator, 22);
+        tap(&mut emulator, 21);
+    }
+    assert_eq!(
+        (
+            emulator.vm().memory()[0x2008],
+            emulator.vm().memory()[0x200a]
+        ),
+        (5, 5)
+    );
+    tap(&mut emulator, 104);
+    assert_eq!(cell(&emulator, 5 * 9 + 5), 5, "the number keys fill a cell");
+    capture(&emulator, "sudoku-digit");
+
+    tap(&mut emulator, 0x1c);
+    assert_eq!(emulator.vm().memory()[0x200c], 1, "F1 enables hints");
+    tap(&mut emulator, 0x1c);
+    assert_eq!(emulator.vm().memory()[0x200c], 0, "F1 disables hints");
+
+    tap(&mut emulator, 13);
+    assert_eq!(
+        emulator.vm().pc(),
+        0x51e,
+        "enter checks an unfinished board"
+    );
+    tap(&mut emulator, 13);
+    assert_eq!(
+        emulator.vm().pc(),
+        0x1823,
+        "the unfinished dialog dismisses"
+    );
+    assert_eq!(cell(&emulator, 5 * 9 + 5), 5);
+
+    tap(&mut emulator, 0x1e);
+    assert_eq!(emulator.vm().pc(), 0x4b6, "F3 asks before the next level");
+    tap(&mut emulator, 121);
+    assert_eq!(emulator.vm().pc(), 0x1823);
+    assert_eq!(emulator.vm().memory()[0x237d], 2, "F3 loads level two");
+    let second: Vec<u8> = (0..9).map(|index| cell(&emulator, index)).collect();
+    assert_eq!(second, [6, 0, 9, 4, 0, 0, 8, 0, 0]);
+    capture(&emulator, "sudoku-level-2");
+
+    tap(&mut emulator, 0x1f);
+    assert_eq!(
+        emulator.vm().pc(),
+        0x4b6,
+        "F4 asks before the previous level"
+    );
+    tap(&mut emulator, 121);
+    assert_eq!(emulator.vm().pc(), 0x1823);
+    assert_eq!(emulator.vm().memory()[0x237d], 1, "F4 returns to level one");
+    for (index, value) in GIVEN.iter().enumerate() {
+        assert_eq!(cell(&emulator, index), *value, "level one cell {index}");
+    }
+
+    tap(&mut emulator, 0x1d);
+    assert_eq!(emulator.vm().pc(), 0x4b6, "F2 asks before showing answers");
+    tap(&mut emulator, 110);
+    assert_eq!(emulator.vm().pc(), 0x1823, "n cancels the answer prompt");
+    assert_eq!(
+        cell(&emulator, 5 * 9 + 5),
+        0,
+        "n leaves the reloaded board untouched"
+    );
+    tap(&mut emulator, 0x1d);
+    tap(&mut emulator, 121);
+    assert_eq!(emulator.vm().pc(), 0x1823);
+    let answer: Vec<u8> = (0..9).map(|index| cell(&emulator, index)).collect();
+    assert_eq!(
+        answer,
+        [6, 7, 8, 1, 9, 5, 4, 0, 8],
+        "the answer overlay comes from the headerless answer file"
+    );
+    assert_eq!(
+        cell(&emulator, 5 * 9 + 5),
+        6,
+        "the answer overwrites entries"
+    );
+    capture(&emulator, "sudoku-answer");
+
+    tap(&mut emulator, 27);
+    assert_eq!(emulator.vm().pc(), 0x26f3, "escape returns to the menu");
+    for expected in 2..=6 {
+        tap(&mut emulator, 21);
+        assert_eq!(emulator.vm().memory()[0x262e], expected);
+    }
+    tap(&mut emulator, 13);
+    assert_eq!(emulator.vm().pc(), 0x1bd7, "the menu opens the help screen");
+    assert!(emulator.vm().is_running());
+    capture(&emulator, "sudoku-help");
+    tap(&mut emulator, 27);
+    assert_eq!(emulator.vm().pc(), 0x26f3, "escape leaves the help screen");
+    tap(&mut emulator, 21);
+    assert_eq!(emulator.vm().memory()[0x262e], 7);
+
+    emulator.input_mut().set_keys([13]);
+    let mut halted = false;
+    for _ in 0..120 {
+        let result = emulator.run_frame().expect("the menu must execute");
+        if matches!(result.status, FrameStatus::Halted(_)) {
+            halted = true;
+            break;
+        }
+    }
+    emulator.input_mut().release_all();
+    assert!(halted, "the exit item leaves the program");
+    assert!(!emulator.vm().is_running());
+}

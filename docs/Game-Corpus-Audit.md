@@ -25,9 +25,10 @@ do not satisfy this status.
 - Pipe Connection checked on 2026-11-07: one dedicated release workflow starts a round, checks the source cell and three-minute timer, moves the cursor in all four directions, places and removes a pipe, pauses and resumes the countdown, returns to the title, and quits through the credits screen.
 - Sokoban checked on 2026-11-07: one dedicated release workflow covers the packed and unpacked entries, moves and blocks against walls, slides and pairs glyphs across two levels, verifies the one-tile type-9 behaviour, advances with the clear screen and `N`, replays with `F1`, and exits with Escape.
 - Billiards checked on 2026-11-07: one dedicated release workflow enters the deterministic first rack, checks all seven ball coordinates, turns the aim with arrows and WASD, fires a shot, verifies the cue displacement and power fields, finishes the animation, and quits from the title.
-- 130 dedicated release workflows passed in this audit.
-- 196 of 324 entry points were loaded by those successful workflows.
-- 128 entry points still need dedicated workflow verification.
+- Sudoku checked on 2026-11-07: one dedicated release workflow checks the title menu, all 81 given cells of level 1, cursor movement and wrapping, digit entry, the hint toggle, the unfinished-board dialog, the answer prompt and overlay, level switching both ways, the help screen and the exit path.
+- 131 dedicated release workflows passed in this audit.
+- 197 of 324 entry points were loaded by those successful workflows.
+- 127 entry points still need dedicated workflow verification.
 - The historical [startup gallery](Game-Compatibility.md) is a separate check
   and must not be interpreted as this workflow audit.
 
@@ -218,7 +219,7 @@ an optional screenshot directory. Keep each test's logs and captures separate.
 | 167 | `LAVA1 推箱达人/未打包的/推箱达人.lav` | Game / game package | [Workflow passed: `sokoban_slides_boxes_pairs_glyphs_and_advances_levels`](../crates/lavaxemu/tests/game_compatibility.rs#L12847) |
 | 168 | `LAVA1 搬运工/搬运工.lav` | Game / game package | [Workflow passed: `porter_pushes_crates_uses_a_bomb_and_restores_board_state`](../crates/lavaxemu/tests/game_compatibility.rs#L12994) |
 | 169 | `LAVA1 撞球高手/撞球高手.lav` | Game / game package | [Workflow passed: `billiards_racks_aims_fires_and_quits_from_the_title`](../crates/lavaxemu/tests/game_compatibility.rs#L13154) |
-| 170 | `LAVA1 数独1.3/sudoku.lav` | Game / game package | Pending |
+| 170 | `LAVA1 数独1.3/sudoku.lav` | Game / game package | [Workflow passed: `sudoku_plays_a_level_fills_digits_and_switches_levels`](../crates/lavaxemu/tests/game_compatibility.rs#L13281) |
 | 171 | `LAVA1 数电模拟器/已打包的文件/数电模拟器.pac` | Circuit simulator | Pending |
 | 172 | `LAVA1 数电模拟器/未打包的文件/数电模拟器.lav` | Circuit simulator | Pending |
 | 173 | `LAVA1 新英雄坛说/新英雄传说.pac` | Game / game package | Pending |

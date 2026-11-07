@@ -2537,3 +2537,31 @@ without an execution error alone does not establish playability.
 - Only the first rack, the aim controls, one shot direction, and the quit path
   are verified. Collisions, pockets, scoring, the remaining shot powers, and
   later racks remain unverified.
+
+## Sudoku (数独1.3)
+
+- Content: `LAVA1 数独1.3/sudoku.lav` with its companion `sudokuq.dat`,
+  `sudokua.dat` and the `数独解算器` subdirectory.
+- Startup-only evidence had not covered a board. No emulator runtime defect was
+  reproduced.
+- A dedicated release workflow waits on the title menu (pc `0x26f3`), moves the
+  menu selection (`0x262e`) down and back up, and starts level 1 with `Enter`.
+  The 9x9 board lives at `0x2383` as 81 row-major bytes, and the workflow checks
+  every given cell and the level number at `0x237d`.
+- The cursor column at `0x2008` and row at `0x200a` start at (4,4), follow the
+  arrow keys, and wrap from 8 back to 0. The number keys reach the guest as the
+  codes `b`, `n`, `m`, `g`, `h`, `j`, `t`, `y`, `u`; entering `h` writes 5 into
+  the selected cell. `F1` toggles the hint flag at `0x200c`.
+- `Enter` on an unfinished board opens the "你还没做完!" dialog at pc `0x51e`,
+  and a second `Enter` dismisses it. `F2` asks before showing answers, `n`
+  cancels, and `y` overlays the answer file. `F3`/`F4` ask before moving to the
+  next or previous level, and `Escape` returns to the menu.
+- The menu's help item opens pc `0x1bd7`; `Escape` returns to the menu, and the
+  exit item halts the program.
+- The answer overlay is deterministic but does not form a valid solution: the
+  game skips the same header it reads from `sudokuq.dat` ("SDK_Q" plus padding)
+  when opening `sudokua.dat`, which has no header, so the displayed answer bytes
+  are shifted. This comes from the distributed data file rather than the
+  emulator, and the regression locks the observed overlay to catch changes.
+- Saving/continuing, the menu hint toggle, level completion and scoring, the
+  remaining levels, and the solver subdirectory remain unverified.
