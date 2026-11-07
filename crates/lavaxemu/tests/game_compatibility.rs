@@ -18375,3 +18375,70 @@ fn war_sword_full_splash_menu_options_editor_and_field_messages() {
     );
     capture(&download, "war-full-download-map");
 }
+
+#[test]
+#[ignore = "requires LAVAX_GAME_ROOT with the game corpus"]
+fn crawler_chronicle_intro_pages_logo_and_halt() {
+    const PATH: &str = "LAVA1 爬虫大陆编年史/爬虫大陆.lav";
+
+    let mut emulator = load(PATH);
+    advance(&mut emulator, 60);
+    assert_eq!(emulator.vm().pc(), 0x1f31, "the loading screen runs");
+    capture(&emulator, "crawler-loading");
+
+    advance(&mut emulator, 720);
+    assert_eq!(emulator.vm().pc(), 0x1fea, "the prologue waits for a key");
+    let byte = |emulator: &Emulator, address: usize| emulator.vm().memory()[address];
+    assert_eq!(byte(&emulator, 0x1b08), 0xa0, "the script starts at zero");
+    capture(&emulator, "crawler-prologue");
+
+    press(&mut emulator, 13);
+    assert_eq!(
+        emulator.vm().pc(),
+        0x1dfb,
+        "enter opens the introduction dialogue"
+    );
+    assert_eq!(byte(&emulator, 0x1b08), 0x41, "the script advances");
+    assert_eq!(byte(&emulator, 0x1b0c), 1, "the speaker is selected");
+    assert_eq!(byte(&emulator, 0x1b10), 1, "the line is selected");
+    capture(&emulator, "crawler-dialog");
+
+    for expected in [0x5a, 0x73, 0x8c] {
+        press(&mut emulator, 13);
+        assert_eq!(
+            byte(&emulator, 0x1b08),
+            expected,
+            "enter advances one dialogue page"
+        );
+    }
+    capture(&emulator, "crawler-dialog-next");
+
+    press(&mut emulator, 27);
+    assert!(
+        (0x1ea7..=0x1eab).contains(&emulator.vm().pc()),
+        "escape skips to the title logo"
+    );
+    capture(&emulator, "crawler-logo");
+
+    advance(&mut emulator, 1800);
+    assert!(
+        (0x1ea7..=0x1eab).contains(&emulator.vm().pc()),
+        "the logo keeps waiting"
+    );
+    let mut halted = None;
+    for _ in 0..20 {
+        emulator.input_mut().set_keys([13]);
+        if let FrameStatus::Halted(code) = emulator.run_frame().unwrap().status {
+            halted = Some(code);
+            break;
+        }
+    }
+    emulator.input_mut().set_keys([]);
+    assert_eq!(halted, Some(0), "a held key ends the preview");
+    assert_eq!(emulator.vm().pc(), 0x1ffd, "the logo exit runs");
+    capture(&emulator, "crawler-logo-exit");
+    assert!(
+        emulator.files_mut().take_dirty_files().is_empty(),
+        "the preview writes nothing"
+    );
+}

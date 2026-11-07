@@ -3253,3 +3253,23 @@ without an execution error alone does not establish playability.
   下载 map source, editor save and reload, and the upper size caps remain
   unverified; the upper caps and the width-times-height limit were probed
   manually but are not asserted by the workflow.
+
+## Crawler Continent Chronicle (爬虫大陆编年史)
+
+- Content: `LAVA1 爬虫大陆编年史/爬虫大陆.lav`.
+- The loading screen runs at pc `0x1f31` and shows the title art and
+  `Loading...`.
+- After about 780 frames the prologue text waits at pc `0x1fea`. The script
+  pointer at `0x1b08` is `0xa0`.
+- Enter opens the dialogue loop at pc `0x1dfb`: the script pointer becomes
+  `0x41`, the speaker byte at `0x1b0c` is 1 and the line byte at `0x1b10` is
+  1. Each further Enter advances one page and adds `0x19` to `0x1b08`
+  (`0x5a`, `0x73`, `0x8c`).
+- Escape skips the remaining dialogue and opens the logo at pc
+  `0x1ea7`-`0x1eab` (`更多精彩尽在 龙之传说2 正式版发行!`). The logo waits
+  without input.
+- Holding Enter for about 20 frames on the logo reaches pc `0x1ffd` and
+  halts with code 0. The package writes no files.
+- The package contains only the prologue and the logo, with no menu, save or
+  gameplay entry; whether the logo is part of a larger preview is not
+  cross-checked against other entries.
