@@ -15792,3 +15792,162 @@ fn jianghu_chaos_title_intro_field_and_save_branches() {
     assert!(top < 30, "Up moves the player to an upper row");
     capture(&up, "jianghu-chaos-up");
 }
+
+#[test]
+#[ignore = "requires the local LavaX game corpus"]
+fn wangwang_tycoon_title_settings_slots_and_board_turns() {
+    let frame = |emulator: &Emulator| emulator.display().indexed_frame().to_vec();
+    let mut menu = load("LAVA1 汪汪大富翁/wangwang.lav");
+    advance(&mut menu, 400);
+    assert_eq!(menu.vm().pc(), 0x227a, "the title waits for a key");
+    let title = frame(&menu);
+    capture(&menu, "wangwang-title");
+
+    let mut navigation = menu.clone();
+    press(&mut navigation, 21);
+    let settings_title = frame(&navigation);
+    assert_ne!(settings_title, title, "Down selects 系统设置");
+    press(&mut navigation, 21);
+    let manual_title = frame(&navigation);
+    assert_ne!(manual_title, settings_title, "Down selects 软件说明");
+    press(&mut navigation, 21);
+    let exit_title = frame(&navigation);
+    assert_ne!(exit_title, manual_title, "Down selects 退出游戏");
+    press(&mut navigation, 21);
+    assert_eq!(frame(&navigation), title, "Down wraps to 进入游戏");
+    press(&mut navigation, 20);
+    assert_eq!(frame(&navigation), exit_title, "Up wraps to 退出游戏");
+
+    let mut arrows = menu.clone();
+    press(&mut arrows, 22);
+    assert_eq!(frame(&arrows), title, "Right leaves the title unchanged");
+    press(&mut arrows, 23);
+    assert_eq!(frame(&arrows), title, "Left leaves the title unchanged");
+
+    let mut manual = menu.clone();
+    press(&mut manual, 21);
+    press(&mut manual, 21);
+    press(&mut manual, 13);
+    let manual_page = frame(&manual);
+    assert_ne!(manual_page, manual_title, "软件说明 opens the manual");
+    capture(&manual, "wangwang-manual");
+    press(&mut manual, 13);
+    assert_eq!(frame(&manual), manual_title, "Enter closes the manual");
+
+    let mut settings = menu.clone();
+    press(&mut settings, 21);
+    press(&mut settings, 13);
+    let settings_page = frame(&settings);
+    assert_ne!(settings_page, settings_title, "系统设置 opens the settings");
+
+    let mut character = settings.clone();
+    press(&mut character, 13);
+    let rows = frame(&character);
+    assert_ne!(rows, settings_page, "角色设定 opens the character list");
+    let mut mode = character.clone();
+    press(&mut mode, 22);
+    let toggled = frame(&mode);
+    assert_ne!(toggled, rows, "Right changes the selected mode");
+    press(&mut mode, 23);
+    assert_eq!(frame(&mode), rows, "Left restores the mode");
+    press(&mut mode, 21);
+    assert_ne!(frame(&mode), rows, "Down selects 张经理");
+    capture(&mode, "wangwang-characters");
+    press(&mut mode, 13);
+    assert_eq!(frame(&mode), settings_title, "Enter returns to the title");
+
+    let mut advanced = settings.clone();
+    press(&mut advanced, 21);
+    let advanced_selected = frame(&advanced);
+    assert_ne!(advanced_selected, settings_page, "Down selects 高级选项");
+    press(&mut advanced, 13);
+    let economy = frame(&advanced);
+    assert_ne!(
+        economy, advanced_selected,
+        "高级选项 shows the economy values"
+    );
+    capture(&advanced, "wangwang-economy");
+    press(&mut advanced, 13);
+    assert_eq!(
+        frame(&advanced),
+        settings_title,
+        "Enter returns to the title"
+    );
+
+    let mut slots = menu.clone();
+    press(&mut slots, 13);
+    let submenu = frame(&slots);
+    assert_ne!(submenu, title, "进入游戏 opens the start submenu");
+    press(&mut slots, 21);
+    let load_selected = frame(&slots);
+    assert_ne!(load_selected, submenu, "Down selects 读取游戏");
+    press(&mut slots, 13);
+    let slot_menu = frame(&slots);
+    assert_ne!(slot_menu, load_selected, "读取游戏 lists four save slots");
+    capture(&slots, "wangwang-slots");
+    press(&mut slots, 21);
+    let second_slot = frame(&slots);
+    assert_ne!(second_slot, slot_menu, "Down selects the second slot");
+    press(&mut slots, 13);
+    assert_eq!(
+        frame(&slots),
+        second_slot,
+        "an empty slot stays on the list"
+    );
+    press(&mut slots, 27);
+    assert_eq!(frame(&slots), title, "Escape returns to the title");
+
+    let mut board = menu.clone();
+    press(&mut board, 13);
+    press(&mut board, 13);
+    advance(&mut board, 300);
+    assert_eq!(board.vm().pc(), 0xa33f, "开始游戏 reaches the board");
+    let board_frame = frame(&board);
+    assert_ne!(board_frame, title, "the board replaces the title");
+    capture(&board, "wangwang-board");
+    advance(&mut board, 120);
+    assert_eq!(frame(&board), board_frame, "the board waits for input");
+
+    let mut turn = board.clone();
+    press(&mut turn, 13);
+    assert_ne!(frame(&turn), board_frame, "Enter takes a turn");
+    advance(&mut turn, 120);
+    let prompt = frame(&turn);
+    assert_ne!(prompt, board_frame, "the turn reaches a purchase prompt");
+    capture(&turn, "wangwang-purchase-prompt");
+    press(&mut turn, 13);
+    advance(&mut turn, 300);
+    assert_ne!(
+        frame(&turn),
+        prompt,
+        "answering the prompt advances the game"
+    );
+    capture(&turn, "wangwang-next-turn");
+
+    let mut quit = menu.clone();
+    press(&mut quit, 21);
+    press(&mut quit, 21);
+    press(&mut quit, 21);
+    quit.input_mut().set_keys([13]);
+    let mut exit_code = None;
+    for _ in 0..120 {
+        let result = quit.run_frame().unwrap();
+        if let FrameStatus::Halted(code) = result.status {
+            exit_code = Some(code);
+            break;
+        }
+    }
+    assert_eq!(exit_code, Some(0), "退出游戏 exits the program");
+
+    let mut escape = menu.clone();
+    escape.input_mut().set_keys([27]);
+    let mut escape_code = None;
+    for _ in 0..120 {
+        let result = escape.run_frame().unwrap();
+        if let FrameStatus::Halted(code) = result.status {
+            escape_code = Some(code);
+            break;
+        }
+    }
+    assert_eq!(escape_code, Some(0), "Escape exits from the title");
+}

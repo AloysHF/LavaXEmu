@@ -2903,3 +2903,29 @@ without an execution error alone does not establish playability.
 - 退隐江湖 fades the title out and halts the program with code 0.
 - Saving, character creation, combat and the story after the field remain
   unverified.
+
+## Wangwang Tycoon (汪汪大富翁)
+
+- Content: `LAVA1 汪汪大富翁/wangwang.lav`.
+- The title waits at pc `0x227a` with 进入游戏, 系统设置, 软件说明 and 退出游戏.
+  Up and Down select the previous and next entry and wrap at both ends; Left and
+  Right leave the selection unchanged. The selected entry is drawn inverted.
+- 进入游戏 opens an inline submenu with 开始游戏 and 读取游戏. 开始游戏 scrolls
+  the title away, starts the board at pc `0xa33f` and waits for input. Enter
+  takes a turn; the turn reaches a purchase prompt (`升级需要336$，升级么Y/N`)
+  and answering it advances to the next player, where AI turns produce events
+  such as `遇到福神`.
+- 读取游戏 lists four empty save slots (`存档一` to `存档四`) at pc `0x1b4c`.
+  Down moves the cursor, Enter on an empty slot leaves the list on screen, and
+  Escape returns to the title with 进入游戏 still selected.
+- 系统设置 opens an inline submenu with 角色设定 and 高级选项. 角色设定 lists
+  阿土伯, 张经理 and 钱夫人 with a 人工 / 电脑 / 破产 mode per row; Left and Right
+  change the selected row's mode, Up and Down change the row, and Enter returns
+  to the title. 高级选项 shows the starting economy (`存款` 10000, `点卷` 300,
+  `物价` 4) plus a 胜利 / 限期 setting, and Enter returns to the title.
+- 软件说明 shows the version and author credits (v1.0, 汪子滨, 蛙蛙, QQ and
+  e-mail) and any key returns to the title.
+- 退出游戏 halts the program with code 0 at pc `0x2310`; Escape on the title
+  halts it with code 0 at pc `0x22ef`.
+- Saving, buying or declining property, bankruptcy, victory and the full board
+  progression remain unverified.
