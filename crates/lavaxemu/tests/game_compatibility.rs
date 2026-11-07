@@ -12841,3 +12841,150 @@ fn pipe_game_places_pipes_counts_down_pauses_and_quits() {
         "a key at the credits must leave the game"
     );
 }
+
+#[test]
+#[ignore = "requires the local game corpus via LAVAX_GAME_ROOT"]
+fn sokoban_slides_boxes_pairs_glyphs_and_advances_levels() {
+    fn word(emulator: &Emulator, address: usize) -> u16 {
+        let memory = emulator.vm().memory();
+        u16::from_le_bytes([memory[address], memory[address + 1]])
+    }
+    fn glyph(emulator: &Emulator, x: usize, y: usize) -> u8 {
+        emulator.vm().memory()[0x2010 + x * 11 + y]
+    }
+    fn player(emulator: &Emulator) -> (u16, u16) {
+        (word(emulator, 0x2000), word(emulator, 0x2002))
+    }
+    fn tap(emulator: &mut Emulator, key: u8) {
+        emulator.input_mut().set_keys([key]);
+        advance(emulator, 2);
+        emulator.input_mut().release_all();
+        advance(emulator, 30);
+    }
+    fn route(emulator: &mut Emulator, keys: &[u8]) {
+        for &key in keys {
+            tap(emulator, key);
+        }
+    }
+    for path in [
+        "LAVA1 推箱达人/推箱达人.pac",
+        "LAVA1 推箱达人/未打包的/推箱达人.lav",
+    ] {
+        let mut emulator = load(path);
+        advance(&mut emulator, 90);
+        assert_eq!(emulator.vm().pc(), 0x491, "the board must wait for a key");
+        assert_eq!(player(&emulator), (5, 5), "level 1 starts in the centre");
+        assert_eq!(word(&emulator, 0x2004), 80, "pixel x = 45 + 7 * 5");
+        assert_eq!(word(&emulator, 0x2006), 36, "pixel y = 1 + 7 * 5");
+        assert_eq!(word(&emulator, 0x2008), 45, "tile origin x");
+        assert_eq!(word(&emulator, 0x200a), 1, "tile origin y");
+        assert_eq!(word(&emulator, 0x200c), 2, "level 1 counts two glyphs");
+        assert_eq!(word(&emulator, 0x200e), 21, "the data holds 21 levels");
+        assert_eq!(glyph(&emulator, 2, 5), 2);
+        assert_eq!(glyph(&emulator, 8, 4), 2);
+        capture(&emulator, "sokoban-level1");
+
+        tap(&mut emulator, 23);
+        assert_eq!(player(&emulator), (4, 5), "left moves one tile");
+        tap(&mut emulator, 22);
+        assert_eq!(player(&emulator), (5, 5), "right moves one tile");
+        tap(&mut emulator, 20);
+        assert_eq!(player(&emulator), (5, 4), "up moves one tile");
+        tap(&mut emulator, 20);
+        assert_eq!(player(&emulator), (5, 4), "the wall row blocks movement");
+        tap(&mut emulator, 21);
+        assert_eq!(player(&emulator), (5, 5));
+
+        route(&mut emulator, &[21, 23, 23, 23, 20]);
+        assert_eq!(
+            glyph(&emulator, 2, 4),
+            2,
+            "the free glyph slides to the wall"
+        );
+        assert_eq!(glyph(&emulator, 2, 5), 0);
+        assert_eq!(word(&emulator, 0x200c), 2, "a slide alone does not score");
+        capture(&emulator, "sokoban-pushed");
+        route(&mut emulator, &[22, 22, 22, 22, 22, 21, 22, 22, 20, 20, 23]);
+        assert_eq!(word(&emulator, 0x200c), 0, "pairing removes both glyphs");
+        assert_eq!(glyph(&emulator, 2, 4), 0);
+        assert_eq!(glyph(&emulator, 3, 4), 0);
+        assert_eq!(emulator.vm().pc(), 0x8c0, "All Clean waits for a key");
+        capture(&emulator, "sokoban-clean");
+
+        tap(&mut emulator, 13);
+        assert_eq!(word(&emulator, 0x200c), 2, "level 2 loads its own count");
+        assert_eq!(player(&emulator), (5, 5));
+        assert_eq!(glyph(&emulator, 2, 5), 9);
+        assert_eq!(glyph(&emulator, 8, 5), 9);
+        capture(&emulator, "sokoban-level2");
+
+        route(&mut emulator, &[23, 23, 23]);
+        assert_eq!(
+            glyph(&emulator, 1, 5),
+            9,
+            "the left glyph stops at the wall"
+        );
+        route(&mut emulator, &[22, 22, 22, 22, 22, 21, 22, 22, 20]);
+        assert_eq!(player(&emulator), (9, 5));
+        tap(&mut emulator, 23);
+        assert_eq!(
+            glyph(&emulator, 7, 5),
+            9,
+            "nine-glyphs move one tile per push"
+        );
+        assert_eq!(glyph(&emulator, 2, 5), 0, "nine-glyphs do not slide ahead");
+        assert_eq!(player(&emulator), (8, 5));
+        assert_eq!(word(&emulator, 0x200c), 2);
+        capture(&emulator, "sokoban-single-step");
+        route(&mut emulator, &[23, 23, 23, 23, 23]);
+        assert_eq!(word(&emulator, 0x200c), 0, "the twin glyphs annihilate");
+        assert_eq!(glyph(&emulator, 1, 5), 0);
+        assert_eq!(glyph(&emulator, 2, 5), 0);
+        assert_eq!(emulator.vm().pc(), 0x8c0);
+        capture(&emulator, "sokoban-clean-again");
+
+        tap(&mut emulator, 13);
+        assert_eq!(word(&emulator, 0x200c), 12);
+        assert_eq!(player(&emulator), (6, 5));
+        assert_eq!(glyph(&emulator, 2, 2), 2);
+        assert_eq!(glyph(&emulator, 1, 8), 2);
+        assert_eq!(glyph(&emulator, 3, 3), 3);
+        assert_eq!(glyph(&emulator, 2, 6), 9);
+        assert_eq!(glyph(&emulator, 8, 6), 9);
+        capture(&emulator, "sokoban-level3");
+
+        tap(&mut emulator, 110);
+        assert_eq!(word(&emulator, 0x200c), 2, "N loads the next level");
+        assert_eq!(player(&emulator), (5, 2));
+        assert_eq!(glyph(&emulator, 6, 5), 2);
+        assert_eq!(glyph(&emulator, 8, 2), 2);
+        capture(&emulator, "sokoban-level4");
+
+        route(&mut emulator, &[22, 22, 22]);
+        assert_eq!(player(&emulator), (8, 2));
+        assert_eq!(
+            glyph(&emulator, 9, 2),
+            2,
+            "the glyph slides before the wall"
+        );
+        assert_eq!(glyph(&emulator, 8, 2), 0);
+        tap(&mut emulator, 28);
+        assert_eq!(player(&emulator), (5, 2), "F1 replays the current level");
+        assert_eq!(glyph(&emulator, 8, 2), 2);
+        assert_eq!(glyph(&emulator, 9, 2), 0);
+        assert_eq!(word(&emulator, 0x200c), 2);
+        capture(&emulator, "sokoban-replayed");
+
+        emulator.input_mut().set_keys([27]);
+        for _ in 0..120 {
+            let result = emulator
+                .run_frame()
+                .expect("game must execute without errors");
+            if matches!(result.status, FrameStatus::Halted(_)) {
+                break;
+            }
+        }
+        emulator.input_mut().release_all();
+        assert!(!emulator.vm().is_running(), "escape leaves the game");
+    }
+}

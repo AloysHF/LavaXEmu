@@ -2472,3 +2472,23 @@ without an execution error alone does not establish playability.
   lives in the guest program and is not an emulator defect.
 - Level completion, scoring, ranking, the remaining menu items, and the other
   arrow-key orientations remain unverified.
+
+## Sokoban (推箱达人)
+
+- Content: `LAVA1 推箱达人/推箱达人.pac` and
+  `LAVA1 推箱达人/未打包的/推箱达人.lav`.
+- Startup-only evidence had not covered a board. No emulator runtime defect was
+  reproduced. The package stores the level data as `LavaData/txdr.dat`; the
+  unpacked entry reaches the same data through the flat companion fallback.
+- A dedicated release workflow covers both entries. It checks the level-1
+  opening state (player at tile 5,5, pixel origin 45,1, two glyphs, 21 levels),
+  moves in all four directions, and verifies the wall row blocks movement. It
+  pushes a glyph through the empty corridor, checks that sliding alone does not
+  change the counter, then completes the level by pairing an identical glyph.
+  The clear screen is verified, any key advances to level 2, and the type-9
+  glyphs are checked to move exactly one tile per push before they annihilate.
+- Level 3 is spot-checked for its counter and glyph layout. `N` loads level 4,
+  where a push slides the glyph to the wall and `F1` replays the level with the
+  original layout. Escape halts the program.
+- Levels 5-21, the remaining glyph types, and the exit path after the last level
+  remain unverified.

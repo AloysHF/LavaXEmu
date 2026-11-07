@@ -23,9 +23,10 @@ do not satisfy this status.
 - Boxing checked on 2026-11-07: one dedicated release workflow plays thirteen punch exchanges with a fixed key cycle, verifies the enemy counter-moves and both stamina values, reaches a knockout that returns to the title, and starts a rematch.
 - Matchsticks checked on 2026-11-07: one dedicated release workflow rejects an over-limit take, plays a full deterministic game, checks the computer's remainder strategy through the last match, and verifies restart, quit and escape behavior.
 - Pipe Connection checked on 2026-11-07: one dedicated release workflow starts a round, checks the source cell and three-minute timer, moves the cursor in all four directions, places and removes a pipe, pauses and resumes the countdown, returns to the title, and quits through the credits screen.
-- 127 dedicated release workflows passed in this audit.
-- 192 of 324 entry points were loaded by those successful workflows.
-- 132 entry points still need dedicated workflow verification.
+- Sokoban checked on 2026-11-07: one dedicated release workflow covers the packed and unpacked entries, moves and blocks against walls, slides and pairs glyphs across two levels, verifies the one-tile type-9 behaviour, advances with the clear screen and `N`, replays with `F1`, and exits with Escape.
+- 128 dedicated release workflows passed in this audit.
+- 194 of 324 entry points were loaded by those successful workflows.
+- 130 entry points still need dedicated workflow verification.
 - The historical [startup gallery](Game-Compatibility.md) is a separate check
   and must not be interpreted as this workflow audit.
 
@@ -212,8 +213,8 @@ an optional screenshot directory. Keep each test's logs and captures separate.
 | 163 | `LAVA1 拳击/boxing.lav` | Game / game package | [Workflow passed: `boxing_resolves_punches_and_finishes_a_match`](../crates/lavaxemu/tests/game_compatibility.rs#L12468) |
 | 164 | `LAVA1 拿火柴/拿火柴.lav` | Game / game package | [Workflow passed: `matchstick_game_takes_turns_and_restarts_or_quits`](../crates/lavaxemu/tests/game_compatibility.rs#L12568) |
 | 165 | `LAVA1 接水管/接水管.lav` | Game / game package | [Workflow passed: `pipe_game_places_pipes_counts_down_pauses_and_quits`](../crates/lavaxemu/tests/game_compatibility.rs#L12701) |
-| 166 | `LAVA1 推箱达人/推箱达人.pac` | Game / game package | Pending |
-| 167 | `LAVA1 推箱达人/未打包的/推箱达人.lav` | Game / game package | Pending |
+| 166 | `LAVA1 推箱达人/推箱达人.pac` | Game / game package | [Workflow passed: `sokoban_slides_boxes_pairs_glyphs_and_advances_levels`](../crates/lavaxemu/tests/game_compatibility.rs#L12847) |
+| 167 | `LAVA1 推箱达人/未打包的/推箱达人.lav` | Game / game package | [Workflow passed: `sokoban_slides_boxes_pairs_glyphs_and_advances_levels`](../crates/lavaxemu/tests/game_compatibility.rs#L12847) |
 | 168 | `LAVA1 搬运工/搬运工.lav` | Game / game package | Pending |
 | 169 | `LAVA1 撞球高手/撞球高手.lav` | Game / game package | Pending |
 | 170 | `LAVA1 数独1.3/sudoku.lav` | Game / game package | Pending |
