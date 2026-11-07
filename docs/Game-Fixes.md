@@ -2714,3 +2714,17 @@ without an execution error alone does not establish playability.
   All four arrow keys change the rendered view in four distinct directions.
 - The exit item shuts the program down at pc `0x2f61`.
 - Save persistence, combat, dialogue and later maps remain unverified.
+
+## Unnamed Village (未知/game.lav)
+
+- Content: `LAVA1 未知/game.lav`.
+- The entry has no title or menu: it starts directly on a fenced village map at
+  pc `0x66de`.
+- At the spawn the character faces a fence. Right walks and scrolls the map,
+  Up and Left only turn the sprite in place, and Down is blocked (the frame is
+  identical to the idle clone).
+- After walking east to the edge, Up, Down and Left all scroll the map and move
+  the character out of that corner.
+- Enter, Space, Escape and letter keys have no visible effect on this map. The
+  purpose of the companion `goldmap.dat`, dialogue, combat and events remain
+  unverified.

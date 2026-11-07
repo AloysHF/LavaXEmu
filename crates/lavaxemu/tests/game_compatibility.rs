@@ -14271,3 +14271,52 @@ fn moon_city_reaches_the_village_and_handles_menu_items() {
     }
     assert!(halted, "the exit item halts the program");
 }
+
+#[test]
+#[ignore = "requires the local game corpus via LAVAX_GAME_ROOT"]
+fn unnamed_village_map_walks_and_scrolls() {
+    let mut emulator = load("LAVA1 未知/game.lav");
+    advance(&mut emulator, 300);
+    capture(&emulator, "unknown-spawn");
+
+    let mut still = emulator.clone();
+    advance(&mut still, 70);
+    let mut right = emulator.clone();
+    hold(&mut right, 22, 40);
+    capture(&right, "unknown-right");
+    assert!(
+        right.display().indexed_frame() != still.display().indexed_frame(),
+        "Right walks and scrolls the map"
+    );
+    for key in [20, 23] {
+        let mut turned = emulator.clone();
+        hold(&mut turned, key, 40);
+        capture(&turned, &format!("unknown-{key}"));
+        assert!(
+            turned.display().indexed_frame() != still.display().indexed_frame(),
+            "Up and Left turn the character at the spawn"
+        );
+    }
+    let mut blocked = emulator.clone();
+    hold(&mut blocked, 21, 40);
+    assert_eq!(
+        blocked.display().indexed_frame(),
+        still.display().indexed_frame(),
+        "Down is blocked by the fence at the spawn"
+    );
+
+    let mut walking = emulator.clone();
+    hold(&mut walking, 22, 300);
+    capture(&walking, "unknown-east-edge");
+    let mut resting = walking.clone();
+    advance(&mut resting, 90);
+    for key in [20, 21, 23] {
+        let mut moved = walking.clone();
+        hold(&mut moved, key, 60);
+        capture(&moved, &format!("unknown-east-{key}"));
+        assert!(
+            moved.display().indexed_frame() != resting.display().indexed_frame(),
+            "the character can leave the eastern edge in another direction"
+        );
+    }
+}
