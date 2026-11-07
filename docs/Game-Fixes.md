@@ -2388,3 +2388,17 @@ without an execution error alone does not establish playability.
   clone to verify the strength bar responds.
 - Two-player behavior, other difficulties, hidden fighter codes, and complete
   match outcomes remain unverified.
+
+## Spot the Difference (找茬)
+
+- Content: `LAVA1 找茬/大家来找茬.lav` and `LAVA1 找茬/找茬.pac`.
+- Startup-only evidence had not covered the board or its controls. No emulator
+  runtime defect was reproduced; the packaged and unpacked entries execute the
+  identical program.
+- A dedicated release workflow advances past the title image, checks the level-1
+  difference coordinates and centered cursor, moves the cursor with W/A/S/D,
+  presses Enter over all three differences, and verifies the found flags, the
+  drawing changes, and the automatic advance to level 2 with reset flags and
+  timer.
+- Levels 3 and 4, the timer-based game over, and the completion screen remain
+  unverified.

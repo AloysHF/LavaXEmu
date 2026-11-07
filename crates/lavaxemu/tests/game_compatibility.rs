@@ -12134,3 +12134,184 @@ fn wrist_wrestling_selects_a_fighter_and_responds_to_gameplay_input() {
     );
     capture(&mashing, "wrist-wrestling-enter-mashing");
 }
+
+#[test]
+#[ignore = "requires the local game corpus via LAVAX_GAME_ROOT"]
+fn spot_the_difference_finds_all_three_differences_and_advances() {
+    fn word(emulator: &Emulator, address: usize) -> u16 {
+        u16::from_le_bytes(
+            emulator.vm().memory()[address..address + 2]
+                .try_into()
+                .unwrap(),
+        )
+    }
+    fn region(emulator: &Emulator, x0: usize, x1: usize, y0: usize, y1: usize) -> Vec<u8> {
+        let width = usize::from(emulator.display().width());
+        emulator
+            .display()
+            .indexed_frame()
+            .chunks_exact(width)
+            .skip(y0)
+            .take(y1 - y0)
+            .flat_map(|row| row[x0..x1].iter().copied())
+            .collect()
+    }
+    fn wait_for_input(emulator: &mut Emulator) {
+        for _ in 0..1200 {
+            let result = emulator
+                .run_frame()
+                .expect("game must execute without errors");
+            match result.status {
+                FrameStatus::WaitingForInput => return,
+                FrameStatus::Halted(_) => panic!("game exited while waiting for input"),
+                _ => {}
+            }
+        }
+        panic!("the game did not wait for input");
+    }
+    fn step(emulator: &mut Emulator, horizontal: bool, target: u16) {
+        let address = if horizontal { 0x26d2 } else { 0x26d4 };
+        let before = word(emulator, address);
+        assert_ne!(before, target, "the cursor is already at the target");
+        let key = match (horizontal, before < target) {
+            (true, true) => b'd',
+            (true, false) => b'a',
+            (false, true) => b's',
+            (false, false) => b'w',
+        };
+        emulator.input_mut().set_keys([key]);
+        for _ in 0..30 {
+            advance(emulator, 1);
+            if word(emulator, address) != before {
+                break;
+            }
+        }
+        emulator.input_mut().release_all();
+        advance(emulator, 10);
+        assert_ne!(
+            word(emulator, address),
+            before,
+            "key {key} must move the cursor"
+        );
+    }
+    fn goto(emulator: &mut Emulator, x: u16, y: u16) {
+        let mut guard = 0;
+        while word(emulator, 0x26d2) != x {
+            step(emulator, true, x);
+            guard += 1;
+            assert!(guard < 200, "the horizontal cursor must reach {x}");
+        }
+        guard = 0;
+        while word(emulator, 0x26d4) != y {
+            step(emulator, false, y);
+            guard += 1;
+            assert!(guard < 200, "the vertical cursor must reach {y}");
+        }
+    }
+    fn check(emulator: &mut Emulator, flag: usize) {
+        emulator.input_mut().set_keys([13]);
+        let mut found = false;
+        for _ in 0..300 {
+            advance(emulator, 1);
+            if emulator.vm().memory()[flag] != 0 {
+                found = true;
+                break;
+            }
+            if emulator.vm().pc() == 0x92c {
+                break;
+            }
+        }
+        emulator.input_mut().release_all();
+        assert!(found, "Enter over a difference must mark it");
+        advance(emulator, 240);
+    }
+
+    for (path, name) in [
+        ("LAVA1 找茬/大家来找茬.lav", "spot-lav"),
+        ("LAVA1 找茬/找茬.pac", "spot-pac"),
+    ] {
+        let mut emulator = load(path);
+        wait_for_input(&mut emulator);
+        assert_eq!(
+            emulator.vm().pc(),
+            0x8a1,
+            "{path} must show the level image"
+        );
+        capture(&emulator, &format!("{name}-level-image"));
+
+        press(&mut emulator, 13);
+        advance(&mut emulator, 540);
+        assert_eq!(word(&emulator, 0x26d8), 1, "{path} must start on level 1");
+        assert_eq!(
+            (word(&emulator, 0x26d2), word(&emulator, 0x26d4)),
+            (80, 40),
+            "{path} must center the cursor"
+        );
+        let coordinates: Vec<u16> = (0..6).map(|i| word(&emulator, 0x26c0 + i * 2)).collect();
+        assert_eq!(
+            coordinates,
+            [111, 100, 70, 25, 30, 78],
+            "{path} must load the first level's differences"
+        );
+        assert!(
+            emulator
+                .display()
+                .indexed_frame()
+                .iter()
+                .any(|&pixel| pixel != emulator.display().indexed_frame()[0]),
+            "{path} must draw the comparison board"
+        );
+        capture(&emulator, &format!("{name}-board"));
+
+        let start = region(&emulator, 70, 100, 30, 55);
+        let mut idle = emulator.clone();
+        advance(&mut idle, 60);
+        step(&mut emulator, true, 82);
+        assert_eq!(word(&emulator, 0x26d2), 82);
+        assert_ne!(
+            region(&emulator, 70, 100, 30, 55),
+            start,
+            "{path} cursor must move right on D"
+        );
+        step(&mut emulator, false, 42);
+        assert_eq!(word(&emulator, 0x26d4), 42);
+        assert_ne!(
+            region(&emulator, 70, 100, 30, 55),
+            region(&idle, 70, 100, 30, 55),
+            "{path} cursor must move down on S"
+        );
+        capture(&emulator, &format!("{name}-moved"));
+
+        for (label, x, y, flag) in [
+            ("pair1", 112, 26, 0x26ccusize),
+            ("pair2", 100, 30, 0x26ce),
+            ("pair3", 70, 78, 0x26d0),
+        ] {
+            goto(&mut emulator, x, y);
+            check(&mut emulator, flag);
+            assert_ne!(
+                emulator.display().indexed_frame(),
+                idle.display().indexed_frame(),
+                "{path} must mark difference {label}"
+            );
+            capture(&emulator, &format!("{name}-{label}"));
+        }
+
+        wait_for_input(&mut emulator);
+        assert_eq!(emulator.vm().pc(), 0x8a1, "{path} must show the next level");
+        assert_eq!(word(&emulator, 0x26d8), 2, "{path} must advance to level 2");
+        let coordinates: Vec<u16> = (0..6).map(|i| word(&emulator, 0x26c0 + i * 2)).collect();
+        assert_eq!(
+            coordinates,
+            [5, 60, 105, 62, 61, 61],
+            "{path} must load the second level's differences"
+        );
+        assert_eq!(
+            emulator.vm().memory()[0x26cc..0x26d2],
+            [0, 0, 0, 0, 0, 0],
+            "{path} must reset the found flags"
+        );
+        assert_eq!(word(&emulator, 0x26d6), 0, "{path} must reset the timer");
+        capture(&emulator, &format!("{name}-level2"));
+    }
+}
