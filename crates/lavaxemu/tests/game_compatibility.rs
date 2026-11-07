@@ -21462,3 +21462,149 @@ fn yo_games_collection_plays_all_minigames_and_scores_them() {
     advance(&mut wqx_pause, 1200);
     assert_eq!(wqx_pause.vm().pc(), 0x5ce9, "enter returns to the wqx menu");
 }
+
+#[test]
+#[ignore = "requires LAVAX_GAME_ROOT with the game corpus"]
+fn secret_realm_rebirth_escapes_ten_generated_mazes() {
+    let path = "LAVA1 秘境还生/秘境还生.lav";
+    let frame = |e: &Emulator| e.display().indexed_frame().to_vec();
+    let step = |e: &mut Emulator, key: u8| {
+        for _ in 0..3 {
+            e.input_mut().set_keys([key]);
+            advance(e, 1);
+        }
+        e.input_mut().set_keys([]);
+        advance(e, 10);
+    };
+    let enter_maze = |e: &mut Emulator| {
+        advance(e, 600);
+        assert_eq!(e.vm().pc(), 0x10df, "the title waits for a key");
+        press(e, 13);
+        advance(e, 60);
+        assert_eq!(e.vm().pc(), 0x11ef, "the key help screen appears");
+        press(e, 13);
+        advance(e, 60);
+        assert_eq!(e.vm().pc(), 0x1c68, "the first maze starts");
+    };
+    let halt_with = |e: &mut Emulator, key: u8| {
+        let mut halted = None;
+        for frame in 0..90 {
+            e.input_mut().set_keys([key]);
+            if frame == 3 {
+                e.input_mut().set_keys([]);
+            }
+            if let FrameStatus::Halted(code) = e.run_frame().unwrap().status {
+                halted = Some(code);
+                break;
+            }
+        }
+        halted
+    };
+
+    let mut movement = load(path);
+    enter_maze(&mut movement);
+    let entry = frame(&movement);
+    step(&mut movement, 20);
+    advance(&mut movement, 30);
+    assert_eq!(frame(&movement), entry, "the border blocks movement up");
+    step(&mut movement, 22);
+    advance(&mut movement, 30);
+    assert_ne!(frame(&movement), entry, "moving right redraws the maze");
+    assert!(
+        movement.files_mut().take_dirty_files().is_empty(),
+        "the maze writes nothing"
+    );
+
+    let mut death = load(path);
+    enter_maze(&mut death);
+    advance(&mut death, 175);
+    assert_eq!(death.vm().pc(), 0x1c4f, "the level timer expires");
+    assert_eq!(
+        &death.vm().memory()[0x1400..0x1412],
+        &[
+            0xc4, 0xe3, 0xc6, 0xe6, 0xbc, 0xa3, 0xb0, 0xe3, 0xcb, 0xc0, 0xd3, 0xda, 0xb5, 0xda,
+            0x31, 0xb9, 0xd8, 0x21,
+        ],
+        "the death screen reports the level"
+    );
+    assert_eq!(halt_with(&mut death, 13), Some(0), "a key ends the game");
+    assert_eq!(death.vm().pc(), 0x1c53, "the game stops after the death");
+
+    let mut escape = load(path);
+    enter_maze(&mut escape);
+    assert_eq!(
+        halt_with(&mut escape, 27),
+        Some(0),
+        "escape leaves the maze"
+    );
+    assert_eq!(escape.vm().pc(), 0x1c97, "escape ends the game");
+
+    let paths = [
+        "DDDDDDDDDDRRRRRRRRUURRDDRRRR",
+        "DDDDRRRRRRDDLLLLLLDDRRRRDDRRUURRDDRRRRRRRR",
+        "RRDDDDRRRRRRDDRRDDLLLLUULLDDDDRRRRRRRRUURRDDRR",
+        "RRRRDDDDLLDDLLDDRRRRUURRUURRRRDDLLDDDDRRRRRRRRRR",
+        "DDDDDDRRRRRRUULLUUUURRDDRRRRUURRRRDDRRUURRDDDDDDDDDDDD",
+        "DDDDDDDDDDDDRRRRUURRUURRRRRRDDDDRRUURRDDRRRR",
+        "RRRRRRRRDDDDLLUULLDDDDLLDDDDRRDDRRRRRRRRRRRRRRRRRR",
+        "RRDDLLDDDDDDRRRRDDLLDDLLDDRRRRUURRDDRRUURRUURRDDRRRRRRRRUURRUUUURRUUUURRDDDDDDDDDDDD",
+        "DDDDDDDDDDRRUUUURRDDDDRRDDDDRRRRRRRRUURRDDRRUURRRRUURRRRUURRRRDDDDDD",
+        "DDDDRRRRRRDDDDRRDDLLDDRRRRUUUURRRRRRRRUURRUURRUURRRRDDLLDDDDLLLLDDLLDDRRRRRRRRRRUURRUURRRRDDDDDDDD",
+    ];
+    let mut cleared = load(path);
+    enter_maze(&mut cleared);
+    for (level, path) in paths.iter().enumerate() {
+        for direction in path.bytes() {
+            let key = match direction {
+                b'U' => 20,
+                b'D' => 21,
+                b'R' => 22,
+                b'L' => 23,
+                _ => unreachable!("the solved path only uses directions"),
+            };
+            step(&mut cleared, key);
+        }
+        if level + 1 < paths.len() {
+            assert_eq!(
+                cleared.vm().pc(),
+                0x1c68,
+                "maze level {} hands over to the next maze",
+                level + 1
+            );
+        }
+    }
+    assert_eq!(
+        cleared.vm().pc(),
+        0x14d6,
+        "clearing the tenth maze starts the ending"
+    );
+    assert_eq!(
+        &cleared.vm().memory()[0x1400..0x1410],
+        &[
+            0xbe, 0xad, 0xb9, 0xfd, 0xbf, 0xd6, 0xb2, 0xc0, 0xb5, 0xc4, 0xcc, 0xd3, 0xc9, 0xfa,
+            0xa3, 0xac,
+        ],
+        "the ending describes the escape"
+    );
+    let expected = [
+        (1, 0x14f1),
+        (2, 0x150e),
+        (3, 0x1527),
+        (4, 0x153c),
+        (5, 0x1557),
+        (6, 0x1c68),
+    ];
+    for (presses, pc) in expected {
+        press(&mut cleared, 13);
+        assert_eq!(
+            cleared.vm().pc(),
+            pc,
+            "ending page {} advances after enter",
+            presses
+        );
+    }
+    assert!(
+        cleared.files_mut().take_dirty_files().is_empty(),
+        "the ending writes nothing"
+    );
+}

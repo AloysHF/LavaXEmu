@@ -3582,3 +3582,27 @@ without an execution error alone does not establish playability.
   and `0x55e2` and ends at `0x53d1`. The scores and lives match the PC
   build, and the WQX build writes no files.
 
+
+
+## Secret Realm Rebirth (LAVA1 秘境还生)
+
+- Content: `LAVA1 秘境还生/秘境还生.lav`, a single Bits16 program that draws
+  a 160x80 monochrome maze.
+- The title waits at pc `0x10df`; any key opens the key-help screen at
+  `0x11ef`, and another key starts the first generated maze at `0x1c68`.
+- Each level is a walled grid drawn with a four-pixel pitch. Level one has
+  a 15x11 interior and starts at cell `(1, 1)`. The exit is stored as
+  doubled cell coordinates in the byte globals at `0x3650` (row) and
+  `0x3651` (column), and the pixel origin lives at `0x3652`/`0x3653`.
+  Reaching the exit generates the next, larger level; borders block
+  movement, while open cells move the player and redraw the frame.
+- The level timer expires after 175 idle frames at `0x1c4f` with the death
+  text naming the current level. Any key halts with code 0 at `0x1c53`.
+  Escape during a maze also halts with code 0, at `0x1c97`.
+- The win check at `0x14ab` compares the level counter with ten. The ending
+  runs through the pages at `0x14d6`, `0x14f1`, `0x150e`, `0x1527`,
+  `0x153c` and `0x1557`; the sixth Enter starts a new level-one game at
+  `0x1c68`.
+- Maze layout and palette are deterministic for a fixed frame timeline, so
+  the fixed ten-level route reproduces the same ten mazes on every run.
+  The game writes no files. No additional emulator changes were required.
