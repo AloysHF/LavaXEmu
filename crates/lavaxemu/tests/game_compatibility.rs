@@ -13629,3 +13629,208 @@ fn circuit_simulator_browses_chips_edits_waveforms_and_exits() {
         assert!(!emulator.vm().is_running());
     }
 }
+
+#[test]
+#[ignore = "requires the local game corpus via LAVAX_GAME_ROOT"]
+fn slot_machine_places_bets_spins_and_exits() {
+    fn tap(emulator: &mut Emulator, key: u8, settle: usize) {
+        emulator.input_mut().set_keys([key]);
+        advance(emulator, 3);
+        emulator.input_mut().release_all();
+        advance(emulator, settle);
+    }
+    fn tap_until(
+        emulator: &mut Emulator,
+        key: u8,
+        settle: usize,
+        ready: impl Fn(&Emulator) -> bool,
+    ) {
+        for _ in 0..80 {
+            tap(emulator, key, settle);
+            if ready(emulator) {
+                return;
+            }
+        }
+        panic!("key {key} did not reach the expected screen");
+    }
+    fn bet(emulator: &Emulator, column: usize) -> u16 {
+        let memory = emulator.vm().memory();
+        u16::from_le_bytes([memory[0x414e + column * 2], memory[0x414f + column * 2]])
+    }
+    let mut emulator = load("LAVA1 旋转老虎机/旋转老虎机.lav");
+    advance(&mut emulator, 300);
+    assert_eq!(emulator.vm().pc(), 0x21fd, "the splash waits for a key");
+    capture(&emulator, "slot-splash");
+    tap_until(&mut emulator, 13, 90, |emulator| {
+        emulator.vm().pc() == 0x2348
+    });
+    assert_eq!(
+        emulator.vm().memory()[0x4132],
+        7,
+        "the menu opens on the first item"
+    );
+    capture(&emulator, "slot-menu");
+    for expected in [21, 35, 49] {
+        tap(&mut emulator, 21, 60);
+        assert_eq!(emulator.vm().memory()[0x4132], expected);
+    }
+    tap(&mut emulator, 21, 60);
+    assert_eq!(emulator.vm().memory()[0x4132], 7, "down wraps the menu");
+    tap(&mut emulator, 20, 60);
+    assert_eq!(emulator.vm().memory()[0x4132], 49, "up wraps the menu");
+    tap(&mut emulator, 20, 60);
+    assert_eq!(emulator.vm().memory()[0x4132], 35);
+
+    tap(&mut emulator, 13, 120);
+    assert_eq!(emulator.vm().pc(), 0x24f3, "enter opens the instructions");
+    capture(&emulator, "slot-instructions");
+    tap(&mut emulator, 27, 90);
+    assert_eq!(emulator.vm().pc(), 0x2524, "escape shows the second page");
+    capture(&emulator, "slot-instructions-2");
+    tap(&mut emulator, 21, 90);
+    assert_eq!(emulator.vm().pc(), 0x2348, "a key returns to the menu");
+
+    tap(&mut emulator, 20, 60);
+    assert_eq!(emulator.vm().memory()[0x4132], 21);
+    tap(&mut emulator, 13, 120);
+    assert_eq!(emulator.vm().pc(), 0x2400, "enter opens the version page");
+    capture(&emulator, "slot-version");
+    tap(&mut emulator, 27, 90);
+    assert_eq!(
+        emulator.vm().pc(),
+        0x2480,
+        "escape shows the version details"
+    );
+    capture(&emulator, "slot-version-2");
+    tap(&mut emulator, 21, 90);
+    assert_eq!(emulator.vm().pc(), 0x21fd, "a key returns to the title");
+
+    tap_until(&mut emulator, 13, 90, |emulator| {
+        emulator.vm().pc() == 0x2348
+    });
+    assert_eq!(emulator.vm().memory()[0x4132], 7);
+    tap(&mut emulator, 13, 120);
+    assert_eq!(emulator.vm().pc(), 0x2720, "enter starts a round");
+    assert_eq!(
+        emulator.vm().memory()[0x4168..0x416a],
+        [20, 0],
+        "a round starts with 20 credits"
+    );
+    assert_eq!(emulator.vm().memory()[0x4166], 0, "no bet is placed");
+    for column in 0..7 {
+        assert_eq!(bet(&emulator, column), 0);
+    }
+    capture(&emulator, "slot-game");
+
+    tap(&mut emulator, 20, 60);
+    assert_eq!(bet(&emulator, 0), 1, "up bets on the first column");
+    assert_eq!(emulator.vm().memory()[0x4166], 1, "the total bet follows");
+    assert_eq!(emulator.vm().memory()[0x4168..0x416a], [19, 0]);
+    tap(&mut emulator, 22, 60);
+    assert_eq!(
+        emulator.vm().memory()[0x4130],
+        41,
+        "right moves to the next column"
+    );
+    tap(&mut emulator, 20, 60);
+    assert_eq!(bet(&emulator, 1), 1, "up bets on the second column");
+    assert_eq!(emulator.vm().memory()[0x4166], 2);
+    assert_eq!(emulator.vm().memory()[0x4168..0x416a], [18, 0]);
+    tap(&mut emulator, 21, 60);
+    assert_eq!(bet(&emulator, 1), 0, "down withdraws the bet");
+    assert_eq!(emulator.vm().memory()[0x4166], 1);
+    assert_eq!(emulator.vm().memory()[0x4168..0x416a], [19, 0]);
+    tap(&mut emulator, 23, 60);
+    assert_eq!(
+        emulator.vm().memory()[0x4130],
+        25,
+        "left returns to the first column"
+    );
+    capture(&emulator, "slot-bet");
+
+    tap(&mut emulator, 13, 60);
+    assert_ne!(emulator.vm().pc(), 0x2720, "enter spins the reels");
+    let mut reached = false;
+    for _ in 0..3000 {
+        advance(&mut emulator, 1);
+        if emulator.vm().pc() == 0x2ead {
+            reached = true;
+            break;
+        }
+    }
+    assert!(reached, "the spin must reach the result screen");
+    assert_eq!(
+        emulator.vm().memory()[0x4164],
+        6,
+        "the result column is fixed"
+    );
+    assert_eq!(
+        emulator.vm().memory()[0x416a],
+        16,
+        "the result payout is fixed"
+    );
+    assert_eq!(
+        emulator.vm().memory()[0x4168..0x416a],
+        [19, 0],
+        "a losing round keeps the remaining credits"
+    );
+    capture(&emulator, "slot-result");
+
+    tap(&mut emulator, 20, 120);
+    assert_eq!(emulator.vm().pc(), 0x2720, "a key returns to the table");
+    for column in 0..7 {
+        assert_eq!(bet(&emulator, column), 0, "the table clears its bets");
+    }
+    assert_eq!(emulator.vm().memory()[0x4166], 0);
+    assert_eq!(emulator.vm().memory()[0x4168..0x416a], [19, 0]);
+
+    tap(&mut emulator, 27, 120);
+    assert_eq!(emulator.vm().pc(), 0x3089, "escape asks to quit");
+    capture(&emulator, "slot-quit");
+    tap(&mut emulator, 22, 90);
+    assert_eq!(emulator.vm().memory()[0x4130], 91, "right selects cancel");
+    tap(&mut emulator, 13, 90);
+    assert_eq!(emulator.vm().pc(), 0x2720, "enter cancels the quit");
+    tap(&mut emulator, 27, 120);
+    assert_eq!(emulator.vm().pc(), 0x3089);
+    tap(&mut emulator, 13, 120);
+    assert_eq!(
+        emulator.vm().pc(),
+        0x21fd,
+        "confirming returns to the title"
+    );
+    assert_eq!(
+        emulator.vm().memory()[0x4168..0x416a],
+        [20, 0],
+        "leaving a round restores the starting credits"
+    );
+    capture(&emulator, "slot-title");
+
+    tap_until(&mut emulator, 13, 90, |emulator| {
+        emulator.vm().pc() == 0x2348
+    });
+    for _ in 0..8 {
+        if emulator.vm().memory()[0x4132] == 49 {
+            break;
+        }
+        tap(&mut emulator, 21, 60);
+    }
+    assert_eq!(
+        emulator.vm().memory()[0x4132],
+        49,
+        "the exit item is selected"
+    );
+    emulator.input_mut().set_keys([13]);
+    let mut halted = false;
+    for _ in 0..120 {
+        let result = emulator.run_frame().expect("the menu must execute");
+        if matches!(result.status, FrameStatus::Halted(_)) {
+            halted = true;
+            break;
+        }
+        emulator.input_mut().release_all();
+    }
+    emulator.input_mut().release_all();
+    assert!(halted, "the exit item leaves the program");
+    assert!(!emulator.vm().is_running());
+}

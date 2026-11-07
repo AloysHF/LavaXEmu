@@ -2601,3 +2601,31 @@ without an execution error alone does not establish playability.
   halts the program.
 - The remaining chips, trigger types, editor columns, and result views remain
   unverified.
+
+## Rotary Slot Machine (旋转老虎机)
+
+- Content: `LAVA1 旋转老虎机/旋转老虎机.lav`.
+- Startup-only evidence had not covered the menu, betting or a spin. No
+  emulator runtime defect was reproduced.
+- A dedicated release workflow waits on the title splash (pc `0x21fd`), presses
+  `Enter` until the menu settles (pc `0x2348`), and checks the menu selection
+  (`0x4132`) walking down both sections, wrapping both ways between the first
+  and last item.
+- The instructions item opens pc `0x24f3` and `Escape` shows the second page at
+  `0x2524`; a key returns to the menu. The version item opens pc `0x2400` and
+  `Escape` shows the second page at `0x2480`; a key returns to the title.
+- `Enter` on the first item starts a round at pc `0x2720` with 20 credits
+  (`0x4168`), no total bet (`0x4166`), and seven empty per-column bets at
+  `0x414e + column * 2`. Up bets one credit on the first column and deducts it,
+  Right moves the cursor (`0x4130`), a second Up bets on the next column, and
+  Down withdraws that bet and refunds the credit.
+- `Enter` with a one-credit bet enters the spin animation at pc `0x2c13` and
+  reaches the result screen at pc `0x2ead` with fixed fields (`0x4164` = 6,
+  `0x416a` = 16) while the remaining credits stay at 19. A key returns to the
+  table and clears every bet.
+- `Escape` asks to quit at pc `0x3089`; Right selects cancel and `Enter`
+  returns to the table, while `Enter` on the default choice returns to the
+  title and restores the starting credits. The menu exit item then halts the
+  program.
+- The double-up/double-down ten-credit shortcuts, the 500-point bonus picture,
+  both easter eggs, and other spin outcomes remain unverified.
