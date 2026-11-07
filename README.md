@@ -103,6 +103,8 @@ The binary is produced at `target/release/lavaxemu.dll`
 `lavaxemu_libretro.<ext>` before placing it in RetroArch's `cores/`
 directory.
 
+For iOS, see [iOS Libretro Core](docs/iOS-Libretro-Core.md).
+
 ### EmulatorJS Core (for the browser)
 
 The browser core links the libretro core into EmulatorJS's RetroArch fork. It
