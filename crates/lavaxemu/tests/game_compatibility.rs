@@ -22898,3 +22898,165 @@ fn absolute_fall_scrolls_help_saves_and_solves_the_first_level() {
         "the new save starts at the first level"
     );
 }
+
+#[test]
+#[ignore = "requires the local game corpus via LAVAX_GAME_ROOT"]
+fn wing_sword_pages_the_prologue_and_walks_the_opening_map() {
+    let builds = [
+        "LAVA1 翼剑天殇/翼剑天殇.pac",
+        "LAVA1 翼剑天殇/非pac/Wing.lav",
+    ];
+    let mut all_frames = Vec::new();
+    for path in builds {
+        let mut game = load(path);
+        advance(&mut game, 300);
+        assert_eq!(game.vm().pc(), 0x286, "the title waits");
+        assert_eq!(
+            &game.vm().memory()[0x43ad..0x43af],
+            &[0, 0],
+            "no player is drawn on the title"
+        );
+        assert!(
+            game.files_mut().take_dirty_files().is_empty(),
+            "the title writes nothing"
+        );
+        let mut frames = vec![game.display().indexed_frame().to_vec()];
+
+        press(&mut game, 13);
+        assert_ne!(
+            game.display().indexed_frame(),
+            frames[0].as_slice(),
+            "the first key opens a text page"
+        );
+        assert_ne!(
+            &game.vm().memory()[0x1c0c..0x1c12],
+            &[0, 0, 0, 0, 0, 0],
+            "the text page names the data file"
+        );
+        frames.push(game.display().indexed_frame().to_vec());
+
+        press(&mut game, 13);
+        assert_eq!(
+            &game.vm().memory()[0x43ad..0x43af],
+            &[5, 3],
+            "the opening map loads with the hero in place"
+        );
+        frames.push(game.display().indexed_frame().to_vec());
+
+        for _ in 2..20 {
+            press(&mut game, 13);
+        }
+        assert_eq!(
+            &game.vm().memory()[0x43ad..0x43af],
+            &[5, 3],
+            "the dialogue leaves the hero at the start"
+        );
+        assert_eq!(game.vm().memory()[0x43b5], 1, "the hero faces down");
+        assert_eq!(game.vm().memory()[0x5b38], 1, "the world counter resets");
+        assert_ne!(
+            game.display().indexed_frame(),
+            frames[1].as_slice(),
+            "the dialogue box is gone once control starts"
+        );
+        frames.push(game.display().indexed_frame().to_vec());
+
+        press(&mut game, 22);
+        assert_eq!(
+            &game.vm().memory()[0x43ad..0x43af],
+            &[6, 3],
+            "right steps one column"
+        );
+        assert_eq!(game.vm().memory()[0x43b5], 2, "right faces right");
+        frames.push(game.display().indexed_frame().to_vec());
+
+        press(&mut game, 22);
+        assert_eq!(
+            &game.vm().memory()[0x43ad..0x43af],
+            &[7, 3],
+            "right steps again"
+        );
+        frames.push(game.display().indexed_frame().to_vec());
+
+        press(&mut game, 21);
+        assert_eq!(
+            &game.vm().memory()[0x43ad..0x43af],
+            &[7, 3],
+            "a wall blocks the downward step"
+        );
+        assert_eq!(
+            game.vm().memory()[0x43b5],
+            1,
+            "the blocked step still faces down"
+        );
+        frames.push(game.display().indexed_frame().to_vec());
+
+        press(&mut game, 20);
+        assert_eq!(
+            &game.vm().memory()[0x43ad..0x43af],
+            &[7, 2],
+            "up steps one row"
+        );
+        assert_eq!(game.vm().memory()[0x43b5], 0, "up faces up");
+        frames.push(game.display().indexed_frame().to_vec());
+
+        press(&mut game, 20);
+        assert_eq!(
+            &game.vm().memory()[0x43ad..0x43af],
+            &[7, 1],
+            "up steps again"
+        );
+        frames.push(game.display().indexed_frame().to_vec());
+
+        press(&mut game, 23);
+        assert_eq!(
+            &game.vm().memory()[0x43ad..0x43af],
+            &[6, 1],
+            "left steps one column"
+        );
+        assert_eq!(game.vm().memory()[0x43b5], 3, "left faces left");
+        frames.push(game.display().indexed_frame().to_vec());
+
+        press(&mut game, 23);
+        assert_eq!(
+            &game.vm().memory()[0x43ad..0x43af],
+            &[5, 1],
+            "left steps again"
+        );
+        frames.push(game.display().indexed_frame().to_vec());
+
+        press(&mut game, 21);
+        assert_eq!(
+            &game.vm().memory()[0x43ad..0x43af],
+            &[5, 2],
+            "down steps one row"
+        );
+        assert_eq!(game.vm().memory()[0x43b5], 1, "down faces down");
+        frames.push(game.display().indexed_frame().to_vec());
+
+        press(&mut game, 21);
+        assert_eq!(
+            &game.vm().memory()[0x43ad..0x43af],
+            &[5, 3],
+            "down returns to the start"
+        );
+        frames.push(game.display().indexed_frame().to_vec());
+
+        assert!(
+            game.files_mut().take_dirty_files().is_empty(),
+            "the opening map writes nothing"
+        );
+        all_frames.push(frames);
+    }
+
+    assert_eq!(
+        all_frames[0].len(),
+        all_frames[1].len(),
+        "both builds take the same steps"
+    );
+    for (index, (packaged, loose)) in all_frames[0].iter().zip(&all_frames[1]).enumerate() {
+        assert_eq!(
+            packaged, loose,
+            "both builds render the same frame at step {index}"
+        );
+    }
+}

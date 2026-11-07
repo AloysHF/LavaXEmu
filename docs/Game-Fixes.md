@@ -3818,3 +3818,27 @@ without an execution error alone does not establish playability.
   the selection reset.
 - Not covered: the layouts and solutions of the later levels, the
   life-decrement path, and the unused remainder of the level records.
+
+## Wing Sword (LAVA1 翼剑天殇)
+
+- Content: `LAVA1 翼剑天殇/翼剑天殇.pac` and the unpacked
+  `LAVA1 翼剑天殇/非pac/Wing.lav`, which runs against `Wing_SC.dat`. The
+  packaged build opens `/LavaData/Wing_SC.dat` and the unpacked build finds
+  `/Wing_SC.dat` through the flat fallback; both load the same 36342-byte
+  script and render identical frames for identical input. No emulator
+  changes were required.
+- Both builds wait on the title at `0x286` with no player coordinates. The
+  first key opens a prologue text page (text buffer from `0x1c00`), the
+  second loads the opening map with the hero at `(5, 3)` while the
+  dialogue continues, and about twenty key presses in total page through
+  the dialogue into player control.
+- The player x and y are `0x43ad` and `0x43ae`, mirrored to `0x43b3` and
+  `0x43b4`; facing is `0x43b5` with 0 up, 1 down, 2 right and 3 left. The
+  hero starts at `(5, 3)` facing down, and the world counter at `0x5b38`
+  resets to one when control starts.
+- Each arrow key moves one cell and updates the facing. A wall at
+  `(7, 4)` blocks the downward step from `(7, 3)` while the facing still
+  changes, and the opening map lets the hero walk the verified loop
+  `(5,3) → (7,3) → (7,1) → (5,1) → (5,3)`. The opening writes no files.
+- Not covered: the rest of the map, NPC interaction, the status and
+  inventory panels, combat, saving and later chapters.
