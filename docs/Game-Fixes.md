@@ -3842,3 +3842,52 @@ without an execution error alone does not establish playability.
   `(5,3) → (7,3) → (7,1) → (5,1) → (5,3)`. The opening writes no files.
 - Not covered: the rest of the map, NPC interaction, the status and
   inventory panels, combat, saving and later chapters.
+
+## Flower Spirit 2.0 (LAVA1 花之精灵2.0)
+
+- Content: `LAVA1 花之精灵2.0/flower2.0.pac` and the unpacked
+  `LAVA1 花之精灵2.0/非pac/花之精灵.lav`, which reads `flowermap.dat`. Both
+  builds embed the same 13645-byte program and load the same 4757-byte map,
+  so identical input renders identical frames. No emulator changes were
+  required.
+- The title waits at `0x23bc`; the first key opens the menu at `0x24c6`. The
+  selected item is the byte at `bp+0x647`, starting at zero, with Down and Up
+  moving it and clamping at `0..3`. Escape calls `sys13(0)` and the program
+  halts at `0x24d7`.
+- The four items start a new game at `0x2f92` (a second key enters play at
+  `0x311d`), open the save picker at `0x25e3`, open the help page at `0x2527`
+  (waiting at `0x25e1`, with the `功能键:` line at `0x1c34`), and open the
+  leaderboard at `0x2a30` (waiting at `0x2b46`). Any key returns from a page
+  and resets the menu selection to zero. A missing `/LavaData/flowerhero.dat`
+  shows an empty record list and writes nothing.
+- The map is a 17-column byte grid at `0x3000`. A position lookup uses
+  `row = y/10 + 0x200d` and `column = x/10 + 1`, where `0x200a/0x200b` hold
+  the hero position in 10-pixel steps, `0x200d` is the viewport row offset,
+  `0x200c` is the progress byte and `0x200f` is the safe flag. The flower
+  count is the word at `0x380d`. A new game starts at `(10, 20)` on tile 0
+  with zero flowers and the safe flag set.
+- Tile 11 is a flower. Row 2 holds flowers at columns 5, 6 and 12: three
+  Right steps reach column 5 and score one flower, and ten Right steps reach
+  `x = 110` with three flowers while clearing tiles `0x3027`, `0x3028` and
+  `0x302e`. The row ends before the boundary wall at `x = 140`.
+- The `s` key opens the save picker at `0x266d`; the highlighted slot is the
+  byte at `bp+0xa`, starting at zero with Down and Up clamping at `0..2`.
+  Enter writes `/lavadata/flowersave{slot}.dat` with the two bytes
+  `[progress, flowers]`, and saving returns to the map with the position
+  kept.
+- Menu item 1 opens the same picker to load a slot. A successful load reads
+  the two bytes, redraws the map at `0x2f92`, restores the flower count and
+  the progress byte, and restarts the hero at `(10, 20)` with all flowers
+  back on the map. An empty slot returns to the menu with the selection
+  reset.
+- Tile 1 is a bud that turns into tile 2 while the hero stands next to it.
+  Pressing a movement key toward tile 2 turns it into tile 3, clears
+  `0x200f` and enters the trap handler at `0x36c`, which subtracts ten
+  flowers and shows the death prompt at `0x3f5`. From the start,
+  Down, Down, Right reaches that prompt with `0x200b = 40` and a score of
+  -10; with a loaded score of three the same route leaves `0xfff9`. A score
+  below zero shows `GAMEOVER!`, and the next key returns to the menu with
+  the flower count reset to zero.
+- Not covered: tile 9 doors, tile 6 stairs, the viewport PageUp/PageDown
+  scrolling, the ten-flower item key, high-score writing, later map rows and
+  the rest of the rooms.

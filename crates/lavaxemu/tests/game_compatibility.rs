@@ -23060,3 +23060,277 @@ fn wing_sword_pages_the_prologue_and_walks_the_opening_map() {
         );
     }
 }
+
+#[test]
+#[ignore = "requires the local game corpus via LAVAX_GAME_ROOT"]
+fn flower_spirit_collects_flowers_and_restores_a_save() {
+    let builds = [
+        "LAVA1 花之精灵2.0/flower2.0.pac",
+        "LAVA1 花之精灵2.0/非pac/花之精灵.lav",
+    ];
+    let mut all_frames = Vec::new();
+    for path in builds {
+        let mut game = load(path);
+        let score = |game: &Emulator| {
+            u16::from_le_bytes(game.vm().memory()[0x380d..0x380f].try_into().unwrap())
+        };
+        let tile = |game: &Emulator, row: usize, column: usize| {
+            game.vm().memory()[0x3000 + row * 17 + column]
+        };
+        advance(&mut game, 300);
+        assert_eq!(game.vm().pc(), 0x23bc, "the title waits for a key");
+        assert!(
+            game.files_mut().take_dirty_files().is_empty(),
+            "the title writes nothing"
+        );
+        let mut frames = vec![game.display().indexed_frame().to_vec()];
+
+        press(&mut game, 13);
+        assert_eq!(game.vm().pc(), 0x24c6, "the first key opens the menu");
+        let menu_bp = game.vm().local_bp() as usize;
+        assert_eq!(
+            game.vm().memory()[menu_bp + 0x647],
+            0,
+            "the menu starts on the first item"
+        );
+        frames.push(game.display().indexed_frame().to_vec());
+
+        press(&mut game, 21);
+        assert_eq!(
+            game.vm().memory()[menu_bp + 0x647],
+            1,
+            "down advances the menu selection"
+        );
+        press(&mut game, 20);
+        assert_eq!(
+            game.vm().memory()[menu_bp + 0x647],
+            0,
+            "up returns the menu selection"
+        );
+        press(&mut game, 20);
+        assert_eq!(
+            game.vm().memory()[menu_bp + 0x647],
+            0,
+            "the menu clamps at the first item"
+        );
+        for _ in 0..3 {
+            press(&mut game, 21);
+        }
+        assert_eq!(
+            game.vm().memory()[menu_bp + 0x647],
+            3,
+            "three downs reach the last item"
+        );
+        press(&mut game, 21);
+        assert_eq!(
+            game.vm().memory()[menu_bp + 0x647],
+            3,
+            "the menu clamps at the last item"
+        );
+
+        press(&mut game, 20);
+        press(&mut game, 13);
+        assert_eq!(game.vm().pc(), 0x25e1, "the help page waits for a key");
+        assert_eq!(
+            &game.vm().memory()[0x1c34..0x1c3d],
+            &[0xb9, 0xa6, 0x20, 0xc4, 0xdc, 0x20, 0xbc, 0xfc, 0x3a],
+            "the help page lists the function keys"
+        );
+        frames.push(game.display().indexed_frame().to_vec());
+        press(&mut game, 13);
+        assert_eq!(game.vm().pc(), 0x24c6, "the help page returns to the menu");
+        assert_eq!(
+            game.vm().memory()[menu_bp + 0x647],
+            0,
+            "the menu selection resets after a page"
+        );
+
+        for _ in 0..3 {
+            press(&mut game, 21);
+        }
+        press(&mut game, 13);
+        assert_eq!(
+            game.vm().pc(),
+            0x2b46,
+            "the last item opens the leaderboard"
+        );
+        assert!(
+            game.files_mut().take_dirty_files().is_empty(),
+            "a missing high score list writes nothing"
+        );
+        frames.push(game.display().indexed_frame().to_vec());
+        press(&mut game, 13);
+        assert_eq!(
+            game.vm().pc(),
+            0x24c6,
+            "the leaderboard returns to the menu"
+        );
+
+        press(&mut game, 13);
+        assert_eq!(
+            game.vm().pc(),
+            0x2f92,
+            "a new game redraws the map before play"
+        );
+        press(&mut game, 13);
+        assert_eq!(game.vm().pc(), 0x311d, "the map waits for movement");
+        assert_eq!(
+            &game.vm().memory()[0x200a..0x200f],
+            &[10, 20, 0, 0, 0],
+            "the new game starts at the top left of the clearing"
+        );
+        assert_eq!(game.vm().memory()[0x200f], 1, "the start is safe");
+        assert_eq!(score(&game), 0, "the new game starts without flowers");
+        assert_eq!(tile(&game, 2, 2), 0, "the hero stands on an empty tile");
+        frames.push(game.display().indexed_frame().to_vec());
+
+        for _ in 0..3 {
+            press(&mut game, 22);
+        }
+        assert_eq!(game.vm().memory()[0x200a], 40, "right walks one tile");
+        assert_eq!(score(&game), 1, "the first flower is picked up");
+        assert_eq!(tile(&game, 2, 5), 0, "the first flower tile is cleared");
+        for _ in 0..7 {
+            press(&mut game, 22);
+        }
+        assert_eq!(game.vm().memory()[0x200a], 110, "the row ends by the wall");
+        assert_eq!(
+            score(&game),
+            3,
+            "all three flowers on the row are picked up"
+        );
+        assert_eq!(tile(&game, 2, 6), 0, "the second flower tile is cleared");
+        assert_eq!(tile(&game, 2, 12), 0, "the third flower tile is cleared");
+        frames.push(game.display().indexed_frame().to_vec());
+
+        press(&mut game, 115);
+        assert_eq!(game.vm().pc(), 0x266d, "the save picker waits for a slot");
+        let picker_bp = game.vm().local_bp() as usize;
+        assert_eq!(
+            game.vm().memory()[picker_bp + 0x0a],
+            0,
+            "the picker starts on the first slot"
+        );
+        press(&mut game, 20);
+        assert_eq!(
+            game.vm().memory()[picker_bp + 0x0a],
+            0,
+            "up clamps the first slot"
+        );
+        press(&mut game, 21);
+        assert_eq!(
+            game.vm().memory()[picker_bp + 0x0a],
+            1,
+            "down moves to the second slot"
+        );
+        press(&mut game, 20);
+        press(&mut game, 13);
+        assert_eq!(game.vm().pc(), 0x311d, "saving returns to the map");
+        assert_eq!(game.vm().memory()[0x200a], 110, "saving keeps the position");
+        let saved = game.files_mut().take_dirty_files();
+        assert_eq!(saved.len(), 1, "saving writes one file");
+        assert_eq!(
+            saved[0].0, "/lavadata/flowersave0.dat",
+            "the first slot has its own file"
+        );
+        assert_eq!(saved[0].1, [0, 3], "the save stores progress and flowers");
+        frames.push(game.display().indexed_frame().to_vec());
+
+        press(&mut game, 27);
+        assert_eq!(game.vm().pc(), 0x24c6, "escape returns to the menu");
+        assert_eq!(
+            game.vm().memory()[menu_bp + 0x647],
+            0,
+            "the menu restarts on the first item"
+        );
+        press(&mut game, 21);
+        press(&mut game, 13);
+        assert_eq!(game.vm().pc(), 0x266d, "the load item opens the picker");
+        press(&mut game, 13);
+        assert_eq!(
+            game.vm().pc(),
+            0x2f92,
+            "loading redraws the map before play"
+        );
+        assert_eq!(score(&game), 3, "loading restores the flower count");
+        assert_eq!(
+            &game.vm().memory()[0x200a..0x200d],
+            &[10, 20, 0],
+            "loading restarts the hero at the clearing"
+        );
+        assert_eq!(tile(&game, 2, 5), 11, "loading restores the first flower");
+        assert_eq!(tile(&game, 2, 6), 11, "loading restores the second flower");
+        assert_eq!(tile(&game, 2, 12), 11, "loading restores the third flower");
+        frames.push(game.display().indexed_frame().to_vec());
+        press(&mut game, 13);
+        assert_eq!(game.vm().pc(), 0x311d, "the loaded map starts");
+
+        press(&mut game, 21);
+        press(&mut game, 21);
+        press(&mut game, 22);
+        assert_eq!(
+            game.vm().pc(),
+            0x3f5,
+            "walking into the pit shows the death prompt"
+        );
+        assert_eq!(game.vm().memory()[0x200b], 40, "the death stays in place");
+        assert_eq!(
+            game.vm().memory()[0x200f],
+            0,
+            "the pit clears the safe flag"
+        );
+        assert_eq!(
+            score(&game),
+            0xfff9,
+            "the pit costs ten flowers from the loaded score"
+        );
+        frames.push(game.display().indexed_frame().to_vec());
+        press(&mut game, 13);
+        assert_eq!(game.vm().pc(), 0x24c6, "losing a life returns to the menu");
+        assert_eq!(score(&game), 0, "the menu resets the flower count");
+        frames.push(game.display().indexed_frame().to_vec());
+
+        press(&mut game, 21);
+        press(&mut game, 13);
+        assert_eq!(
+            game.vm().pc(),
+            0x266d,
+            "the empty slot check opens the picker"
+        );
+        press(&mut game, 21);
+        press(&mut game, 21);
+        press(&mut game, 13);
+        assert_eq!(game.vm().pc(), 0x24c6, "an empty slot returns to the menu");
+        assert_eq!(
+            game.vm().memory()[menu_bp + 0x647],
+            0,
+            "the menu restarts after an empty slot"
+        );
+        frames.push(game.display().indexed_frame().to_vec());
+
+        game.input_mut().set_keys([27]);
+        let mut exit = None;
+        for _ in 0..3 {
+            if let FrameStatus::Halted(code) = game.run_frame().unwrap().status {
+                exit = Some(code);
+                break;
+            }
+        }
+        game.input_mut().set_keys([]);
+        assert_eq!(exit, Some(0), "escape quits the menu");
+        assert_eq!(game.vm().pc(), 0x24d7, "the menu exits through its halt");
+        all_frames.push(frames);
+    }
+
+    assert_eq!(
+        all_frames[0].len(),
+        all_frames[1].len(),
+        "both builds take the same steps"
+    );
+    for (index, (packaged, loose)) in all_frames[0].iter().zip(&all_frames[1]).enumerate() {
+        assert_eq!(
+            packaged, loose,
+            "both builds render the same frame at step {index}"
+        );
+    }
+}
