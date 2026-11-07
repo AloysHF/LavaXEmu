@@ -3503,3 +3503,43 @@ without an execution error alone does not establish playability.
 - Escape on the title opens the credits at pc `0x159a` (`再  见`, `制作:海成`,
   `策划:dudu`); any key fades through `0x10ae` and halts at pc `0x15a2` with
   code 1.
+
+## Instant Worms (LAVA1 百战天虫即时版)
+
+- Content: `LAVA1 百战天虫即时版/天虫即时.lav` and
+  `LAVA1 百战天虫即时版/VS版/GVmaker/天虫即时vs.lav`.
+- The standard build waits on the title at pc `0x2063` with the banner
+  `百战天虫即时版` at `0x1c06` and the four entries 双人对抗, 人机对抗,
+  地图管理, 求助 at `0x1c1e`, `0x1c2e`, `0x1c49` and `0x1c59`. It mounts
+  `/wormmap/default.wmap` (1340 bytes) and `/资源管理器.lav`.
+- 人机对抗 advances through pc `0x1484` into an AI duel; Escape opens the exit
+  prompt at `0x14de`.
+- 求助 opens the F5 help page at pc `0x2148`, the next page at `0x21ce`, and
+  returns to the title.
+- 地图管理 opens the built-in map browser at pc `0xce2`; Enter enters the
+  duel at `0x1476`, which idles into the battle loop at `0x1423`. Letter keys
+  walk, aim and swap worms: the row-35 columns start at `19,21,105,107`, `d`
+  moves the team to `30,32` and `a` restores it, Right moves to `111,113` and
+  W/S change the frame.
+- Space in the duel pauses at pc `0x13af` with a frozen frame and the prompt
+  按Q退出,按R重来,按其他键继续. `y` resumes the same frame, `r` restarts at
+  `0xce2`, and `n` returns to the title.
+- 地图管理 → 新建一张地图 opens the editor at pc `0x1920` with the pen
+  toolbar (抬笔, 细笔, 画笔). Enter saves through `0x1f7c`, showing the save
+  confirmation at `0x1fae` and returning to the manager. The blank map is
+  written as a 1340-byte `default.wmap` copy with a zeroed cell area and the
+  header `c4 1a 00 00 01 00 00 00 3c 05 00 00 80 00 00 00 01 00 00 00`.
+- Escape while editing opens the quit prompt 保存吗?Y是/N否/R返回编辑; `n`
+  returns to the manager without writing, while `y` rewrites the map with the
+  drawn cells (same path and header, different content).
+- Escape on the title halts with code 0 at pc `0x21ee`.
+- The VS build waits at pc `0x118e` with the same banner and 双人对抗,
+  地图管理, 未开放, 用户管理 entries, mounting `/lavadata/default.wmap`
+  (1340 bytes). The map manager and F5 do not respond on its title.
+- 双人对抗 starts the duel at pc `0x105f` with row-35 columns `39,41,119,121`;
+  `d`/`a` move the active worm, Right/Left move both teams' aims, and Escape
+  opens the exit prompt at `0x10ed`.
+- Enter opens the rematch prompt 再来一局?Y/N at pc `0x11c8`; `y` restarts the
+  duel at `0x105f` with the worms reset, and `n` returns to the title. Escape
+  on the title halts with code 0 at pc `0x11dc`. The VS build writes no files.
+

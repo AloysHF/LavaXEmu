@@ -20470,3 +20470,498 @@ fn platinum_snake_walks_menus_sets_speed_steers_pauses_and_saves_a_score() {
     advance(&mut emulator, 60);
     assert_eq!(emulator.vm().pc(), 0x17f7, "the title returns");
 }
+
+#[test]
+#[ignore = "requires LAVAX_GAME_ROOT with the game corpus"]
+fn instant_worms_builds_walk_menus_edit_maps_and_fight_duels() {
+    let std_path = "LAVA1 百战天虫即时版/天虫即时.lav";
+    let vs_path = "LAVA1 百战天虫即时版/VS版/GVmaker/天虫即时vs.lav";
+    let frame = |emulator: &Emulator| emulator.display().indexed_frame().to_vec();
+    let worms = |emulator: &Emulator| {
+        let stride = usize::from(emulator.display().width());
+        let frame = emulator.display().indexed_frame();
+        (3..157)
+            .filter(|&x| frame[35 * stride + x] != 0)
+            .collect::<Vec<usize>>()
+    };
+    let banner = [
+        0xb0, 0xd9, 0xd5, 0xbd, 0xcc, 0xec, 0xb3, 0xe6, 0xbc, 0xb4, 0xca, 0xb1, 0xb0, 0xe6,
+    ];
+    let contains = |emulator: &Emulator, needle: &[u8]| {
+        emulator
+            .vm()
+            .memory()
+            .windows(needle.len())
+            .any(|window| window == needle)
+    };
+    let open_editor = |emulator: &mut Emulator| {
+        advance(emulator, 300);
+        assert_eq!(emulator.vm().pc(), 0x2063, "the title waits for input");
+        press(emulator, 109);
+        assert_eq!(emulator.vm().pc(), 0x1e41, "m opens the map manager");
+        press(emulator, 98);
+        assert_eq!(emulator.vm().pc(), 0x1920, "a new map opens the editor");
+    };
+
+    let mut emulator = load(std_path);
+    advance(&mut emulator, 300);
+    assert_eq!(emulator.vm().pc(), 0x2063, "the title waits for input");
+    assert_eq!(
+        &emulator.vm().memory()[0x1c06..0x1c14],
+        &banner,
+        "the banner names the game"
+    );
+    assert_eq!(
+        &emulator.vm().memory()[0x1c1e..0x1c26],
+        &[0xcb, 0xab, 0xc8, 0xcb, 0xb6, 0xd4, 0xd5, 0xbd],
+        "the first entry starts a duel"
+    );
+    assert_eq!(
+        &emulator.vm().memory()[0x1c2e..0x1c36],
+        &[0xc8, 0xcb, 0xbb, 0xfa, 0xb6, 0xd4, 0xd5, 0xbd],
+        "the second entry duels the computer"
+    );
+    assert_eq!(
+        &emulator.vm().memory()[0x1c49..0x1c51],
+        &[0xb5, 0xd8, 0xcd, 0xbc, 0xb9, 0xdc, 0xc0, 0xed],
+        "the third entry manages maps"
+    );
+    assert_eq!(
+        &emulator.vm().memory()[0x1c59..0x1c5d],
+        &[0xc7, 0xf3, 0xd6, 0xfa],
+        "the last entry asks for help"
+    );
+    assert_eq!(
+        emulator
+            .files()
+            .file("/wormmap/default.wmap")
+            .map(|map| map.len()),
+        Some(1340),
+        "the stock map is mounted"
+    );
+    capture(&emulator, "instant-worms-title");
+
+    let title = frame(&emulator);
+    press(&mut emulator, 25);
+    assert_eq!(emulator.vm().pc(), 0x2148, "F5 opens the first help page");
+    let help = frame(&emulator);
+    assert_ne!(help, title, "the help covers the title");
+    capture(&emulator, "instant-worms-help");
+    press(&mut emulator, 13);
+    assert_eq!(emulator.vm().pc(), 0x21ce, "a key turns to the second page");
+    assert_ne!(
+        frame(&emulator),
+        help,
+        "the second page differs from the first"
+    );
+    press(&mut emulator, 13);
+    assert_eq!(emulator.vm().pc(), 0x2063, "a key closes the help");
+    assert_eq!(frame(&emulator), title, "the title returns unchanged");
+
+    press(&mut emulator, 98);
+    assert_eq!(emulator.vm().pc(), 0xce2, "the map browser opens");
+    capture(&emulator, "instant-worms-browser");
+    press(&mut emulator, 13);
+    assert_eq!(emulator.vm().pc(), 0x1476, "the duel replays the map");
+    advance(&mut emulator, 60);
+    assert_eq!(emulator.vm().pc(), 0x1423, "the duel waits for orders");
+    let battle = frame(&emulator);
+    advance(&mut emulator, 60);
+    assert_eq!(
+        frame(&emulator),
+        battle,
+        "the duel is idle until orders arrive"
+    );
+    capture(&emulator, "instant-worms-duel");
+    assert_eq!(
+        worms(&emulator),
+        vec![19, 21, 105, 107],
+        "both teams stand on the ground"
+    );
+
+    hold(&mut emulator, 100, 40);
+    assert_eq!(
+        worms(&emulator),
+        vec![30, 32, 105, 107],
+        "d walks the left worm forward"
+    );
+    hold(&mut emulator, 97, 40);
+    assert_eq!(worms(&emulator), vec![19, 21, 105, 107], "a walks it back");
+    hold(&mut emulator, 22, 40);
+    assert_eq!(
+        worms(&emulator),
+        vec![19, 21, 111, 113],
+        "right walks the right worm forward"
+    );
+    hold(&mut emulator, 23, 40);
+    assert_eq!(frame(&emulator), battle, "walking back restores the stand");
+
+    let mut aimed = emulator.clone();
+    hold(&mut aimed, 119, 8);
+    assert_ne!(frame(&aimed), battle, "w raises the aiming cross");
+    let mut lowered = emulator.clone();
+    hold(&mut lowered, 115, 8);
+    assert_ne!(frame(&lowered), battle, "s lowers the aiming cross");
+    let mut jumped = emulator.clone();
+    hold(&mut jumped, 113, 20);
+    assert_eq!(jumped.vm().pc(), 0x1423, "q launches the worm");
+    assert_ne!(frame(&jumped), battle, "the worm leaves the ground");
+
+    let mut fired = emulator.clone();
+    hold(&mut fired, 101, 60);
+    assert_eq!(fired.vm().pc(), 0x1476, "e charges and fires");
+    assert_ne!(frame(&fired), battle, "the shot replaces the field");
+    advance(&mut fired, 120);
+    assert_eq!(fired.vm().pc(), 0x1423, "the field waits after the shot");
+    assert_ne!(frame(&fired), battle, "the shot changes the ground");
+    capture(&fired, "instant-worms-shot");
+
+    let mut paused = emulator.clone();
+    press(&mut paused, 27);
+    assert_eq!(paused.vm().pc(), 0x13af, "escape pauses the duel");
+    assert_ne!(frame(&paused), battle, "the pause dialog covers the field");
+    assert!(
+        contains(
+            &paused,
+            &[
+                0x59, 0xbc, 0xcc, 0xd0, 0xf8, 0x2f, 0x52, 0xd6, 0xd8, 0xc0, 0xb4, 0x2f, 0x4e, 0xb2,
+                0xbb, 0xcd, 0xe6, 0x00,
+            ]
+        ),
+        "the dialog offers continue, restart and quit"
+    );
+    capture(&paused, "instant-worms-pause");
+    press(&mut paused, 121);
+    assert_eq!(paused.vm().pc(), 0x1423, "y resumes the duel");
+    assert_eq!(frame(&paused), battle, "continuing restores the field");
+
+    let mut restarted = emulator.clone();
+    press(&mut restarted, 27);
+    assert_eq!(restarted.vm().pc(), 0x13af, "escape pauses again");
+    press(&mut restarted, 114);
+    assert_eq!(restarted.vm().pc(), 0xce2, "r returns to the map browser");
+    press(&mut restarted, 27);
+    assert_eq!(restarted.vm().pc(), 0x2063, "escape leaves the browser");
+
+    let mut quit = emulator.clone();
+    press(&mut quit, 27);
+    assert_eq!(quit.vm().pc(), 0x13af, "escape pauses the duel");
+    press(&mut quit, 110);
+    assert_eq!(quit.vm().pc(), 0x2063, "n returns to the title");
+    assert!(
+        quit.files_mut().take_dirty_files().is_empty(),
+        "the duel writes nothing"
+    );
+
+    let mut ai = load(std_path);
+    advance(&mut ai, 300);
+    press(&mut ai, 110);
+    assert_eq!(ai.vm().pc(), 0xce2, "the computer duel picks a map");
+    press(&mut ai, 13);
+    assert_eq!(ai.vm().pc(), 0x1476, "the computer duel replays the map");
+    advance(&mut ai, 600);
+    assert_eq!(
+        ai.vm().pc(),
+        0x1484,
+        "the computer duel waits for the player"
+    );
+    capture(&ai, "instant-worms-ai-duel");
+    press(&mut ai, 27);
+    assert_eq!(ai.vm().pc(), 0x14de, "escape leaves the computer duel");
+    assert!(
+        ai.files_mut().take_dirty_files().is_empty(),
+        "the computer duel writes nothing"
+    );
+
+    let mut blank = load(std_path);
+    advance(&mut blank, 300);
+    press(&mut blank, 109);
+    assert_eq!(blank.vm().pc(), 0x1e41, "m opens the map manager");
+    assert!(
+        contains(
+            &blank,
+            &[
+                0xd0, 0xc2, 0xbd, 0xa8, 0xd2, 0xbb, 0xd5, 0xc5, 0xb5, 0xd8, 0xcd, 0xbc,
+            ]
+        ),
+        "the manager offers a new map"
+    );
+    assert!(
+        contains(
+            &blank,
+            &[
+                0xb4, 0xd3, 0xbe, 0xc9, 0xb5, 0xd8, 0xcd, 0xbc, 0xb1, 0xe0, 0xbc, 0xad,
+            ]
+        ),
+        "the manager offers an old map"
+    );
+    capture(&blank, "instant-worms-map-menu");
+    press(&mut blank, 98);
+    assert_eq!(blank.vm().pc(), 0x1920, "a new map opens the editor");
+    assert!(
+        contains(&blank, &[0xcc, 0xa7, 0xb1, 0xca]),
+        "the toolbar starts on the pen-up tool"
+    );
+    assert!(
+        contains(&blank, &[0xcf, 0xb8, 0xb1, 0xca]),
+        "the toolbar lists the thin pen"
+    );
+    assert!(
+        contains(&blank, &[0xbb, 0xad, 0xb1, 0xca]),
+        "the toolbar lists the pen"
+    );
+    capture(&blank, "instant-worms-editor");
+    press(&mut blank, 13);
+    assert_eq!(blank.vm().pc(), 0x1f7c, "enter saves the blank map");
+    capture(&blank, "instant-worms-saved");
+    let saved = blank.files_mut().take_dirty_files();
+    assert_eq!(saved.len(), 1, "the save writes one file");
+    assert_eq!(
+        saved[0].0, "/wormmap/aatbum`li.wmap",
+        "the map is stored in the WormMap folder"
+    );
+    assert_eq!(saved[0].1.len(), 1340, "the saved map keeps the stock size");
+    assert!(
+        saved[0].1[..0x3c].iter().all(|&byte| byte == 0),
+        "the map starts with padding"
+    );
+    assert_eq!(
+        &saved[0].1[0x3c..0x50],
+        &[
+            0xc4, 0x1a, 0x00, 0x00, 0x01, 0x00, 0x00, 0x00, 0x3c, 0x05, 0x00, 0x00, 0x80, 0x00,
+            0x00, 0x00, 0x01, 0x00, 0x00, 0x00,
+        ],
+        "the header records the map size"
+    );
+    press(&mut blank, 13);
+    assert_eq!(blank.vm().pc(), 0x1fae, "enter shows the saved path");
+    press(&mut blank, 13);
+    assert_eq!(blank.vm().pc(), 0x1e41, "enter returns to the manager");
+    press(&mut blank, 27);
+    assert_eq!(blank.vm().pc(), 0x2063, "escape leaves the manager");
+    assert!(
+        blank.files_mut().take_dirty_files().is_empty(),
+        "leaving writes nothing"
+    );
+
+    let mut drawn = load(std_path);
+    open_editor(&mut drawn);
+    assert!(
+        contains(&drawn, &[0xcc, 0xa7, 0xb1, 0xca]),
+        "the editor opens with the same toolbar"
+    );
+    press(&mut drawn, 27);
+    assert_eq!(drawn.vm().pc(), 0x1c56, "escape asks before leaving");
+    assert!(
+        contains(
+            &drawn,
+            &[
+                0xb1, 0xa3, 0xb4, 0xe6, 0xc2, 0xf0, 0xa3, 0xbf, 0x59, 0xca, 0xc7, 0x2f, 0x4e, 0xb7,
+                0xf1, 0x2f, 0x52, 0xb7, 0xb5, 0xbb, 0xd8, 0xb1, 0xe0, 0xbc, 0xad,
+            ]
+        ),
+        "the prompt offers yes, no and return"
+    );
+    capture(&drawn, "instant-worms-quit-prompt");
+    press(&mut drawn, 110);
+    assert_eq!(drawn.vm().pc(), 0x1e41, "no discards the map");
+    assert!(
+        drawn.files_mut().take_dirty_files().is_empty(),
+        "declining writes nothing"
+    );
+    press(&mut drawn, 110);
+    assert_eq!(drawn.vm().pc(), 0xce2, "the manager browses saved maps");
+    press(&mut drawn, 13);
+    assert_eq!(drawn.vm().pc(), 0x1920, "the stock map opens in the editor");
+    hold(&mut drawn, 22, 8);
+    hold(&mut drawn, 21, 8);
+    press(&mut drawn, 103);
+    press(&mut drawn, 27);
+    assert_eq!(drawn.vm().pc(), 0x1c56, "escape asks again");
+    press(&mut drawn, 121);
+    assert_eq!(drawn.vm().pc(), 0x1f7c, "yes saves the edited map");
+    let edited = drawn.files_mut().take_dirty_files();
+    assert_eq!(edited.len(), 1, "the edited map is written once");
+    assert_eq!(
+        edited[0].0, saved[0].0,
+        "the edited map reuses the save path"
+    );
+    assert_eq!(
+        edited[0].1.len(),
+        1340,
+        "the edited map keeps the stock size"
+    );
+    assert_eq!(
+        &edited[0].1[0x3c..0x50],
+        &saved[0].1[0x3c..0x50],
+        "the header stays intact"
+    );
+    assert_ne!(
+        edited[0].1, saved[0].1,
+        "the drawn point changes the saved map"
+    );
+    press(&mut drawn, 13);
+    assert_eq!(drawn.vm().pc(), 0x1fae, "enter shows the saved path");
+    press(&mut drawn, 13);
+    assert_eq!(drawn.vm().pc(), 0x1e41, "enter returns to the manager");
+    press(&mut drawn, 27);
+    assert_eq!(drawn.vm().pc(), 0x2063, "escape leaves the manager");
+
+    let mut halted = None;
+    drawn.input_mut().set_keys([27]);
+    for frame in 0..90 {
+        if frame == 3 {
+            drawn.input_mut().set_keys([]);
+        }
+        if let FrameStatus::Halted(code) = drawn.run_frame().unwrap().status {
+            halted = Some(code);
+            break;
+        }
+    }
+    assert_eq!(halted, Some(0), "escape on the title ends the program");
+    assert_eq!(drawn.vm().pc(), 0x21ee, "the exit path runs");
+
+    let mut emulator = load(vs_path);
+    advance(&mut emulator, 300);
+    assert_eq!(
+        emulator.vm().pc(),
+        0x118e,
+        "the community build waits on its title"
+    );
+    assert_eq!(
+        &emulator.vm().memory()[0x1c06..0x1c14],
+        &banner,
+        "the banner names the same game"
+    );
+    assert_eq!(
+        &emulator.vm().memory()[0x1c1e..0x1c26],
+        &[0xcb, 0xab, 0xc8, 0xcb, 0xb6, 0xd4, 0xd5, 0xbd],
+        "the first entry starts a duel"
+    );
+    assert_eq!(
+        &emulator.vm().memory()[0x1c2e..0x1c36],
+        &[0xb5, 0xd8, 0xcd, 0xbc, 0xb9, 0xdc, 0xc0, 0xed],
+        "the second entry names the map manager"
+    );
+    assert_eq!(
+        &emulator.vm().memory()[0x1c37..0x1c3d],
+        &[0xce, 0xb4, 0xbf, 0xaa, 0xb7, 0xc5],
+        "the map manager is marked closed"
+    );
+    assert_eq!(
+        &emulator.vm().memory()[0x1c49..0x1c51],
+        &[0xd3, 0xc3, 0xbb, 0xa7, 0xb9, 0xdc, 0xc0, 0xed],
+        "the third entry names the user manager"
+    );
+    assert_eq!(
+        emulator
+            .files()
+            .file("/lavadata/default.wmap")
+            .map(|map| map.len()),
+        Some(1340),
+        "the stock map is mounted"
+    );
+    capture(&emulator, "instant-worms-vs-title");
+
+    let title = frame(&emulator);
+    for key in [110, 109, 25] {
+        press(&mut emulator, key);
+        assert_eq!(
+            emulator.vm().pc(),
+            0x118e,
+            "the closed entries stay on the title"
+        );
+        assert_eq!(frame(&emulator), title, "the closed entries draw nothing");
+    }
+    press(&mut emulator, 98);
+    assert_eq!(
+        emulator.vm().pc(),
+        0x105f,
+        "the duel starts without a map browser"
+    );
+    assert_eq!(
+        worms(&emulator),
+        vec![39, 41, 119, 121],
+        "both teams stand closer together"
+    );
+    let battle = frame(&emulator);
+    advance(&mut emulator, 60);
+    assert_eq!(
+        frame(&emulator),
+        battle,
+        "the duel is idle until orders arrive"
+    );
+    capture(&emulator, "instant-worms-vs-duel");
+
+    hold(&mut emulator, 100, 40);
+    assert_eq!(
+        worms(&emulator),
+        vec![50, 52, 119, 121],
+        "d walks the left worm forward"
+    );
+    hold(&mut emulator, 97, 40);
+    assert_eq!(worms(&emulator), vec![39, 41, 119, 121], "a walks it back");
+    hold(&mut emulator, 22, 40);
+    assert_eq!(
+        worms(&emulator),
+        vec![39, 41, 125, 127],
+        "right walks the right worm forward"
+    );
+    hold(&mut emulator, 23, 40);
+    assert_eq!(
+        worms(&emulator),
+        vec![39, 41, 119, 121],
+        "walking back restores the stand"
+    );
+
+    press(&mut emulator, 27);
+    assert_eq!(emulator.vm().pc(), 0x10ed, "escape pauses the duel");
+    press(&mut emulator, 13);
+    assert_eq!(emulator.vm().pc(), 0x11c8, "a key offers a rematch");
+    assert_ne!(
+        frame(&emulator),
+        battle,
+        "the rematch prompt covers the field"
+    );
+    assert!(
+        contains(
+            &emulator,
+            &[
+                0xd4, 0xd9, 0xc0, 0xb4, 0xd2, 0xbb, 0xbe, 0xd6, 0xa3, 0xbf, 0x59, 0x2f, 0x4e, 0x00,
+            ]
+        ),
+        "the prompt asks for another round"
+    );
+    capture(&emulator, "instant-worms-vs-rematch");
+    press(&mut emulator, 121);
+    assert_eq!(emulator.vm().pc(), 0x105f, "yes restarts the duel");
+    assert_eq!(
+        worms(&emulator),
+        vec![39, 41, 119, 121],
+        "the restart resets the field"
+    );
+    press(&mut emulator, 27);
+    assert_eq!(emulator.vm().pc(), 0x10ed, "escape pauses again");
+    press(&mut emulator, 13);
+    assert_eq!(emulator.vm().pc(), 0x11c8, "the rematch prompt returns");
+    press(&mut emulator, 110);
+    assert_eq!(emulator.vm().pc(), 0x118e, "no returns to the title");
+    assert!(
+        emulator.files_mut().take_dirty_files().is_empty(),
+        "the community build writes nothing"
+    );
+
+    let mut halted = None;
+    emulator.input_mut().set_keys([27]);
+    for frame in 0..90 {
+        if frame == 3 {
+            emulator.input_mut().set_keys([]);
+        }
+        if let FrameStatus::Halted(code) = emulator.run_frame().unwrap().status {
+            halted = Some(code);
+            break;
+        }
+    }
+    assert_eq!(halted, Some(0), "escape on the title ends the program");
+    assert_eq!(emulator.vm().pc(), 0x11dc, "the exit path runs");
+}
