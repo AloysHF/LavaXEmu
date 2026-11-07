@@ -3324,3 +3324,29 @@ without an execution error alone does not establish playability.
   pc `0x2f75`, opens the item menu at pc `0x2add`, and confirms with the `A`
   key (`0x61`). Escape leaves the duel through pc `0x3848` back to the title.
 - The game writes no files.
+
+## Biorhythm (LAVA1 生物钟)
+
+- Content: `LAVA1 生物钟/生物钟.lav` as a single file.
+- The birth-date form waits at pc `0x414` with the text buffer at `0x2000`
+  holding `2000\0 01\0 01\0`. The cursor byte `0x2028` starts at 0; typing two
+  digits writes the field and moves the cursor to 7 after a valid year
+  (1900–2020), to 12 after a valid month (1–12), and to 13 after a valid day,
+  which also sets the accepted flag `0x202a` to 1. Invalid years, months and
+  days leave the cursor in their field.
+- Enter on the completed form opens the query form at pc `0x4a0` with the same
+  defaults. A query on or before the birth date shows the refusal screen at pc
+  `0xb0`, and any key halts with code 0 at pc `0x1edd`.
+- Help pages: F5 (`25`) opens page one at pc `0x14f`; Right opens pc `0x21c`
+  then pc `0x2f9` and stops at the last page; Left returns page by page and
+  stops at the first page. Escape returns to the birth or query form.
+- A valid query shows the result screen at pc `0x5b4`. It stores the three
+  percentage strings at `0x2017`, `0x201c` and `0x2021`, the next birthday at
+  `0x2032`/`0x2034`/`0x2036`, the query date at `0x2038`/`0x203a`/`0x203c`
+  and the elapsed day count at `0x203e`. For birth 1990/12/17, the queries
+  1990/12/18 and 1990/12/24 report `25%`/`64%`/`68%` and `83%`/`92%`/`93%`
+  with 366 and 372 elapsed days.
+- F4 (`31`) opens the about screen at pc `0x38a`; any key returns to the result
+  loop at pc `0x1eb8`, and Escape halts with code 0 at pc `0x1edd`. Escape on
+  the birth or query form also halts there.
+- The game writes no files.

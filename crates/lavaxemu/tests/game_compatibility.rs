@@ -18774,3 +18774,232 @@ fn cat_dog_war_2_menus_battle_and_credits() {
         "the game writes nothing"
     );
 }
+
+#[test]
+#[ignore = "requires LAVAX_GAME_ROOT with the game corpus"]
+fn biorhythm_dates_help_results_and_exit() {
+    const PATH: &str = "LAVA1 生物钟/生物钟.lav";
+    const BIRTH: [u8; 9] = [98, 117, 117, 48, 98, 110, 98, 116, 13];
+
+    let mut emulator = load(PATH);
+    let byte = |emulator: &Emulator, address: usize| emulator.vm().memory()[address];
+    let word = |emulator: &Emulator, address: usize| {
+        u16::from_le_bytes(
+            emulator.vm().memory()[address..address + 2]
+                .try_into()
+                .unwrap(),
+        )
+    };
+    advance(&mut emulator, 300);
+    assert_eq!(
+        emulator.vm().pc(),
+        0x414,
+        "the birth date form waits for a key"
+    );
+    assert_eq!(
+        &emulator.vm().memory()[0x2000..0x200b],
+        b"2000\x0001\x0001\x00",
+        "the form starts at 2000/01/01"
+    );
+    capture(&emulator, "biorhythm-birth");
+
+    press(&mut emulator, 25);
+    assert_eq!(emulator.vm().pc(), 0x14f, "the first help page opens");
+    capture(&emulator, "biorhythm-help-1");
+    press(&mut emulator, 22);
+    assert_eq!(emulator.vm().pc(), 0x21c, "the second help page opens");
+    capture(&emulator, "biorhythm-help-2");
+    press(&mut emulator, 22);
+    assert_eq!(emulator.vm().pc(), 0x2f9, "the third help page opens");
+    capture(&emulator, "biorhythm-help-3");
+    press(&mut emulator, 22);
+    assert_eq!(emulator.vm().pc(), 0x2f9, "the last help page stays");
+    press(&mut emulator, 23);
+    assert_eq!(emulator.vm().pc(), 0x21c, "the second help page returns");
+    press(&mut emulator, 23);
+    assert_eq!(emulator.vm().pc(), 0x14f, "the first help page returns");
+    press(&mut emulator, 23);
+    assert_eq!(
+        emulator.vm().pc(),
+        0x14f,
+        "the first page has no previous page"
+    );
+    press(&mut emulator, 27);
+    assert_eq!(
+        emulator.vm().pc(),
+        0x414,
+        "escape returns to the birth form"
+    );
+
+    for key in [98, 121, 117, 117] {
+        press(&mut emulator, key);
+    }
+    assert_eq!(byte(&emulator, 0x2028), 0, "a year before 1900 is rejected");
+    for key in [98, 117, 117, 48] {
+        press(&mut emulator, key);
+    }
+    assert_eq!(
+        byte(&emulator, 0x2028),
+        7,
+        "a valid year moves to the month"
+    );
+    for key in [98, 109] {
+        press(&mut emulator, key);
+    }
+    assert_eq!(byte(&emulator, 0x2028), 7, "a month above 12 is rejected");
+    for key in [98, 110] {
+        press(&mut emulator, key);
+    }
+    assert_eq!(
+        byte(&emulator, 0x2028),
+        12,
+        "a valid month moves to the day"
+    );
+    for key in [109, 110] {
+        press(&mut emulator, key);
+    }
+    assert_eq!(byte(&emulator, 0x2028), 12, "a day above 31 is rejected");
+    for key in [98, 116] {
+        press(&mut emulator, key);
+    }
+    assert_eq!(
+        byte(&emulator, 0x2028),
+        13,
+        "a valid day completes the form"
+    );
+    assert_eq!(byte(&emulator, 0x202a), 1, "the birth date is accepted");
+    assert_eq!(
+        &emulator.vm().memory()[0x2000..0x200b],
+        b"1990\x0012\x0017\x00",
+        "the birth date is stored"
+    );
+    press(&mut emulator, 13);
+    assert_eq!(emulator.vm().pc(), 0x4a0, "the query form waits for a key");
+    assert_eq!(
+        &emulator.vm().memory()[0x2000..0x200b],
+        b"2000\x0001\x0001\x00",
+        "the query form starts at 2000/01/01"
+    );
+    capture(&emulator, "biorhythm-query");
+
+    for key in BIRTH {
+        press(&mut emulator, key);
+    }
+    assert_eq!(
+        emulator.vm().pc(),
+        0xb0,
+        "a query on the birth date is refused"
+    );
+    capture(&emulator, "biorhythm-refused");
+    let mut halted = None;
+    emulator.input_mut().set_keys([32]);
+    for _ in 0..60 {
+        if let FrameStatus::Halted(code) = emulator.run_frame().unwrap().status {
+            halted = Some(code);
+            break;
+        }
+    }
+    emulator.input_mut().set_keys([]);
+    assert_eq!(halted, Some(0), "the refusal ends the program");
+    assert_eq!(emulator.vm().pc(), 0x1edd, "the exit path runs");
+
+    let mut emulator = load(PATH);
+    advance(&mut emulator, 300);
+    for key in BIRTH {
+        press(&mut emulator, key);
+    }
+    assert_eq!(emulator.vm().pc(), 0x4a0, "the query form opens");
+    for key in [98, 117, 117, 48, 98, 110, 98, 121, 13] {
+        press(&mut emulator, key);
+    }
+    assert_eq!(
+        emulator.vm().pc(),
+        0x5b4,
+        "the result screen waits for a key"
+    );
+    assert_eq!(
+        &emulator.vm().memory()[0x2017..0x201c],
+        b"25%\0\0",
+        "the physical cycle is 25 percent"
+    );
+    assert_eq!(
+        &emulator.vm().memory()[0x201c..0x2021],
+        b"64%\0\0",
+        "the emotional cycle is 64 percent"
+    );
+    assert_eq!(
+        &emulator.vm().memory()[0x2021..0x2026],
+        b"68%\0\0",
+        "the intellectual cycle is 68 percent"
+    );
+    assert_eq!(
+        &emulator.vm().memory()[0x2000..0x200b],
+        b"1990\x0012\x0018\x00",
+        "the query date is shown"
+    );
+    assert_eq!(word(&emulator, 0x2032), 1991, "the next birthday year");
+    assert_eq!(word(&emulator, 0x2034), 12, "the next birthday month");
+    assert_eq!(word(&emulator, 0x2036), 17, "the next birthday day");
+    assert_eq!(word(&emulator, 0x2038), 1990, "the query year is stored");
+    assert_eq!(word(&emulator, 0x203a), 12, "the query month is stored");
+    assert_eq!(word(&emulator, 0x203c), 18, "the query day is stored");
+    assert_eq!(word(&emulator, 0x203e), 366, "the elapsed day count");
+    capture(&emulator, "biorhythm-result-18");
+
+    press(&mut emulator, 31);
+    assert_eq!(emulator.vm().pc(), 0x38a, "the about screen opens");
+    capture(&emulator, "biorhythm-about");
+    press(&mut emulator, 13);
+    assert_eq!(
+        emulator.vm().pc(),
+        0x1eb8,
+        "the result loop resumes behind the about screen"
+    );
+    let mut halted = None;
+    emulator.input_mut().set_keys([27]);
+    for _ in 0..60 {
+        if let FrameStatus::Halted(code) = emulator.run_frame().unwrap().status {
+            halted = Some(code);
+            break;
+        }
+    }
+    emulator.input_mut().set_keys([]);
+    assert_eq!(halted, Some(0), "escape on the result ends the program");
+    assert_eq!(emulator.vm().pc(), 0x1edd, "the exit path runs");
+
+    let mut emulator = load(PATH);
+    advance(&mut emulator, 300);
+    for key in BIRTH {
+        press(&mut emulator, key);
+    }
+    for key in [98, 117, 117, 48, 98, 110, 110, 103, 13] {
+        press(&mut emulator, key);
+    }
+    assert_eq!(
+        emulator.vm().pc(),
+        0x5b4,
+        "the second result screen waits for a key"
+    );
+    assert_eq!(&emulator.vm().memory()[0x2017..0x201c], b"83%\0\0");
+    assert_eq!(&emulator.vm().memory()[0x201c..0x2021], b"92%\0\0");
+    assert_eq!(&emulator.vm().memory()[0x2021..0x2026], b"93%\0\0");
+    assert_eq!(word(&emulator, 0x203e), 372, "the elapsed day count grows");
+    capture(&emulator, "biorhythm-result-24");
+
+    let mut emulator = load(PATH);
+    advance(&mut emulator, 300);
+    for _ in 0..3 {
+        emulator.input_mut().set_keys([27]);
+        emulator.run_frame().unwrap();
+    }
+    emulator.input_mut().set_keys([]);
+    let mut halted = None;
+    for _ in 0..60 {
+        if let FrameStatus::Halted(code) = emulator.run_frame().unwrap().status {
+            halted = Some(code);
+            break;
+        }
+    }
+    assert_eq!(halted, Some(0), "escape on the birth form ends the program");
+    assert_eq!(emulator.vm().pc(), 0x1edd, "the exit path runs");
+}

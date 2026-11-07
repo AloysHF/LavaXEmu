@@ -56,9 +56,10 @@ do not satisfy this status.
 - Crawler Continent Chronicle checked on 2026-11-08: one dedicated release workflow loads the title art and loading screen, waits through the auto-playing prologue, opens the dialogue and advances three pages with the script pointer, skips the rest with Escape, reaches the animated logo, and holds a key to exit with code 0 without writing files. The package contains only the prologue and logo, with no menu or gameplay entry.
 - Bomb Man checked on 2026-11-08: one dedicated release workflow waits out the countdown and title animation, walks the title, mode and map screens, checks the two-player/single-player toggle and the four-map wrap, plays a solo bomb to the failure and credits screens, and plays a duel bomb to player one's win and credits with halt code 0 without writing files.
 - Cat-Dog War 2 checked on 2026-11-08: one dedicated release workflow walks the help and key-guide pages, checks the three difficulty settings and their CPU power values, opens the single-player arena, item and combat menus with wrapping item selection, charges a strike until the opponent's HP drops, leaves through the exit and credits screens with halt code 0, then opens the two-player arena, both players' menus and item selection, and returns to the title without writing files.
-- 162 dedicated release workflows passed in this audit.
-- 231 of 324 entry points were loaded by those successful workflows.
-- 93 entry points still need dedicated workflow verification.
+- Biorhythm checked on 2026-11-08: one dedicated release workflow opens the birth-date form with its 2000/01/01 default, walks the three help pages with clamped ends and returns with Escape, rejects a year before 1900, a month above 12 and a day above 31 while accepting 1990/12/17, opens the query form with the same defaults, refuses a query on the birth date, reports 25/64/68 and 83/92/93 percent for the 1990/12/18 and 1990/12/24 queries with the next birthday and elapsed day counts, opens the about page, and halts with code 0 from the birth, refusal and result screens without writing files.
+- 163 dedicated release workflows passed in this audit.
+- 232 of 324 entry points were loaded by those successful workflows.
+- 92 entry points still need dedicated workflow verification.
 - The historical [startup gallery](Game-Compatibility.md) is a separate check
   and must not be interpreted as this workflow audit.
 
@@ -297,7 +298,7 @@ an optional screenshot directory. Keep each test's logs and captures separate.
 | 215 | `LAVA1 版炸弹人/BomB.lav` | Game / game package | [Workflow passed: `bomb_man_splash_menus_solo_failure_and_duel_win`](../crates/lavaxemu/tests/game_compatibility.rs#L18448) |
 | 216 | `LAVA1 猫狗大战2/猫狗大战Ⅱ.lav` | Game / game package | [Workflow passed: `cat_dog_war_2_menus_battle_and_credits`](../crates/lavaxemu/tests/game_compatibility.rs#L18583) |
 | 217 | `LAVA1 生死时速II/生死时速Ⅱ（修改版）.lav` | Game / game package | [Workflow passed: `modified_speed_racing_steers_and_returns_from_the_score_screen`](../crates/lavaxemu/tests/game_compatibility.rs#L601) |
-| 218 | `LAVA1 生物钟/生物钟.lav` | Utility / education | Pending |
+| 218 | `LAVA1 生物钟/生物钟.lav` | Utility / education | [Workflow passed: `biorhythm_dates_help_results_and_exit`](../crates/lavaxemu/tests/game_compatibility.rs#L18780) |
 | 219 | `LAVA1 疯狂F2/F2.lav` | Game / game package | [Workflow passed: `crazy_f2_counts_presses_and_finishes_the_timed_round`](../crates/lavaxemu/tests/game_compatibility.rs#L499) |
 | 220 | `LAVA1 疯狂弹球/疯狂弹球.pac` | Game / game package | [Workflow passed: `crazy_ball_packaged_and_loose_versions_load_the_stage_and_move_the_paddle`](../crates/lavaxemu/tests/game_compatibility.rs#L1096) |
 | 221 | `LAVA1 疯狂弹球/非pac/crazyball.lav` | Game / game package | [Workflow passed: `crazy_ball_packaged_and_loose_versions_load_the_stage_and_move_the_paddle`](../crates/lavaxemu/tests/game_compatibility.rs#L1096) |
