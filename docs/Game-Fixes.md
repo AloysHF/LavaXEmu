@@ -3641,3 +3641,37 @@ without an execution error alone does not establish playability.
   type a deal number and Enter loads it through `0x2c0`. The `c` key opens
   the TIMES input at `0x1df` and Enter stores the typed value. The game
   writes no files. No additional emulator changes were required.
+
+
+## SpaceWar (LAVA1 空间战争)
+
+- Content: `LAVA1 空间战争/SpaceWar.lav`, a single Bits16 program that draws
+  a 160x80 vertical shooter and loads its title artwork from the companion
+  image file.
+- The splash waits at pc `0x180a`; any key opens the speed menu at
+  `0x1843`. The speed word at `0x2000` starts at zero, Down and Right
+  increment it modulo three, Up and Left decrement it with the same wrap,
+  and Enter starts the stage. Escape halts with code 0 at `0x18c8`.
+- The stage initialiser at `0x116f` stores stage one at `0x2099`, five
+  lives at `0x209b`, the ship at `(0x2027, 0x2029) = (40, 60)`, and clears
+  the player-bullet count at `0x202b`, the enemy count at `0x2045`, and the
+  enemy-bullet count at `0x2067`.
+- The letter keys steer the ship: `q`, `a`, `s` and `z` move up, left,
+  right and down at one pixel per frame. The ship clamps to `x` in
+  `10..=124` and `y` in `20..=62`.
+- Enter spawns a player bullet in the first free slot of the count at
+  `0x202b`. Slot flags start at `0x202d`, x at `0x2035` and y at `0x203d`,
+  each two bytes apart. A bullet from the starting ship appears at
+  `(46, 28)` and climbs until its y drops below ten, which frees the slot.
+- Enemy slots use flags at `0x2047`, x at `0x204f` and y at `0x2057`. The
+  hit test near `0x1661` compares each player bullet against each enemy
+  and, on a hit, clears both slots, runs the explosion, and increments the
+  score at `0x209d`. Three, five and six shots score one, two and three
+  kills. The stage text `STAGE 1` sits at `0x2018`, and the five score
+  digits are written to `0x2011..=0x2015`.
+- Enemies that reach the ship take one life each. When the last life is
+  gone the game shows the farewell screen at `0x19a3`; Enter acknowledges
+  it at `0x19a5`, returns to the splash at `0x180a`, and another Enter
+  reopens the speed menu at `0x1843` with the speed reset to zero.
+- The game only reads its companion image and text and writes no files.
+  No additional emulator changes were required.

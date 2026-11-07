@@ -21918,3 +21918,146 @@ fn freecell_deals_moves_cards_and_walks_the_menus() {
         "the dialogs write nothing"
     );
 }
+
+#[test]
+#[ignore = "requires LAVAX_GAME_ROOT with the game corpus"]
+fn space_war_walks_the_speed_menu_and_fights_the_first_wave() {
+    let path = "LAVA1 空间战争/SpaceWar.lav";
+    let stage = |e: &Emulator| e.vm().memory()[0x2099];
+    let lives = |e: &Emulator| e.vm().memory()[0x209b];
+    let score = |e: &Emulator| e.vm().memory()[0x209d];
+    let ship = |e: &Emulator| (e.vm().memory()[0x2027], e.vm().memory()[0x2029]);
+    let bullets = |e: &Emulator| e.vm().memory()[0x202b];
+    let start = |e: &mut Emulator| {
+        advance(e, 30);
+        press(e, 13);
+        press(e, 13);
+        advance(e, 80);
+        assert_eq!(e.vm().pc(), 0x1164, "the first stage is running");
+    };
+
+    let mut title = load(path);
+    advance(&mut title, 30);
+    assert_eq!(title.vm().pc(), 0x180a, "the splash waits for a key");
+    press(&mut title, 13);
+    assert_eq!(title.vm().pc(), 0x1843, "the key opens the speed menu");
+    assert_eq!(title.vm().memory()[0x2000], 0, "the default speed is zero");
+    press(&mut title, 21);
+    assert_eq!(title.vm().memory()[0x2000], 1, "down raises the speed");
+    press(&mut title, 22);
+    assert_eq!(title.vm().memory()[0x2000], 2, "right also raises it");
+    press(&mut title, 21);
+    assert_eq!(title.vm().memory()[0x2000], 0, "raising wraps to zero");
+    press(&mut title, 20);
+    assert_eq!(title.vm().memory()[0x2000], 2, "up lowers it with wrap");
+    press(&mut title, 23);
+    assert_eq!(title.vm().memory()[0x2000], 1, "left also lowers it");
+    let mut halt = None;
+    for frame in 0..90 {
+        title.input_mut().set_keys([27]);
+        if frame == 3 {
+            title.input_mut().set_keys([]);
+        }
+        if let FrameStatus::Halted(code) = title.run_frame().unwrap().status {
+            halt = Some(code);
+            break;
+        }
+    }
+    assert_eq!(halt, Some(0), "escape exits from the speed menu");
+    assert_eq!(title.vm().pc(), 0x18c8);
+
+    let mut wave = load(path);
+    start(&mut wave);
+    assert_eq!(stage(&wave), 1);
+    assert_eq!(lives(&wave), 5);
+    assert_eq!(ship(&wave), (40, 60));
+    assert_eq!(bullets(&wave), 0, "no bullet is in flight");
+    assert_eq!(
+        &wave.vm().memory()[0x2018..0x201f],
+        b"STAGE 1",
+        "the hud names the stage"
+    );
+
+    let mut left = load(path);
+    start(&mut left);
+    hold(&mut left, 97, 70);
+    assert_eq!(ship(&left), (10, 60), "the ship stops at the left edge");
+
+    let mut right = load(path);
+    start(&mut right);
+    hold(&mut right, 115, 100);
+    assert_eq!(ship(&right), (124, 60), "the ship stops at the right edge");
+
+    let mut up = load(path);
+    start(&mut up);
+    hold(&mut up, 113, 80);
+    assert_eq!(ship(&up), (40, 20), "the ship stops at the top edge");
+
+    let mut down = load(path);
+    start(&mut down);
+    hold(&mut down, 122, 40);
+    assert_eq!(ship(&down), (40, 62), "the ship stops at the bottom edge");
+
+    let mut shot = load(path);
+    start(&mut shot);
+    press(&mut shot, 13);
+    assert_eq!(shot.vm().pc(), 0xf47);
+    assert_eq!(bullets(&shot), 1);
+    assert_eq!(shot.vm().memory()[0x202d], 1, "the first slot fires");
+    assert_eq!(
+        (shot.vm().memory()[0x2035], shot.vm().memory()[0x203d]),
+        (46, 28),
+        "the bullet leaves the ship's nose"
+    );
+    advance(&mut shot, 10);
+    assert_eq!(shot.vm().memory()[0x203d], 26, "the bullet climbs");
+    advance(&mut shot, 50);
+    assert_eq!(bullets(&shot), 0, "the bullet leaves the screen");
+    assert_eq!(shot.vm().memory()[0x202d], 0, "the slot is freed");
+
+    let mut three = load(path);
+    start(&mut three);
+    for _ in 0..3 {
+        press(&mut three, 13);
+    }
+    assert_eq!(three.vm().pc(), 0x116e);
+    assert_eq!(score(&three), 1, "three shots down one enemy");
+    assert_eq!(stage(&three), 1);
+    assert_eq!(
+        &three.vm().memory()[0x2011..0x2016],
+        b"00001",
+        "the hud shows the kill"
+    );
+    let mut five = load(path);
+    start(&mut five);
+    for _ in 0..5 {
+        press(&mut five, 13);
+    }
+    assert_eq!(score(&five), 2, "five shots down two enemies");
+    assert_eq!(five.vm().memory()[0x2015], b'2');
+
+    let mut six = load(path);
+    start(&mut six);
+    for _ in 0..6 {
+        press(&mut six, 13);
+    }
+    assert_eq!(score(&six), 3, "six shots down three enemies");
+    assert_eq!(lives(&six), 0, "the last life is already gone");
+
+    let mut over = load(path);
+    start(&mut over);
+    advance(&mut over, 400);
+    assert_eq!(over.vm().pc(), 0x19a3, "the wave ends in game over");
+    assert_eq!(lives(&over), 0);
+    press(&mut over, 13);
+    assert_eq!(over.vm().pc(), 0x19a5, "the first key is acknowledged");
+    press(&mut over, 13);
+    assert_eq!(over.vm().pc(), 0x180a, "the splash returns");
+    press(&mut over, 13);
+    assert_eq!(over.vm().pc(), 0x1843, "the speed menu returns");
+    assert_eq!(over.vm().memory()[0x2000], 0, "the speed resets");
+    assert!(
+        over.files_mut().take_dirty_files().is_empty(),
+        "the game writes no files"
+    );
+}
