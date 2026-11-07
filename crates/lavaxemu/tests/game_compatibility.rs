@@ -14034,3 +14034,72 @@ fn down_hundred_floors_steers_and_reaches_game_over() {
     assert_eq!(idle.vm().pc(), 0x1a1a, "the run ends in game over");
     capture(&idle, "down100-game-over");
 }
+
+#[test]
+#[ignore = "requires the local game corpus via LAVAX_GAME_ROOT"]
+fn hold_twenty_seconds_moves_the_player_and_shows_the_result() {
+    let mut emulator = load("LAVA1 是男人就撑20秒正式版/是男人就撑20秒正式版.lav");
+    advance(&mut emulator, 300);
+    assert!(
+        matches!(emulator.vm().pc(), 0x1ec6 | 0x1fcd),
+        "the title menu waits for a key"
+    );
+    capture(&emulator, "hold20-title");
+    press(&mut emulator, 13);
+    assert_eq!(emulator.vm().pc(), 0x1bdb, "Enter starts a survival run");
+    capture(&emulator, "hold20-run");
+
+    let mut still = emulator.clone();
+    advance(&mut still, 50);
+    let mut positions = Vec::new();
+    for key in [20, 21, 22, 23] {
+        let mut steered = emulator.clone();
+        hold(&mut steered, key, 20);
+        capture(&steered, &format!("hold20-{key}"));
+        let frame = steered.display().indexed_frame().to_vec();
+        assert!(
+            frame != still.display().indexed_frame(),
+            "each arrow key moves the player away from its idle position"
+        );
+        positions.push(frame);
+    }
+    for (index, frame) in positions.iter().enumerate() {
+        for other in &positions[index + 1..] {
+            assert_ne!(
+                frame, other,
+                "the four arrow keys move the player to different positions"
+            );
+        }
+    }
+
+    let mut run = emulator.clone();
+    for _ in 0..500 {
+        if run.vm().pc() == 0x1665 {
+            break;
+        }
+        run.input_mut().set_keys([20]);
+        advance(&mut run, 1);
+    }
+    run.input_mut().set_keys([]);
+    assert_eq!(
+        run.vm().pc(),
+        0x1665,
+        "steering into the falling field ends the run"
+    );
+    capture(&run, "hold20-result");
+    press(&mut run, 13);
+
+    let mut resumed = false;
+    for _ in 0..600 {
+        if run.vm().pc() == 0x1bdb {
+            resumed = true;
+            break;
+        }
+        advance(&mut run, 1);
+    }
+    assert!(
+        resumed,
+        "a new run starts after the result is shown (pc {:#x})",
+        run.vm().pc()
+    );
+}

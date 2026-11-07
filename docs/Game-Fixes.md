@@ -2669,3 +2669,18 @@ without an execution error alone does not establish playability.
   horizontally; Up and Down leave the rendered frame unchanged at this point.
 - Leaving the run unattended ends it at pc `0x1a1a` with a GAME OVER screen.
 - No additional emulator behavior changes were required.
+
+## Hold 20 Seconds (是男人就撑20秒正式版)
+
+- Content: `LAVA1 是男人就撑20秒正式版/是男人就撑20秒正式版.lav`.
+- Startup-only evidence had not covered the menu, the run or the result flow.
+- The title menu (start, settings, recordings, ranking, exit) loops between
+  pc `0x1ec6` and `0x1fcd`. `Enter` starts a survival run at pc `0x1bdb`.
+- The player is a four-pixel square in a field of falling particles. Each arrow
+  key moves it one pixel per poll; holding for at least 20 frames produces four
+  distinct positions, while shorter taps leave the frame unchanged.
+- Steering into a particle ends the run and shows the survived-time overlay at
+  pc `0x1665`, which waits for a key. Another `Enter` returns to the run at
+  pc `0x1bdb`.
+- The level shown in this scene is `L:2`; how the level value advances and what
+  the settings, recording and ranking menus do remain unverified.
