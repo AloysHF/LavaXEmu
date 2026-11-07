@@ -2514,3 +2514,26 @@ without an execution error alone does not establish playability.
 - `O` fades the board out and halts the program.
 - Level completion, auto-save, scoring, the remaining levels, and WASD input
   remain unverified.
+
+## Billiards (撞球高手)
+
+- Content: `LAVA1 撞球高手/撞球高手.lav`.
+- Startup-only evidence had not covered a rack. No emulator runtime defect was
+  reproduced.
+- A dedicated release workflow opens the game from its title screen, then
+  accepts the level banner. The first rack is deterministic even though the
+  banner is labelled as a random level: the seven balls are stored at `0x2000 +
+  index * 8` as 8.8 fixed-point coordinates, with the cue as index 0.
+- The workflow checks every rack coordinate, the full shot clock (`0x20b0`,
+  starting at 149), the zero score, and the starting aim cursor (`0x20b6`,
+  `0x20b8`). The left/right and up/down arrows turn the aim in steps of two,
+  and `A`/`D`/`W`/`S` mirror them.
+- A rightward shot moves the cue five pixels, writes the shot vector to
+  `0x2098`, sets the power field at `0x209c`, and spends two seconds. The slide
+  animation advances on key input rather than on idle frames: the workflow
+  presses a key to finish the shot and observes the power field settle at 1.
+- Escape returns from the board to the title without halting, and a second
+  Escape on the title leaves the program.
+- Only the first rack, the aim controls, one shot direction, and the quit path
+  are verified. Collisions, pockets, scoring, the remaining shot powers, and
+  later racks remain unverified.

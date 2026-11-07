@@ -13148,3 +13148,130 @@ fn porter_pushes_crates_uses_a_bomb_and_restores_board_state() {
     assert!(!emulator.vm().is_running());
     capture(&emulator, "porter-exit");
 }
+
+#[test]
+#[ignore = "requires the local game corpus via LAVAX_GAME_ROOT"]
+fn billiards_racks_aims_fires_and_quits_from_the_title() {
+    fn word(emulator: &Emulator, address: usize) -> u16 {
+        let memory = emulator.vm().memory();
+        u16::from_le_bytes([memory[address], memory[address + 1]])
+    }
+    fn tap(emulator: &mut Emulator, key: u8) {
+        emulator.input_mut().set_keys([key]);
+        advance(emulator, 3);
+        emulator.input_mut().release_all();
+        advance(emulator, 120);
+    }
+    let mut emulator = load("LAVA1 撞球高手/撞球高手.lav");
+    advance(&mut emulator, 360);
+    tap(&mut emulator, 13);
+    assert_eq!(
+        emulator.vm().pc(),
+        0x25f8,
+        "the level banner waits for a key"
+    );
+    assert_eq!(emulator.vm().memory()[0x20a4], 11);
+    capture(&emulator, "billiards-banner");
+
+    tap(&mut emulator, 13);
+    for (index, (x, y)) in [
+        (0x1064, 0x134b),
+        (0x2580, 0x2361),
+        (0x6e0a, 0x3bfb),
+        (0x551f, 0x1394),
+        (0x20e3, 0x21bb),
+        (0x2929, 0x2fdc),
+        (0x1e6a, 0x179d),
+    ]
+    .iter()
+    .enumerate()
+    {
+        assert_eq!(word(&emulator, 0x2000 + index * 8), *x);
+        assert_eq!(word(&emulator, 0x2004 + index * 8), *y);
+    }
+    assert_eq!(word(&emulator, 0x20b0), 149, "the shot clock starts full");
+    assert_eq!(
+        word(&emulator, 0x20b6),
+        16,
+        "the aim starts on the cue ball"
+    );
+    assert_eq!(word(&emulator, 0x20b8), 19);
+    assert_eq!(
+        emulator.vm().memory()[0x20c5],
+        b'0',
+        "the score starts at zero"
+    );
+    capture(&emulator, "billiards-rack");
+
+    tap(&mut emulator, 22);
+    assert_eq!(word(&emulator, 0x20b6), 18, "right turns the aim");
+    tap(&mut emulator, 23);
+    assert_eq!(word(&emulator, 0x20b6), 16);
+    tap(&mut emulator, 20);
+    assert_eq!(word(&emulator, 0x20b8), 17, "up raises the aim");
+    tap(&mut emulator, 21);
+    assert_eq!(word(&emulator, 0x20b8), 19);
+    tap(&mut emulator, b'd');
+    assert_eq!(word(&emulator, 0x20b6), 18, "D mirrors the right arrow");
+    tap(&mut emulator, b'a');
+    assert_eq!(word(&emulator, 0x20b6), 16);
+    tap(&mut emulator, b'w');
+    assert_eq!(word(&emulator, 0x20b8), 17, "W mirrors the up arrow");
+    tap(&mut emulator, b's');
+    assert_eq!(word(&emulator, 0x20b8), 19);
+    capture(&emulator, "billiards-aim");
+
+    tap(&mut emulator, 22);
+    tap(&mut emulator, 22);
+    assert_eq!(word(&emulator, 0x20b6), 20);
+    let clock = word(&emulator, 0x20b0);
+    tap(&mut emulator, 32);
+    assert_eq!(
+        (word(&emulator, 0x2000), word(&emulator, 0x2004)),
+        (0x1564, 0x134b),
+        "the cue ball rolls five pixels to the right"
+    );
+    assert_eq!(word(&emulator, 0x2098), 0x3ebb);
+    assert_eq!(emulator.vm().memory()[0x209c], 9, "the shot spends power");
+    assert_eq!(
+        word(&emulator, 0x20b0),
+        clock - 2,
+        "each action costs two seconds"
+    );
+    capture(&emulator, "billiards-shot");
+
+    tap(&mut emulator, 13);
+    assert_eq!(
+        word(&emulator, 0x20b0),
+        clock - 4,
+        "the clock keeps ticking"
+    );
+    assert_eq!(
+        emulator.vm().memory()[0x209c],
+        1,
+        "a key press finishes the shot animation"
+    );
+    capture(&emulator, "billiards-settled");
+
+    tap(&mut emulator, 27);
+    assert_eq!(
+        emulator.vm().memory()[0x20a4],
+        14,
+        "escape returns to the title"
+    );
+    assert!(emulator.vm().is_running());
+    capture(&emulator, "billiards-title");
+
+    emulator.input_mut().set_keys([27]);
+    let mut halted = false;
+    for _ in 0..120 {
+        let result = emulator.run_frame().expect("the title screen must execute");
+        if matches!(result.status, FrameStatus::Halted(_)) {
+            halted = true;
+            break;
+        }
+    }
+    emulator.input_mut().release_all();
+    assert!(halted, "escape on the title leaves the program");
+    assert!(!emulator.vm().is_running());
+}
