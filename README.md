@@ -178,6 +178,8 @@ Plane Shooter reaches single-player practice and has a workflow for board
 cursor movement, selection and the in-game exit confirmation.
 Minesweeper has a workflow for opening cells, toggling a mark, moving the
 selection, and returning to the difficulty menu.
+Wrist Wrestling has a workflow for fighter selection, rapid strength input,
+starting, pausing and resuming a single-player match.
 
 ## Usage
 

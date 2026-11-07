@@ -11828,7 +11828,7 @@ fn plane_shooter_enters_practice_and_accepts_board_controls() {
         e.input_mut().release_all();
         e.input_mut().set_keys([key]);
         advance(e, 1);
-        e.input_mut().release_all();
+        e.input_mut().set_keys([]);
         advance(e, 59);
     }
     fn region(e: &Emulator, x0: usize, x1: usize, y0: usize, y1: usize) -> Vec<u8> {
@@ -12013,4 +12013,124 @@ fn minesweeper_opens_cells_marks_and_moves_on_the_board() {
         "Escape must return to the difficulty menu"
     );
     capture(&returned, "minesweeper-back-to-difficulty");
+}
+
+#[test]
+#[ignore = "requires the local game corpus via LAVAX_GAME_ROOT"]
+fn wrist_wrestling_selects_a_fighter_and_responds_to_gameplay_input() {
+    fn tap(e: &mut Emulator, key: u8) {
+        e.input_mut().release_all();
+        e.input_mut().set_keys([key]);
+        advance(e, 1);
+        e.input_mut().set_keys([]);
+        advance(e, 59);
+    }
+    fn region(e: &Emulator, x0: usize, x1: usize, y0: usize, y1: usize) -> Vec<u8> {
+        let width = usize::from(e.display().width());
+        e.display()
+            .indexed_frame()
+            .chunks_exact(width)
+            .skip(y0)
+            .take(y1 - y0)
+            .flat_map(|row| row[x0..x1].iter().copied())
+            .collect()
+    }
+
+    let path = fixture_path_with_size("扳手腕.lav", Some(8_744));
+    let mut splash = load(&path);
+    advance(&mut splash, 1200);
+    assert_eq!(splash.vm().pc(), 0x0d84);
+    assert!(
+        splash
+            .display()
+            .indexed_frame()
+            .iter()
+            .any(|&pixel| pixel != splash.display().indexed_frame()[0]),
+        "the studio logo must render"
+    );
+    capture(&splash, "wrist-wrestling-splash");
+
+    let mut menu = splash;
+    tap(&mut menu, 13);
+    advance(&mut menu, 1200);
+    assert_eq!(menu.vm().pc(), 0x0edc);
+    capture(&menu, "wrist-wrestling-mode-menu");
+
+    let mut character = menu.clone();
+    tap(&mut character, 13);
+    assert_eq!(character.vm().pc(), 0x1371);
+    capture(&character, "wrist-wrestling-character-selection");
+
+    let mut character_idle = character.clone();
+    advance(&mut character_idle, 60);
+    let mut next_character = character.clone();
+    tap(&mut next_character, 22);
+    assert_ne!(
+        region(&next_character, 10, 150, 8, 70),
+        region(&character_idle, 10, 150, 8, 70),
+        "the character selector must respond to a horizontal direction"
+    );
+    capture(&next_character, "wrist-wrestling-next-character");
+
+    let mut previous_character = next_character;
+    tap(&mut previous_character, 23);
+    let mut character_after_two_inputs = character.clone();
+    advance(&mut character_after_two_inputs, 120);
+    assert_eq!(
+        region(&previous_character, 10, 150, 8, 70),
+        region(&character_after_two_inputs, 10, 150, 8, 70),
+        "the opposite direction must return to the original fighter"
+    );
+    capture(&previous_character, "wrist-wrestling-previous-character");
+
+    let mut difficulty = character;
+    tap(&mut difficulty, 13);
+    assert_eq!(difficulty.vm().pc(), 0x1531);
+    capture(&difficulty, "wrist-wrestling-difficulty");
+
+    let mut paused_at_start = difficulty;
+    tap(&mut paused_at_start, 13);
+    assert_eq!(paused_at_start.vm().pc(), 0x1860);
+    capture(&paused_at_start, "wrist-wrestling-ready");
+
+    let mut active = paused_at_start.clone();
+    tap(&mut active, 32);
+    assert_eq!(active.vm().pc(), 0x17d8);
+    assert_ne!(
+        region(&active, 50, 115, 24, 52),
+        region(&paused_at_start, 50, 115, 24, 52),
+        "Space must start the paused match"
+    );
+    capture(&active, "wrist-wrestling-active");
+
+    let mut idle = active.clone();
+    advance(&mut idle, 60);
+    let mut paused = active.clone();
+    tap(&mut paused, b'p');
+    assert_eq!(paused.vm().pc(), 0x1860);
+    assert_ne!(
+        region(&paused, 50, 115, 24, 52),
+        region(&idle, 50, 115, 24, 52),
+        "P must display the pause state"
+    );
+    capture(&paused, "wrist-wrestling-paused");
+
+    let mut resumed = paused;
+    tap(&mut resumed, 32);
+    assert_eq!(resumed.vm().pc(), 0x17d8);
+    capture(&resumed, "wrist-wrestling-resumed");
+
+    let mut mashing = active;
+    for _ in 0..30 {
+        mashing.input_mut().set_keys([13]);
+        advance(&mut mashing, 1);
+        mashing.input_mut().set_keys([]);
+        advance(&mut mashing, 1);
+    }
+    assert_ne!(
+        region(&mashing, 15, 112, 55, 72),
+        region(&idle, 15, 112, 55, 72),
+        "rapid Enter presses must move the visible strength bar"
+    );
+    capture(&mashing, "wrist-wrestling-enter-mashing");
 }

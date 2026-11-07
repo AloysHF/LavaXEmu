@@ -2377,3 +2377,14 @@ without an execution error alone does not establish playability.
   selection.
 - Other difficulty settings, a complete round, and win/loss results remain
   unverified.
+
+## Wrist Wrestling (扳手腕)
+
+- Startup-only evidence had not covered a match. No emulator runtime defect was
+  reproduced.
+- A dedicated release workflow enters single-player mode, cycles fighter
+  selection in both directions, selects the default difficulty, starts and
+  pauses the match, resumes it, and compares rapid Enter input with an idle
+  clone to verify the strength bar responds.
+- Two-player behavior, other difficulties, hidden fighter codes, and complete
+  match outcomes remain unverified.
