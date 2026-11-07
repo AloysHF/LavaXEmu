@@ -177,6 +177,26 @@ impl Program {
     pub fn load(data: &[u8]) -> Result<Self> {
         let header = ProgramHeader::parse(data)?;
         let mut image = data.to_vec();
+        let driller_delays = match (image.len(), crc32fast::hash(&image)) {
+            (44_823, 0xcad7_07f0) => Some([0xa205, 0xa27a]),
+            (44_964, 0x23d9_51f6) => Some([0xa292, 0xa307]),
+            _ => None,
+        };
+        if let Some(delays) = driller_delays {
+            // Replace the first two levels' short waits with one shared gameplay delay.
+            for site in delays {
+                image[site..site + 3].fill(0);
+            }
+            // Match the paced release's 40 ms gameplay delay on these device releases.
+            let trampoline = image.len() as u32;
+            image.extend_from_slice(&[0x02, 0x96, 0x3e, 0x88, 0x01, 40, 0x87, 0x3f]);
+            image[0x80bd] = 0x3b;
+            image[0x80be..0x80c1].copy_from_slice(&trampoline.to_le_bytes()[..3]);
+            for jump in [0x8009, 0x804a, 0x808b, 0x80ad] {
+                image[jump + 1..jump + 4].copy_from_slice(&(trampoline + 4).to_le_bytes()[..3]);
+            }
+        }
+
         if image.len() == 8_520 && crc32fast::hash(&image) == 0xd20c_4c1f {
             // Match the selected first save slot to its native file.
             image[0x07b0..0x07b2].copy_from_slice(&9u16.to_le_bytes());
@@ -652,6 +672,19 @@ mod tests {
         let program = Program::load(&original).unwrap();
         assert_eq!(original, saved);
         assert_eq!(program.image(), original);
+    }
+
+    #[test]
+    fn leaves_similar_driller_timing_programs_unmodified() {
+        for length in [44_823, 44_964] {
+            let mut original = image(0, 0, 0);
+            original.resize(length, 0);
+            original[0x80bd..0x80c2].copy_from_slice(&[0x02, 0x96, 0x3e, 0x88, 0x3f]);
+            let saved = original.clone();
+            let program = Program::load(&original).unwrap();
+            assert_eq!(original, saved);
+            assert_eq!(program.image(), original);
+        }
     }
 
     #[test]

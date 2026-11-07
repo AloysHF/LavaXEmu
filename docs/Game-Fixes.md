@@ -2265,3 +2265,23 @@ without an execution error alone does not establish playability.
 - The previously supported save-space repair also retains its two-slot regression.
   Later areas, other battles, equipment crafting and the ending remain unverified.
   Game content, save files and captures are not distributed.
+
+## Power Driller (强力钻土机)
+
+- Two device releases omit the paced release's shared 40 ms gameplay wait and
+  use short per-level waits instead. A deterministic 180-frame idle check shows
+  90 updates in those releases versus 45 in the paced release. Restore the
+  shared wait across all drawing returns and remove the two superseded short
+  waits, restricted by the two program length/CRC fingerprints. Keep original
+  files and general VM timing unchanged; protect unrelated images with a test.
+- Run all three releases through level selection, instructions, four-direction
+  movement and resource consumption. Check identical 45-update pacing, collect
+  all five training diamonds, and clear the first actual stage through fixed
+  real movement and idle inputs. Check enemy damage is survivable and the native
+  stage advances to two; no guest memory is changed to construct progress.
+- Check the native 25-byte record contains the completed first stage and second
+  stage unlock. Import it into a fresh instance, verify the unlock table, select
+  stage two with the menu cursor and continue into its map. Return to the level
+  menu and check normal exit. Review all stage captures locally.
+- Later levels, maximum completion ratings and special weapons remain
+  unverified. Game content, native records and captures are not distributed.

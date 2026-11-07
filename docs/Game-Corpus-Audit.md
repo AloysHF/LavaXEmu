@@ -18,9 +18,9 @@ do not satisfy this status.
 - Shared guest text memory checked on 2026-11-01: all 75 dedicated release workflows passed after the text-buffer repair and state migration.
 - Inverted TextOut checked on 2026-11-01: all 77 dedicated release workflows passed after honoring the source-inversion flag.
 - Virtual storage capacity checked on 2026-11-05: all 95 existing dedicated release workflows passed after the DiskCheck repair.
-- 113 dedicated release workflows passed in this audit.
-- 171 of 324 entry points were loaded by those successful workflows.
-- 153 entry points still need dedicated workflow verification.
+- 114 dedicated release workflows passed in this audit.
+- 174 of 324 entry points were loaded by those successful workflows.
+- 150 entry points still need dedicated workflow verification.
 - The historical [startup gallery](Game-Compatibility.md) is a separate check
   and must not be interpreted as this workflow audit.
 
@@ -185,9 +185,9 @@ an optional screenshot directory. Keep each test's logs and captures separate.
 | 141 | `LAVA1 幽灵屋/105.lav` | Game / game package | [Workflow passed: `ghost_house_versions_collect_charms_clear_stage_pause_and_restore_both_save_slots`](../crates/lavaxemu/tests/game_compatibility.rs#L10827) |
 | 142 | `LAVA1 异域传说序章/Land.pac` | Game / game package | [Workflow passed: `foreign_land_versions_fight_follow_the_school_story_and_preserve_both_save_slots`](../crates/lavaxemu/tests/game_compatibility.rs#L10987) |
 | 143 | `LAVA1 异域传说序章/非pac/Land.lav` | Game / game package | [Workflow passed: `foreign_land_versions_fight_follow_the_school_story_and_preserve_both_save_slots`](../crates/lavaxemu/tests/game_compatibility.rs#L10987) |
-| 144 | `LAVA1 强力钻土机/强力钻土机(Tc800).lav` | Game / game package | Pending |
-| 145 | `LAVA1 强力钻土机/强力钻土机(其它机型).lav` | Game / game package | Pending |
-| 146 | `LAVA1 强力钻土机/强力钻土机(模拟器).lav` | Game / game package | Pending |
+| 144 | `LAVA1 强力钻土机/强力钻土机(Tc800).lav` | Game / game package | [Workflow passed: `power_driller_versions_clear_training_and_stage_one_and_restore_unlocks`](../crates/lavaxemu/tests/game_compatibility.rs#L11156) |
+| 145 | `LAVA1 强力钻土机/强力钻土机(其它机型).lav` | Game / game package | [Workflow passed: `power_driller_versions_clear_training_and_stage_one_and_restore_unlocks`](../crates/lavaxemu/tests/game_compatibility.rs#L11156) |
+| 146 | `LAVA1 强力钻土机/强力钻土机(模拟器).lav` | Game / game package | [Workflow passed: `power_driller_versions_clear_training_and_stage_one_and_restore_unlocks`](../crates/lavaxemu/tests/game_compatibility.rs#L11156) |
 | 147 | `LAVA1 忍う者/打包的/忍う者.pac` | Game / game package | Pending |
 | 148 | `LAVA1 忍う者/没打包的/忍う者.lav` | Game / game package | Pending |
 | 149 | `LAVA1 情怨/pac/Love.pac` | Game / game package | Pending |

@@ -48,6 +48,8 @@ being progressively improved.
   programs without uploading them
 
 Compatibility evidence is tracked in the [workflow audit](docs/Game-Corpus-Audit.md).
+Power Driller device releases use the paced gameplay loop, with workflows for
+training, the first-stage clear, second-stage entry and restored native unlocks.
 Foreign Land prologue reserves both native save slots before writing, including
 when the second slot is saved first; its workflow covers the opening battle,
 school dialogue and saving/loading two distinct points.

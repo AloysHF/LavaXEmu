@@ -11150,3 +11150,217 @@ fn foreign_land_versions_fight_follow_the_school_story_and_preserve_both_save_sl
         }
     }
 }
+
+#[test]
+#[ignore = "requires the local game corpus via LAVAX_GAME_ROOT"]
+fn power_driller_versions_clear_training_and_stage_one_and_restore_unlocks() {
+    fn word(e: &Emulator, a: usize) -> u16 {
+        u16::from_le_bytes(e.vm().memory()[a..a + 2].try_into().unwrap())
+    }
+    fn key(e: &mut Emulator, k: u8, frames: usize, held: usize) {
+        e.input_mut().release_all();
+        for frame in 0..frames {
+            e.input_mut()
+                .set_keys((k != 0 && frame < held).then_some(k));
+            advance(e, 1);
+        }
+    }
+    fn menu(e: &mut Emulator) {
+        advance(e, 1200);
+        for _ in 0..4 {
+            key(e, 13, 180, 18);
+        }
+        assert_eq!(word(e, 0x3e4c), 1);
+    }
+    fn leave(e: &mut Emulator) {
+        key(e, 27, 180, 18);
+        assert_eq!(word(e, 0x3e4c), 1);
+        assert_eq!(e.vm().memory()[0x3e57], 1);
+    }
+    for (file, label) in [
+        ("强力钻土机(模拟器).lav", "driller-paced"),
+        ("强力钻土机(其它机型).lav", "driller-device"),
+        ("强力钻土机(Tc800).lav", "driller-tc"),
+    ] {
+        let path = fixture_path(file);
+        let mut e = load(&path);
+        menu(&mut e);
+        capture(&e, &format!("{label}-level-menu"));
+        key(&mut e, b'u', 120, 3);
+        capture(&e, &format!("{label}-training-instructions"));
+        for _ in 0..8 {
+            key(&mut e, 13, 120, 3);
+        }
+        assert_eq!(e.vm().memory()[0x3e53], 0);
+        assert_eq!(word(&e, 0x3e40), 0);
+        assert_eq!(word(&e, 0x3e42), 0);
+        assert_eq!(word(&e, 0x3e5a), 50);
+        assert_eq!(word(&e, 0x3e58), 2000);
+        capture(&e, &format!("{label}-training"));
+        let mut paced = e.clone();
+        let tick = paced.vm().memory()[0x3e50];
+        advance(&mut paced, 180);
+        assert_eq!(paced.vm().memory()[0x3e50].wrapping_sub(tick), 45);
+        let mut moved = e.clone();
+        key(&mut moved, b'd', 32, 32);
+        assert!(word(&moved, 0x3e40) > 0);
+        assert!(word(&moved, 0x3e58) < 2000);
+        capture(&moved, &format!("{label}-movement"));
+        let training = [
+            (100, 31),
+            (100, 29),
+            (100, 29),
+            (100, 29),
+            (100, 29),
+            (100, 29),
+            (100, 29),
+            (100, 29),
+            (100, 29),
+            (100, 29),
+            (100, 29),
+            (100, 29),
+            (100, 29),
+            (100, 29),
+            (115, 29),
+            (115, 29),
+            (115, 29),
+            (115, 29),
+            (97, 29),
+            (97, 29),
+            (119, 29),
+            (97, 29),
+            (97, 29),
+            (97, 29),
+            (97, 29),
+            (97, 29),
+            (97, 29),
+            (97, 29),
+            (97, 29),
+            (97, 29),
+            (97, 29),
+            (115, 29),
+            (115, 29),
+            (97, 29),
+            (97, 29),
+            (115, 29),
+            (115, 29),
+            (100, 29),
+            (115, 29),
+            (115, 29),
+            (100, 29),
+            (100, 29),
+            (100, 29),
+            (119, 29),
+            (119, 29),
+            (119, 29),
+            (100, 29),
+            (119, 29),
+            (100, 29),
+            (100, 29),
+            (115, 29),
+            (115, 29),
+            (115, 29),
+            (115, 29),
+            (100, 29),
+            (100, 29),
+            (100, 29),
+            (100, 29),
+            (100, 29),
+            (100, 29),
+            (100, 41),
+            (100, 29),
+            (100, 41),
+            (97, 29),
+            (119, 41),
+            (97, 29),
+            (119, 41),
+            (100, 29),
+            (100, 17),
+        ];
+        for (k, frames) in training {
+            key(&mut e, k, frames, frames);
+            e.input_mut().release_all();
+            advance(&mut e, 3);
+        }
+        assert_eq!(word(&e, 0x3e5c), 5);
+        assert_eq!(e.vm().memory()[0x3e53], 1);
+        assert!(word(&e, 0x3e5a) > 0);
+        capture(&e, &format!("{label}-training-complete"));
+        e.input_mut().release_all();
+        advance(&mut e, 180);
+        for _ in 0..4 {
+            key(&mut e, 13, 180, 3);
+        }
+        key(&mut e, b'u', 180, 3);
+        assert_eq!(e.vm().memory()[0x3e53], 1);
+        assert_eq!(word(&e, 0x3e5c), 0);
+        capture(&e, &format!("{label}-stage-one"));
+        // Fixed real inputs include idle blocks for enemy timing and pickup animations.
+        let actions = b"sss0sss0ddd0dss0ssa0aaa0sss0sss0ssd0ddd0ddd0aa0aaa0aww0www0www0ddd0dss0dds0sdd0ddd0ddd0ddd0dww0www0waa0aaa0aww0wa00aww0www0aaa0aas0wddd0ddd0ddd0ddd0ddd0dds0sss0sss0sss0sss0sss0ssa0aaa0aaa0aadddd0ddd0ddd0ddd0ddd0dd0ddawww0wdd0www0www0www0www0aaw0waa0aaa0ass0sss0sdd0sss0sas00";
+        let mut gems = 0;
+        for &action in actions {
+            let k = if action == b'0' { 0 } else { action };
+            key(&mut e, k, 12, 12);
+            assert!((1..=50).contains(&word(&e, 0x3e5a)));
+            let count = word(&e, 0x3e5c);
+            if count > gems {
+                gems = count;
+                capture(&e, &format!("{label}-stage-one-gem-{count}"));
+            }
+        }
+        assert_eq!(gems, 5);
+        assert_eq!(e.vm().memory()[0x3e53], 2);
+        assert!((1..50).contains(&word(&e, 0x3e5a)));
+        e.input_mut().release_all();
+        advance(&mut e, 180);
+        let saved = e.files().file("/LavaData/diamond.dat").unwrap().to_vec();
+        assert_eq!(saved.len(), 25);
+        assert_eq!(&saved[..2], &[2, 1]);
+        capture(&e, &format!("{label}-stage-one-complete"));
+        // Select the level menu on the native result screen.
+        key(&mut e, b'd', 60, 3);
+        key(&mut e, b'u', 180, 3);
+        assert_eq!(word(&e, 0x3e4c), 1);
+        capture(&e, &format!("{label}-unlocked-menu"));
+        let mut restored = load(&path);
+        restored
+            .files_mut()
+            .import_file("/LavaData/diamond.dat", saved.clone());
+        menu(&mut restored);
+        assert_eq!(&restored.vm().memory()[0x4afa..0x4b09], &saved[..15]);
+        assert_eq!(
+            restored.files().file("/LavaData/diamond.dat"),
+            Some(saved.as_slice())
+        );
+        capture(&restored, &format!("{label}-restored-unlocks"));
+        for (k, a, target) in [(b'd', 0x3e48, 34), (b's', 0x3e4a, 25)] {
+            for _ in 0..600 {
+                if word(&restored, a) >= target {
+                    break;
+                }
+                restored.input_mut().set_keys([k]);
+                advance(&mut restored, 1);
+            }
+            restored.input_mut().release_all();
+            advance(&mut restored, 3);
+            assert!(word(&restored, a) >= target);
+        }
+        capture(&restored, &format!("{label}-stage-two-selected"));
+        key(&mut restored, b'u', 180, 3);
+        assert_eq!(restored.vm().memory()[0x3e53], 2);
+        assert_eq!(word(&restored, 0x3e5c), 0);
+        assert!(word(&restored, 0x3e5a) > 0);
+        capture(&restored, &format!("{label}-stage-two"));
+        leave(&mut restored);
+        capture(&restored, &format!("{label}-returned-menu"));
+        let mut halted = false;
+        for frame in 0..300 {
+            restored.input_mut().set_keys((frame < 18).then_some(27));
+            if restored.run_frame().unwrap().status == FrameStatus::Halted(0) {
+                halted = true;
+                break;
+            }
+        }
+        assert!(halted);
+    }
+}
