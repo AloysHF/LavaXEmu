@@ -2814,3 +2814,22 @@ without an execution error alone does not establish playability.
   rematch that keeps `win:1` and gives white the first move.
 - White wins, draws, later AI replies, saving and the menu exit remain
   unverified.
+
+## Wuxia (武侠)
+
+- Content: `LAVA1 武侠/武侠.lav`.
+- The title menu waits at pc `0x330` with the entries 初涉武林, 游龙再现 and
+  豹隐山林. Down and Up move and wrap in both directions, and the selected entry
+  is held when the menu is reopened.
+- 初涉武林 opens a night scene that contains only a 14x13-pixel tree icon.
+  Down advances the typed dialog: the first page reveals
+  `这是一个没有月亮的夜晚，森林上空都是乌云。` in the bottom box, and the
+  scene switches to a room with a portrait after six pages. The next page draws
+  the room dialog (`我这是在哪?`).
+- 游龙再现 opens the two-slot load menu (`读取进度一` / `读取进度二`) at pc
+  `0x1553`. Selecting an empty slot shows `存档读取失败`, and Escape returns to
+  the title with 游龙再现 still selected.
+- 豹隐山林 calls the system exit and halts the program with code 0 at pc
+  `0x3868`.
+- The rest of the intro, actual gameplay, saving, combat and the remaining story
+  branches remain unverified.

@@ -14967,3 +14967,112 @@ fn happy_gomoku_menu_places_stones_undoes_restarts_and_detects_a_win() {
     assert_eq!(stone(&duo, 8, 8), 2, "white starts the next game");
     capture(&duo, "gomoku-rematch");
 }
+
+#[test]
+#[ignore = "requires the local LavaX game corpus"]
+fn wuxia_title_menu_save_slots_and_story_intro() {
+    let frame = |emulator: &Emulator| emulator.display().indexed_frame().to_vec();
+    let green = |emulator: &Emulator| {
+        emulator
+            .display()
+            .indexed_frame()
+            .iter()
+            .filter(|&&pixel| pixel == 0)
+            .count()
+    };
+
+    let mut menu = load("LAVA1 武侠/武侠.lav");
+    advance(&mut menu, 90);
+    let title = frame(&menu);
+    capture(&menu, "wuxia-title");
+
+    let mut navigation = menu.clone();
+    press(&mut navigation, 21);
+    let second = frame(&navigation);
+    assert_ne!(second, title, "Down highlights the second entry");
+    capture(&navigation, "wuxia-title-continue");
+    press(&mut navigation, 21);
+    let third = frame(&navigation);
+    assert_ne!(third, second, "Down highlights the third entry");
+    press(&mut navigation, 21);
+    assert_eq!(
+        frame(&navigation),
+        title,
+        "Down wraps back to the first entry"
+    );
+    press(&mut navigation, 20);
+    assert_eq!(
+        frame(&navigation),
+        third,
+        "Up wraps back to the third entry"
+    );
+
+    let mut save = menu.clone();
+    press(&mut save, 21);
+    assert_eq!(frame(&save), second, "the title keeps 游龙再现 selected");
+    press(&mut save, 13);
+    assert_ne!(frame(&save), second, "Enter opens the load menu");
+    let load_menu = frame(&save);
+    capture(&save, "wuxia-load-menu");
+    press(&mut save, 13);
+    advance(&mut save, 60);
+    assert_ne!(
+        frame(&save),
+        load_menu,
+        "an empty slot reports a load failure"
+    );
+    let failure = frame(&save);
+    capture(&save, "wuxia-load-failed");
+    advance(&mut save, 120);
+    assert_eq!(frame(&save), failure, "the failure message stays on screen");
+    press(&mut save, 27);
+    advance(&mut save, 30);
+    assert_eq!(
+        frame(&save),
+        second,
+        "Escape returns to the title with the same entry"
+    );
+
+    let mut story = menu.clone();
+    press(&mut story, 13);
+    let night = frame(&story);
+    assert_eq!(green(&story), 63, "the night scene only shows the tree");
+    assert_ne!(night, title, "初涉武林 leaves the title screen");
+    capture(&story, "wuxia-night");
+    press(&mut story, 21);
+    let first_page = frame(&story);
+    assert_ne!(first_page, night, "Down starts the story text");
+    assert!(
+        green(&story) > 3_000,
+        "the night scene gains the dialog box"
+    );
+    capture(&story, "wuxia-story-night");
+    for _ in 0..5 {
+        press(&mut story, 21);
+    }
+    let room = frame(&story);
+    assert_ne!(room, first_page, "the story changes the scene");
+    assert!(green(&story) > 7_000, "the room and the portrait are drawn");
+    capture(&story, "wuxia-room");
+    press(&mut story, 21);
+    assert_ne!(frame(&story), room, "Down advances the room dialog");
+    capture(&story, "wuxia-room-dialog");
+
+    let mut quit = menu.clone();
+    press(&mut quit, 21);
+    press(&mut quit, 21);
+    for _ in 0..3 {
+        quit.input_mut().set_keys([13]);
+        let _ = quit.run_frame().unwrap();
+    }
+    quit.input_mut().set_keys([]);
+    let mut exit_code = None;
+    for _ in 0..400 {
+        let result = quit.run_frame().unwrap();
+        if let FrameStatus::Halted(code) = result.status {
+            exit_code = Some(code);
+            break;
+        }
+    }
+    assert_eq!(exit_code, Some(0), "豹隐山林 exits the program");
+}
