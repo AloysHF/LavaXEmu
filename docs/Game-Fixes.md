@@ -2285,3 +2285,26 @@ without an execution error alone does not establish playability.
   menu and check normal exit. Review all stage captures locally.
 - Later levels, maximum completion ratings and special weapons remain
   unverified. Game content, native records and captures are not distributed.
+
+## Ninja (忍う者)
+
+- The identified release copies five bytes of its six-byte GBK default name,
+  splitting the last character when an empty name is confirmed. Copy all six
+  bytes in the loaded image, guarded by its program length and CRC. Entered
+  names retain their original path.
+- Saving slot two first seeks beyond the empty native file and writes slot one
+  instead. Extend the existing save-space repair to reserve both 2,000-byte
+  slots before the original write, preserving existing contents. General file
+  behavior and original content remain unchanged; a negative fingerprint test
+  protects unrelated programs.
+- Replay loose and packaged versions through name confirmation, the cemetery
+  conversation, the 1,000-money reward and town-to-forest travel. Use genuine
+  movement and attack inputs to finish a wild battle, return to the field and
+  check level one, 202 HP and 1,007 money.
+- Write that point into slot two first, then the earlier town point into slot
+  one. Check both halves of the 4,000-byte file and preserve slot two byte for
+  byte. Load each slot in a fresh instance, check position, name and character
+  values, continue moving and exit through the system menu. Review captures
+  locally; game content, saves and captures are not distributed.
+- Other encounters, spell learning, the seven-person quest and the ending
+  remain unverified.

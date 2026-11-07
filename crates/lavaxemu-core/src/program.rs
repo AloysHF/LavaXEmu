@@ -440,9 +440,14 @@ impl Program {
         let save_slot_site = match (image.len(), crc32fast::hash(&image)) {
             (33_999, 0xdf90_d7c3) if image[0x1e71..0x1e75] == [0x3d, 0x14, 0x17, 0] => Some(0x1e71),
             (33_741, 0xe7b4_ee06) if image[0x1e86..0x1e8a] == [0x3d, 0xe4, 0x16, 0] => Some(0x1e86),
+            (35_434, 0xb148_19de) if image[0x20c4..0x20c8] == [0x3d, 0xf9, 0x17, 0] => Some(0x20c4),
             _ => None,
         };
         if let Some(site) = save_slot_site {
+            if site == 0x20c4 {
+                // Keep all three GBK characters in the empty-name fallback.
+                image[0x2a8b] = 6;
+            }
             // Reserve both native save slots before this release seeks to either one.
             let trampoline = image.len() as u32;
             image.extend_from_slice(&[0x0e, 9, 0, 0x01, 0, 0x01, 2, 0xb2, 0x38]);
@@ -651,6 +656,7 @@ mod tests {
         for (length, site, call) in [
             (33_999, 0x1e71, [0x3d, 0x14, 0x17, 0]),
             (33_741, 0x1e86, [0x3d, 0xe4, 0x16, 0]),
+            (35_434, 0x20c4, [0x3d, 0xf9, 0x17, 0]),
         ] {
             let mut original = image(0, 0, 0);
             original.resize(length, 0);

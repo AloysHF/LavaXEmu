@@ -18,9 +18,9 @@ do not satisfy this status.
 - Shared guest text memory checked on 2026-11-01: all 75 dedicated release workflows passed after the text-buffer repair and state migration.
 - Inverted TextOut checked on 2026-11-01: all 77 dedicated release workflows passed after honoring the source-inversion flag.
 - Virtual storage capacity checked on 2026-11-05: all 95 existing dedicated release workflows passed after the DiskCheck repair.
-- 114 dedicated release workflows passed in this audit.
-- 174 of 324 entry points were loaded by those successful workflows.
-- 150 entry points still need dedicated workflow verification.
+- 115 dedicated release workflows passed in this audit.
+- 176 of 324 entry points were loaded by those successful workflows.
+- 148 entry points still need dedicated workflow verification.
 - The historical [startup gallery](Game-Compatibility.md) is a separate check
   and must not be interpreted as this workflow audit.
 
@@ -188,8 +188,8 @@ an optional screenshot directory. Keep each test's logs and captures separate.
 | 144 | `LAVA1 强力钻土机/强力钻土机(Tc800).lav` | Game / game package | [Workflow passed: `power_driller_versions_clear_training_and_stage_one_and_restore_unlocks`](../crates/lavaxemu/tests/game_compatibility.rs#L11156) |
 | 145 | `LAVA1 强力钻土机/强力钻土机(其它机型).lav` | Game / game package | [Workflow passed: `power_driller_versions_clear_training_and_stage_one_and_restore_unlocks`](../crates/lavaxemu/tests/game_compatibility.rs#L11156) |
 | 146 | `LAVA1 强力钻土机/强力钻土机(模拟器).lav` | Game / game package | [Workflow passed: `power_driller_versions_clear_training_and_stage_one_and_restore_unlocks`](../crates/lavaxemu/tests/game_compatibility.rs#L11156) |
-| 147 | `LAVA1 忍う者/打包的/忍う者.pac` | Game / game package | Pending |
-| 148 | `LAVA1 忍う者/没打包的/忍う者.lav` | Game / game package | Pending |
+| 147 | `LAVA1 忍う者/打包的/忍う者.pac` | Game / game package | [Workflow passed: `ninja_versions_keep_the_default_name_win_a_battle_and_restore_both_slots`](../crates/lavaxemu/tests/game_compatibility.rs#L11370) |
+| 148 | `LAVA1 忍う者/没打包的/忍う者.lav` | Game / game package | [Workflow passed: `ninja_versions_keep_the_default_name_win_a_battle_and_restore_both_slots`](../crates/lavaxemu/tests/game_compatibility.rs#L11370) |
 | 149 | `LAVA1 情怨/pac/Love.pac` | Game / game package | Pending |
 | 150 | `LAVA1 情怨/非pac/Love_I.lav` | Game / game package | Pending |
 | 151 | `LAVA1 我的世界~霸王屎/我的世界.lav` | Game / game package | [Workflow passed: `my_world_creates_a_character_and_moves_on_the_map`](../crates/lavaxemu/tests/game_compatibility.rs#L1037) |

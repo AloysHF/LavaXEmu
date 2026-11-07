@@ -57,9 +57,11 @@ from party setup, reads P2's own roster values, counts P1 defeats correctly and
 clears defeated members' HP. The Tunshi v0.29 repair stops enemy targeting when
 the player's party is defeated, redraws the field after closing menus and
 returns to the title after defeat or Escape from exploration.
-The Sword and Foreign Land prologue repairs reserve both 2,000-byte native save
-slots before seeking,
+The Sword, Foreign Land prologue and Ninja repairs reserve both 2,000-byte native
+save slots before seeking,
 preserving existing bytes when the second slot is saved first.
+The Ninja repair also copies all six GBK bytes of its empty-name fallback,
+preventing the final double-byte character from being truncated.
 The Four-player Mahjong repair checks the wall before each normal draw and
 rejects a kong without a replacement tile, preventing the remaining count from wrapping.
 The Zelda Minigames chest timer repair expires elapsed deadlines when an input

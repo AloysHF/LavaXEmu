@@ -11364,3 +11364,166 @@ fn power_driller_versions_clear_training_and_stage_one_and_restore_unlocks() {
         assert!(halted);
     }
 }
+
+#[test]
+#[ignore = "requires the local game corpus via LAVAX_GAME_ROOT"]
+fn ninja_versions_keep_the_default_name_win_a_battle_and_restore_both_slots() {
+    fn word(e: &Emulator, a: usize) -> u16 {
+        u16::from_le_bytes(e.vm().memory()[a..a + 2].try_into().unwrap())
+    }
+    fn position(e: &Emulator) -> (u8, u16, u16) {
+        let m = e.vm().memory();
+        (
+            m[0x43b4],
+            u16::from(m[0x43ae]) + u16::from(m[0x43b0]),
+            u16::from(m[0x43af]) + u16::from(m[0x43b1]),
+        )
+    }
+    fn key(e: &mut Emulator, k: u8, frames: usize, held: usize) {
+        e.input_mut().release_all();
+        for frame in 0..frames {
+            e.input_mut().set_keys((frame < held).then_some(k));
+            advance(e, 1);
+        }
+    }
+    fn repeated(e: &mut Emulator, k: u8, count: usize, frames: usize, held: usize) {
+        for _ in 0..count {
+            key(e, k, frames, held);
+        }
+    }
+    fn system_menu(e: &mut Emulator) {
+        key(e, 25, 120, 3);
+        repeated(e, 22, 4, 120, 3);
+        key(e, 13, 120, 3);
+    }
+    fn save(e: &mut Emulator, slot: usize, label: &str) -> Vec<u8> {
+        system_menu(e);
+        key(e, 13, 120, 3);
+        if slot == 2 {
+            key(e, 21, 120, 3);
+        }
+        capture(e, &format!("{label}-slot-{slot}-save-choice"));
+        key(e, 13, 120, 3);
+        let bytes = e.files().file("/GVMdata/RZ_Save.dat").unwrap().to_vec();
+        assert_eq!(bytes.len(), 4000);
+        capture(e, &format!("{label}-slot-{slot}-saved"));
+        key(e, 13, 120, 3);
+        bytes
+    }
+    for (file, label) in [
+        ("忍う者.lav", "ninja-loose"),
+        ("忍う者.pac", "ninja-package"),
+    ] {
+        let path = fixture_path(file);
+        let mut e = load(&path);
+        advance(&mut e, 1200);
+        capture(&e, &format!("{label}-title"));
+        for i in 0..8 {
+            key(&mut e, 13, 180, 3);
+            if i == 0 {
+                capture(&e, &format!("{label}-name-entry"));
+            }
+        }
+        assert_eq!(
+            &e.vm().memory()[0x42fd..0x4304],
+            &[0xce, 0xde, 0xa4, 0xa6, 0xb5, 0xd0, 0]
+        );
+        assert_eq!(position(&e), (1, 3, 68));
+        capture(&e, &format!("{label}-cemetery"));
+        repeated(&mut e, 20, 6, 60, 1);
+        repeated(&mut e, 13, 2, 60, 1);
+        capture(&e, &format!("{label}-goddess-dialogue"));
+        repeated(&mut e, 13, 24, 180, 3);
+        assert_eq!(position(&e), (1, 31, 7));
+        assert_eq!(word(&e, 0x4320), 1000);
+        capture(&e, &format!("{label}-town-reward"));
+        let beginning = e.clone();
+        for k in [
+            22, 22, 21, 21, 21, 21, 21, 21, 21, 21, 21, 21, 23, 23, 23, 23, 23, 23, 23, 23, 23, 21,
+            21, 21, 21, 23, 23, 23, 23, 23, 23, 20, 20, 23, 23,
+        ] {
+            key(&mut e, k, 60, 1);
+        }
+        assert_eq!(position(&e), (1, 18, 18));
+        key(&mut e, 23, 60, 1);
+        assert_eq!(position(&e), (1, 1, 30));
+        capture(&e, &format!("{label}-forest-entrance"));
+        for (k, count) in [(22, 6), (21, 12), (22, 6), (20, 8)] {
+            repeated(&mut e, k, count, 60, 1);
+        }
+        for (k, count) in [(22, 4), (21, 16), (22, 10), (20, 10)] {
+            repeated(&mut e, k, count, 90, 1);
+        }
+        assert_eq!(position(&e), (1, 6, 32));
+        assert_eq!(e.vm().pc(), 0x118b);
+        assert_ne!(e.vm().memory()[0x4365], 0);
+        capture(&e, &format!("{label}-battle-menu"));
+        for i in 0..20 {
+            key(&mut e, 13, 180, 3);
+            if [0, 3, 10, 18].contains(&i) {
+                capture(&e, &format!("{label}-battle-{i}"));
+            }
+        }
+        assert_eq!(e.vm().memory()[0x4365], 0);
+        assert_eq!(e.vm().memory()[0x4310], 1);
+        assert_eq!(word(&e, 0x430a), 202);
+        assert_eq!(word(&e, 0x4320), 1007);
+        capture(&e, &format!("{label}-victory-returned-field"));
+        let second = save(&mut e, 2, label);
+        assert!(second[..2000].iter().all(|&byte| byte == 0));
+        let mut earlier = beginning;
+        earlier
+            .files_mut()
+            .import_file("/GVMdata/RZ_Save.dat", second.clone());
+        let combined = save(&mut earlier, 1, label);
+        assert_eq!(&combined[2000..], &second[2000..]);
+        assert_ne!(&combined[..2000], &combined[2000..]);
+        for (slot, expected, gold, hp, level) in
+            [(1, (1, 31, 7), 1000, 200, 0), (2, (1, 6, 32), 1007, 202, 1)]
+        {
+            let mut restored = load(&path);
+            restored
+                .files_mut()
+                .import_file("/GVMdata/RZ_Save.dat", combined.clone());
+            advance(&mut restored, 1200);
+            for k in [21, 13] {
+                key(&mut restored, k, 120, 3);
+            }
+            if slot == 2 {
+                key(&mut restored, 21, 120, 3);
+            }
+            capture(&restored, &format!("{label}-slot-{slot}-load-choice"));
+            repeated(&mut restored, 13, 2, 120, 3);
+            assert_eq!(position(&restored), expected);
+            assert_eq!(word(&restored, 0x4320), gold);
+            assert_eq!(word(&restored, 0x430a), hp);
+            assert_eq!(restored.vm().memory()[0x4310], level);
+            assert_eq!(
+                &restored.vm().memory()[0x42fd..0x4304],
+                &[0xce, 0xde, 0xa4, 0xa6, 0xb5, 0xd0, 0]
+            );
+            assert_eq!(
+                restored.files().file("/GVMdata/RZ_Save.dat"),
+                Some(combined.as_slice())
+            );
+            capture(&restored, &format!("{label}-slot-{slot}-restored"));
+            repeated(&mut restored, if slot == 1 { 22 } else { 20 }, 3, 60, 1);
+            assert_ne!(position(&restored), expected);
+            capture(&restored, &format!("{label}-slot-{slot}-continued"));
+            system_menu(&mut restored);
+            repeated(&mut restored, 21, 2, 120, 3);
+            capture(&restored, &format!("{label}-slot-{slot}-quit-choice"));
+            let mut halted = false;
+            for frame in 0..600 {
+                restored
+                    .input_mut()
+                    .set_keys((frame < 3 || (180..183).contains(&frame)).then_some(13));
+                if restored.run_frame().unwrap().status == FrameStatus::Halted(0) {
+                    halted = true;
+                    break;
+                }
+            }
+            assert!(halted);
+        }
+    }
+}

@@ -48,6 +48,9 @@ being progressively improved.
   programs without uploading them
 
 Compatibility evidence is tracked in the [workflow audit](docs/Game-Corpus-Audit.md).
+Ninja preserves the complete default name and both native save slots, including
+when slot two is written first. Its workflow covers the opening story, forest
+combat, level-up rewards and restoring two distinct points.
 Power Driller device releases use the paced gameplay loop, with workflows for
 training, the first-stage clear, second-stage entry and restored native unlocks.
 Foreign Land prologue reserves both native save slots before writing, including
