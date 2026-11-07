@@ -22061,3 +22061,185 @@ fn space_war_walks_the_speed_menu_and_fights_the_first_wave() {
         "the game writes no files"
     );
 }
+
+#[test]
+#[ignore = "requires LAVAX_GAME_ROOT with the game corpus"]
+fn allout_solves_the_first_board_and_advances_to_the_next() {
+    let path = "LAVA1 类似十全十美/allout.lav";
+    let cell = |e: &Emulator, index: usize| e.vm().memory()[0x2a54 + index * 2];
+    let lit =
+        |e: &Emulator| -> Vec<usize> { (0..25).filter(|index| cell(e, *index) == 1).collect() };
+    let state = |e: &Emulator| {
+        (
+            e.vm().memory()[0x2a86],
+            e.vm().memory()[0x2a88],
+            e.vm().memory()[0x2a8a],
+            e.vm().memory()[0x2a8c],
+        )
+    };
+    let start = |e: &mut Emulator| {
+        advance(e, 30);
+        assert_eq!(e.vm().pc(), 0xd33, "the intro waits for enter");
+        press(e, 13);
+        assert_eq!(e.vm().pc(), 0xfee, "enter starts the first board");
+    };
+    let quit_with_yes = |e: &mut Emulator| -> Option<i32> {
+        for frame in 0..90 {
+            e.input_mut().set_keys([121]);
+            if frame == 3 {
+                e.input_mut().set_keys([]);
+            }
+            if let FrameStatus::Halted(code) = e.run_frame().unwrap().status {
+                return Some(code);
+            }
+        }
+        None
+    };
+
+    let mut intro = load(path);
+    advance(&mut intro, 30);
+    assert_eq!(intro.vm().pc(), 0xd33, "the intro waits for enter");
+    assert_eq!(state(&intro), (0, 0, 0, 0), "the first board starts fresh");
+    assert_eq!(
+        lit(&intro),
+        vec![2, 6, 8, 10, 14, 16, 18, 22],
+        "board zero lights eight cells"
+    );
+    assert_eq!(
+        intro.vm().memory()[0x2a95],
+        b'1',
+        "the intro names the level"
+    );
+    press(&mut intro, 27);
+    assert_eq!(intro.vm().pc(), 0xd96, "escape prompts from the intro");
+    press(&mut intro, 110);
+    assert_eq!(intro.vm().pc(), 0xd33, "no returns to the intro");
+    press(&mut intro, 13);
+    assert_eq!(intro.vm().pc(), 0xfee, "enter starts the board");
+    press(&mut intro, 23);
+    assert_eq!(
+        (state(&intro).0, state(&intro).1),
+        (0, 0),
+        "left is clamped"
+    );
+    press(&mut intro, 20);
+    assert_eq!((state(&intro).0, state(&intro).1), (0, 0), "up is clamped");
+    press(&mut intro, 22);
+    assert_eq!((state(&intro).0, state(&intro).1), (0, 1));
+    press(&mut intro, 21);
+    assert_eq!((state(&intro).0, state(&intro).1), (1, 1));
+    for _ in 0..3 {
+        press(&mut intro, 22);
+    }
+    assert_eq!(state(&intro).1, 4, "right reaches the last column");
+    press(&mut intro, 22);
+    assert_eq!(state(&intro).1, 4, "right stays clamped");
+    for _ in 0..3 {
+        press(&mut intro, 21);
+    }
+    assert_eq!(state(&intro).0, 4, "down reaches the last row");
+    press(&mut intro, 21);
+    assert_eq!(state(&intro).0, 4, "down stays clamped");
+    assert_eq!(state(&intro).2, 0, "steering spends no move");
+    press(&mut intro, 27);
+    assert_eq!(intro.vm().pc(), 0x11a1, "escape prompts during play");
+    press(&mut intro, 110);
+    assert_eq!(intro.vm().pc(), 0xfee, "no resumes the board");
+    assert_eq!(state(&intro), (4, 4, 0, 0), "the board is unchanged");
+    press(&mut intro, 27);
+    assert_eq!(intro.vm().pc(), 0x11a1);
+    assert_eq!(quit_with_yes(&mut intro), Some(0), "yes quits from play");
+
+    let mut exit = load(path);
+    advance(&mut exit, 30);
+    press(&mut exit, 27);
+    assert_eq!(exit.vm().pc(), 0xd96);
+    assert_eq!(
+        quit_with_yes(&mut exit),
+        Some(0),
+        "yes quits from the intro"
+    );
+
+    let mut toggle = load(path);
+    start(&mut toggle);
+    press(&mut toggle, 13);
+    assert_eq!(toggle.vm().pc(), 0xfee, "one press does not win");
+    assert_eq!(state(&toggle).2, 1, "a press spends one move");
+    assert_eq!(
+        lit(&toggle),
+        vec![0, 1, 2, 5, 6, 8, 10, 14, 16, 18, 22],
+        "the cursor cross flips its three in-bounds cells"
+    );
+    assert_eq!(
+        toggle.vm().memory()[0x2a8f],
+        b'1',
+        "the hud counts the move"
+    );
+
+    let mut centre = load(path);
+    start(&mut centre);
+    for _ in 0..2 {
+        press(&mut centre, 21);
+    }
+    for _ in 0..2 {
+        press(&mut centre, 22);
+    }
+    press(&mut centre, 13);
+    assert_eq!(
+        lit(&centre),
+        vec![2, 6, 7, 8, 10, 11, 12, 13, 14, 16, 17, 18, 22],
+        "the centre press flips the full cross"
+    );
+
+    let mut solve = load(path);
+    start(&mut solve);
+    press(&mut solve, 13);
+    for _ in 0..4 {
+        press(&mut solve, 22);
+    }
+    press(&mut solve, 13);
+    for _ in 0..2 {
+        press(&mut solve, 21);
+    }
+    for _ in 0..2 {
+        press(&mut solve, 23);
+    }
+    press(&mut solve, 13);
+    for _ in 0..2 {
+        press(&mut solve, 21);
+    }
+    for _ in 0..2 {
+        press(&mut solve, 23);
+    }
+    press(&mut solve, 13);
+    for _ in 0..4 {
+        press(&mut solve, 22);
+    }
+    press(&mut solve, 13);
+    assert_eq!(solve.vm().pc(), 0x11c8, "the win waits for a key");
+    assert_eq!(state(&solve), (4, 4, 5, 0), "five moves solve the board");
+    assert_eq!(
+        lit(&solve),
+        (0..25).collect::<Vec<_>>(),
+        "all cells are lit"
+    );
+    assert_eq!(
+        solve.vm().memory()[0x2a8f],
+        b'5',
+        "the hud shows five moves"
+    );
+    press(&mut solve, 13);
+    assert_eq!(solve.vm().pc(), 0xfee, "the next board starts at once");
+    assert_eq!(state(&solve), (0, 0, 0, 1), "the second board starts fresh");
+    assert_eq!(
+        lit(&solve),
+        vec![0, 2, 4, 7, 10, 12, 14, 16, 18, 21, 23],
+        "board one is loaded"
+    );
+    assert_eq!(solve.vm().memory()[0x2a8f], b'0', "the move counter resets");
+    assert_eq!(solve.vm().memory()[0x2a95], b'2', "the hud names the level");
+    assert!(
+        solve.files_mut().take_dirty_files().is_empty(),
+        "the game writes no files"
+    );
+}

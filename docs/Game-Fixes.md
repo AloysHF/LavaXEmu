@@ -3675,3 +3675,39 @@ without an execution error alone does not establish playability.
   reopens the speed menu at `0x1843` with the speed reset to zero.
 - The game only reads its companion image and text and writes no files.
   No additional emulator changes were required.
+
+
+## All Out (LAVA1 类似十全十美)
+
+- Content: `LAVA1 类似十全十美/allout.lav`, a single Bits16 program that
+  plays a 5x5 lights-on puzzle with 52 preset boards.
+- The intro at `0xc5f` sets the level word at `0x2a8c` to zero, copies
+  board zero into the grid, draws `第 N 关`, and waits for Enter at
+  `0xd33`. The grid holds 25 words at `0x2a54`, row-major with a two-byte
+  stride. The cursor row and column sit at `0x2a86` and `0x2a88`, the move
+  counter at `0x2a8a`, and the last key at `0x2a8e`.
+- The 52 boards are copied at startup by inline `preset_memory` data into
+  `0x202c`, 50 bytes per board. Board zero lights the eight cells at
+  indices `2, 6, 8, 10, 14, 16, 18, 22`.
+- The play loop at `0xfee` steers with the arrows: Up, Down, Left and
+  Right change the cursor within `0..=4` and stop at the edges without
+  spending a move.
+- Enter spends one move and calls the toggle routine at `0xb0e` for the
+  cursor and its four orthogonal neighbours. Each call clears an
+  out-of-bounds cell and flips an in-bounds cell between zero and one, so
+  a corner press flips three cells and a centre press flips five. The win
+  check at `0xa7a` returns true when all 25 cells are one.
+- The five presses `(0,0)`, `(0,4)`, `(2,2)`, `(4,0)` and `(4,4)` light
+  every cell in five moves. The win handler at `0x11b5` draws
+  `Good Job!` and waits at `0x11c8`; after a key it resets the move
+  counter and cursor, increments the level, wraps past board 51, copies
+  the next board into the grid, redraws it, and enters the play loop
+  directly at `0xfee`.
+- Escape during play asks `你要离开吗？(Y/N)` at `0x114c` and waits
+  at `0x11a1`. `y` halts with code 0 at `0x11b1`; any other key resumes
+  the unchanged board at `0xfee`. The intro has its own prompt at
+  `0xd96`, where `y` halts with code 0 at `0xda6` and any other key
+  returns to the intro.
+- The move count is formatted into `0x2a8f` and the level number into
+  `0x2a95`. The game writes no files. No additional emulator changes were
+  required.
