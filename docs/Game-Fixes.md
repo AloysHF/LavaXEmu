@@ -3034,3 +3034,41 @@ without an execution error alone does not establish playability.
   difficulty selector.
 - Level clearing, enemy sinking, scoring, the effect of the difficulty on the
   AI and the later levels remain unverified.
+
+## Spirit Sword Shooting (灵剑射击)
+
+- Content: `LAVA1 灵剑射击/灵剑射击.lav`.
+- The splash waits at pc `0x2259`; Enter opens the first-run message at
+  pc `0x23b5`, whose Enter starts the logo animation at pc `0x1962` / `0x1a06`.
+  Enter again reaches pc `0x19ac` and then the title menu at pc `0x1b66`.
+  When `/lavadata/shoop.dat` already exists the first-run message is skipped
+  and the logo opens directly.
+- The title has three entries (开始游戏 / 排行榜 / 退出游戏). Down stops at the
+  third entry and Up stops at the first; the rendered selection frames are
+  stable at both ends.
+- F5 opens the help page at pc `0x1ab8`; Down leaves it and returns to the menu
+  with the first entry selected.
+- 排行榜 opens the leaderboard at pc `0x24f3`; an empty table shows zeroed
+  rows and Enter returns to the menu.
+- 开始游戏 starts level one at pc `0x215a` / `0x215b`. The level byte is
+  `0x3391`, the remaining arrows at `0x338b` start at ten, and the HUD text
+  buffer begins at `0x3397` (`分数：0 总分：0`); the level label at `0x33b5`
+  reads `第1关`.
+- The target moves vertically at `0x3380` (big-endian) and waits at the right
+  edge `0x3382 = 150`. The arrow stays at `0x3384 = 53` and `0x3386 = 18`.
+  Firing with `a` at the moment the target reaches row 60 hits for thirteen
+  points, spends one arrow and renders `分数：13 总分：13`.
+- Ten shots spend the quiver and five hits produce the level total of 65. The
+  next level starts with the arrows restored to ten, the level total reset and
+  the cumulative total kept; the level label reads `第2关`.
+- `p` pauses the round at pc `0x206e` and freezes the target; any key resumes.
+- Escape during a round asks for a leaderboard name at pc `0x1479`. Entering
+  `xy` and pressing Enter returns to the menu, and the leaderboard then shows
+  the name with the total 65.
+- The leaderboard writes a 48-byte `/lavadata/shoop.dat` holding four rows; the
+  first row keeps the 2-byte name and the total score at offset 40. Importing
+  the file into a fresh emulator reads the same leaderboard back.
+- 退出游戏 asks four nested questions at pc `0x2519`, `0x253e`, `0x256e` and
+  `0x2593`. Answering `n` at any question returns to the menu and answering `y`
+  at the last one halts the program with code 0.
+- Later levels, misses and the exact target motion range remain unverified.

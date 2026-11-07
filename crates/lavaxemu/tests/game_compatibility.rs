@@ -16745,3 +16745,271 @@ fn pirate_ship_menus_help_credits_difficulty_and_sailing() {
     assert_eq!(word(&unpacked, 0x2f64), word(&easy, 0x2f64), "same lives");
     assert_eq!(word(&unpacked, 0x2f66), word(&easy, 0x2f66), "same level");
 }
+
+#[test]
+#[ignore = "requires the local game corpus via LAVAX_GAME_ROOT"]
+fn spirit_sword_menu_help_arrows_scoring_level_and_rank() {
+    const PATH: &str = "LAVA1 灵剑射击/灵剑射击.lav";
+    let frame = |emulator: &Emulator| emulator.display().indexed_frame().to_vec();
+    let word = |emulator: &Emulator, address: usize| {
+        u16::from_be_bytes(
+            emulator.vm().memory()[address..address + 2]
+                .try_into()
+                .unwrap(),
+        )
+    };
+    let open_menu = |emulator: &mut Emulator| {
+        advance(emulator, 300);
+        assert_eq!(emulator.vm().pc(), 0x2259, "the splash waits for a key");
+        press(emulator, 13);
+        assert_eq!(
+            emulator.vm().pc(),
+            0x23b5,
+            "the first-run message waits for a key"
+        );
+        press(emulator, 13);
+        advance(emulator, 120);
+        press(emulator, 13);
+        advance(emulator, 120);
+        assert_eq!(emulator.vm().pc(), 0x1b66, "the title menu waits for a key");
+    };
+
+    let mut menu = load(PATH);
+    open_menu(&mut menu);
+    capture(&menu, "spirit-menu");
+    let first = frame(&menu);
+    press(&mut menu, 21);
+    let second = frame(&menu);
+    assert_ne!(second, first, "down highlights the second entry");
+    press(&mut menu, 21);
+    let third = frame(&menu);
+    assert_ne!(third, second, "down highlights the third entry");
+    press(&mut menu, 21);
+    assert_eq!(frame(&menu), third, "the menu stops at the last entry");
+    press(&mut menu, 20);
+    assert_eq!(frame(&menu), second, "up returns to the second entry");
+    press(&mut menu, 20);
+    assert_eq!(frame(&menu), first, "up returns to the first entry");
+    press(&mut menu, 20);
+    assert_eq!(frame(&menu), first, "the menu stops at the first entry");
+
+    press(&mut menu, 25);
+    assert_eq!(menu.vm().pc(), 0x1ab8, "F5 opens the help page");
+    capture(&menu, "spirit-help");
+    press(&mut menu, 21);
+    assert_eq!(menu.vm().pc(), 0x1b66, "down leaves the help page");
+    assert_eq!(frame(&menu), first, "the title returns at the first entry");
+
+    press(&mut menu, 21);
+    press(&mut menu, 13);
+    advance(&mut menu, 120);
+    assert_eq!(menu.vm().pc(), 0x24f3, "the empty leaderboard opens");
+    capture(&menu, "spirit-rank-empty");
+    press(&mut menu, 13);
+    assert_eq!(menu.vm().pc(), 0x1b66, "enter returns from the leaderboard");
+
+    let mut game = load(PATH);
+    open_menu(&mut game);
+    press(&mut game, 13);
+    advance(&mut game, 300);
+    assert!(
+        matches!(game.vm().pc(), 0x215a | 0x215b),
+        "the start entry begins the first level"
+    );
+    capture(&game, "spirit-level-one");
+    assert_eq!(game.vm().memory()[0x3391], 1, "the first level is shown");
+    assert_eq!(
+        game.vm().memory()[0x338b],
+        10,
+        "the level starts with ten arrows"
+    );
+    assert_eq!(
+        &game.vm().memory()[0x3397..0x33a6],
+        b"\xb7\xd6\xca\xfd\xa3\xba0 \xd7\xdc\xb7\xd6\xa3\xba0",
+        "the score starts at zero"
+    );
+    assert_eq!(
+        &game.vm().memory()[0x33b5..0x33ba],
+        b"\xb5\xda\x31\xb9\xd8",
+        "the HUD shows level one"
+    );
+    assert_eq!(
+        word(&game, 0x3382),
+        150,
+        "the target sits at the right edge"
+    );
+    assert_eq!(word(&game, 0x3384), 53, "the arrow flies at a fixed height");
+    assert_eq!(word(&game, 0x3386), 18, "the arrow waits at the left edge");
+    let target = word(&game, 0x3380);
+    advance(&mut game, 60);
+    assert_ne!(word(&game, 0x3380), target, "the target moves up and down");
+
+    for shot in 0..10 {
+        let mut waited = 0;
+        while word(&game, 0x3380) != 60 {
+            advance(&mut game, 1);
+            waited += 1;
+            assert!(waited < 4000, "the target must reach the shot height");
+        }
+        hold(&mut game, b'a', 3);
+        advance(&mut game, 150);
+        if shot == 0 {
+            assert_eq!(game.vm().memory()[0x338b], 9, "firing spends one arrow");
+            assert_eq!(
+                &game.vm().memory()[0x3397..0x33a8],
+                b"\xb7\xd6\xca\xfd\xa3\xba13 \xd7\xdc\xb7\xd6\xa3\xba13",
+                "a hit scores thirteen points"
+            );
+            capture(&game, "spirit-hit");
+        }
+    }
+    advance(&mut game, 300);
+    assert!(
+        matches!(game.vm().pc(), 0x215a | 0x215b),
+        "the second level starts"
+    );
+    assert_eq!(game.vm().memory()[0x3391], 2, "the second level is shown");
+    assert_eq!(
+        game.vm().memory()[0x338b],
+        10,
+        "the second level restores the arrows"
+    );
+    assert_eq!(
+        &game.vm().memory()[0x3397..0x33a7],
+        b"\xb7\xd6\xca\xfd\xa3\xba0 \xd7\xdc\xb7\xd6\xa3\xba65",
+        "the total keeps the level-one score"
+    );
+    assert_eq!(
+        &game.vm().memory()[0x33b5..0x33ba],
+        b"\xb5\xda\x32\xb9\xd8",
+        "the HUD shows level two"
+    );
+    capture(&game, "spirit-level-two");
+
+    let target = word(&game, 0x3380);
+    press(&mut game, 112);
+    assert_eq!(game.vm().pc(), 0x206e, "P pauses the round");
+    let paused = frame(&game);
+    advance(&mut game, 120);
+    assert_eq!(frame(&game), paused, "the paused frame stays still");
+    assert_eq!(word(&game, 0x3380), target, "the target freezes");
+    capture(&game, "spirit-paused");
+    press(&mut game, 32);
+    assert!(
+        matches!(game.vm().pc(), 0x215a | 0x215b),
+        "any key resumes the round"
+    );
+    advance(&mut game, 90);
+    assert_ne!(word(&game, 0x3380), target, "the target moves again");
+
+    press(&mut game, 27);
+    advance(&mut game, 180);
+    assert_eq!(game.vm().pc(), 0x1479, "escape asks for a leaderboard name");
+    capture(&game, "spirit-rank-name");
+    for key in b"xy" {
+        press(&mut game, *key);
+    }
+    press(&mut game, 13);
+    advance(&mut game, 120);
+    assert_eq!(
+        game.vm().pc(),
+        0x1b66,
+        "the registered name returns to the menu"
+    );
+    press(&mut game, 21);
+    press(&mut game, 13);
+    advance(&mut game, 120);
+    assert_eq!(
+        game.vm().pc(),
+        0x24f3,
+        "the leaderboard opens after a round"
+    );
+    capture(&game, "spirit-rank");
+    let rank = frame(&game);
+    let files = game.files_mut().take_dirty_files();
+    let (rank_path, rank_bytes) = files
+        .iter()
+        .find(|(path, _)| path.ends_with("shoop.dat"))
+        .expect("the leaderboard must write its record");
+    assert_eq!(rank_path.as_str(), "/lavadata/shoop.dat");
+    assert_eq!(rank_bytes.len(), 48, "the leaderboard stores four entries");
+    assert_eq!(&rank_bytes[..2], b"xy", "the first row keeps the name");
+    assert_eq!(rank_bytes[40], 65, "the first row keeps the total score");
+
+    let mut reloaded = load(PATH);
+    for (path, bytes) in files {
+        reloaded.files_mut().import_file(&path, bytes);
+    }
+    advance(&mut reloaded, 300);
+    assert_eq!(
+        reloaded.vm().pc(),
+        0x2259,
+        "the splash still waits for a key"
+    );
+    press(&mut reloaded, 13);
+    assert!(
+        matches!(reloaded.vm().pc(), 0x1962 | 0x1a06),
+        "the stored record skips the first-run message"
+    );
+    advance(&mut reloaded, 120);
+    press(&mut reloaded, 13);
+    advance(&mut reloaded, 120);
+    assert_eq!(reloaded.vm().pc(), 0x1b66, "the title menu waits for a key");
+    press(&mut reloaded, 21);
+    press(&mut reloaded, 13);
+    advance(&mut reloaded, 120);
+    assert_eq!(reloaded.vm().pc(), 0x24f3, "the stored leaderboard opens");
+    assert_eq!(frame(&reloaded), rank, "the stored record is read back");
+
+    let mut quitting = load(PATH);
+    open_menu(&mut quitting);
+    press(&mut quitting, 21);
+    press(&mut quitting, 21);
+    press(&mut quitting, 13);
+    advance(&mut quitting, 120);
+    assert_eq!(quitting.vm().pc(), 0x2519, "the exit entry asks to leave");
+    press(&mut quitting, b'n');
+    advance(&mut quitting, 60);
+    assert_eq!(quitting.vm().pc(), 0x1b66, "declining returns to the menu");
+    press(&mut quitting, 21);
+    press(&mut quitting, 21);
+    press(&mut quitting, 13);
+    advance(&mut quitting, 120);
+    press(&mut quitting, b'y');
+    assert_eq!(
+        quitting.vm().pc(),
+        0x253e,
+        "the second question keeps asking"
+    );
+    press(&mut quitting, b'n');
+    advance(&mut quitting, 60);
+    assert_eq!(
+        quitting.vm().pc(),
+        0x1b66,
+        "declining the second question returns to the menu"
+    );
+    press(&mut quitting, 21);
+    press(&mut quitting, 21);
+    press(&mut quitting, 13);
+    advance(&mut quitting, 120);
+    press(&mut quitting, b'y');
+    assert_eq!(
+        quitting.vm().pc(),
+        0x253e,
+        "the second question appears again"
+    );
+    press(&mut quitting, b'y');
+    assert_eq!(quitting.vm().pc(), 0x256e, "the third question appears");
+    press(&mut quitting, b'y');
+    assert_eq!(quitting.vm().pc(), 0x2593, "the last question appears");
+    capture(&quitting, "spirit-exit");
+    press(&mut quitting, b'y');
+    let mut exit_code = None;
+    for _ in 0..120 {
+        if let FrameStatus::Halted(code) = quitting.run_frame().unwrap().status {
+            exit_code = Some(code);
+            break;
+        }
+    }
+    assert_eq!(exit_code, Some(0), "the last answer halts the program");
+}
