@@ -3391,3 +3391,44 @@ without an execution error alone does not establish playability.
 - The stage-number sprintf buffer overlaps the static header buffer, so the
   level-pack rewrite carries a damaged header; the bytes match what the guest
   asks for and are not adjusted by the emulator.
+
+## Crazy Checkers (LAVA1 疯狂跳棋)
+
+- Content: `LAVA1 疯狂跳棋/打包的文件/fktq.pac` and
+  `LAVA1 疯狂跳棋/疯狂跳棋.lav`.
+- The splash waits at pc `0xacd`; any key opens the title at pc `0x1545` with
+  the three-item menu word `0x2961` starting at 0. Up and Down stop at the
+  first and last item instead of wrapping.
+- The third item opens the score table at pc `0xf5a`: eight six-byte names at
+  `0x2295` (all `mbx\0\0`), four recorded results set to 1 at `0x22bd`, and
+  the text `31:30` at `0x2d7b`. Escape returns to the title.
+- Escape at the title opens the credits at pc `0x1080`; any key runs pc
+  `0x1090` and halts with code 0.
+- The name form waits at pc `0xce6`. In one-player mode the player buffer is
+  `0x2235`, the opponent buffer `0x223d` holds `comp`, and the typed length is
+  `0x2d7c`. Enter on an empty name returns to the title with the rejection flag
+  `0x2d7e` set to 1 and the key byte `0x2d7f` set to 13; reopening the form
+  clears the flag. Typed letters are stored in the buffer and counted, and
+  Enter starts the board at pc `0x1fc9`.
+- In two-player mode both buffers start empty. The first empty Enter advances
+  to the second name with `0x2d7e` set to 1; an empty second Enter returns to
+  the title with `0x2d7e` set to 2. Four typed letters fill a name and advance
+  automatically: the first four keep the form at `0xce6` for the second name,
+  and the next four start the board.
+- The board keeps 61 records of 7 bytes at `0x2008` with the owner byte at
+  offset +5. Mode byte `0x2234` is 1 for one player and 0 for two players,
+  piece counters `0x2232`/`0x2233` start at 3/3, and the cursor `0x2230`
+  starts at cell 2. White starts on cells 0, 34 and 56, black on 4, 26 and 60.
+- The cursor clamps at the column bottom and top (Down 2→3→4→5, Up 5→4→3→2→1)
+  and walks right through cells 6, 12, 19, 27, 36, 44, 51 and 57 before
+  stopping, then left through 52, 46, 39, 31, 23, 16, 10 and 5. Enter on a
+  black piece is rejected and leaves the board unchanged.
+- Enter on the white piece at cell 1 sets selection byte `0x2231` to 1 and
+  marks the move cells 1, 2, 5, 6, 7, 11, 12 and 13 with values 8/9. Moving
+  right to cell 6 and confirming makes the move; the computer answers
+  deterministically, the cursor follows to cell 36, both counters become 4/4,
+  white occupies cell 5, black cell 35, and every marker is cleared.
+- Escape opens the exit prompt at pc `0x227e`; `n` returns to the board at pc
+  `0x1fc9`, and `y` leaves for the credits at pc `0x1080`, where any key halts
+  with code 0.
+- Playing a move and leaving the game write no files.

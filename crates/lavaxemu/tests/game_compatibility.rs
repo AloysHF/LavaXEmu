@@ -19393,3 +19393,382 @@ fn crazy_map_editor_menus_maps_and_saves() {
     );
     capture(&emulator, "crazy-map-editor-built-in-map");
 }
+
+#[test]
+#[ignore = "requires LAVAX_GAME_ROOT with the game corpus"]
+fn crazy_checkers_versions_walk_menus_start_both_modes_and_trade_moves() {
+    for path in [
+        "LAVA1 疯狂跳棋/打包的文件/fktq.pac",
+        "LAVA1 疯狂跳棋/疯狂跳棋.lav",
+    ] {
+        let byte = |emulator: &Emulator, address: usize| emulator.vm().memory()[address];
+        let board =
+            |emulator: &Emulator, cell: usize| emulator.vm().memory()[0x2008 + cell * 7 + 5];
+        let finish = |emulator: &mut Emulator| {
+            for _ in 0..3 {
+                emulator.input_mut().set_keys([13]);
+                emulator.run_frame().unwrap();
+            }
+            emulator.input_mut().set_keys([]);
+            let mut halted = None;
+            for _ in 0..60 {
+                if let FrameStatus::Halted(code) = emulator.run_frame().unwrap().status {
+                    halted = Some(code);
+                    break;
+                }
+            }
+            assert_eq!(halted, Some(0), "a key on the credits ends the program");
+            assert_eq!(emulator.vm().pc(), 0x1090, "the exit path runs");
+        };
+
+        let mut emulator = load(path);
+        advance(&mut emulator, 300);
+        assert_eq!(emulator.vm().pc(), 0xacd, "the splash waits for a key");
+        capture(&emulator, "crazy-checkers-splash");
+        press(&mut emulator, 13);
+        assert_eq!(emulator.vm().pc(), 0x1545, "the title waits for a key");
+        capture(&emulator, "crazy-checkers-title");
+        assert_eq!(
+            byte(&emulator, 0x2961),
+            0,
+            "the first menu item starts selected"
+        );
+        press(&mut emulator, 21);
+        assert_eq!(byte(&emulator, 0x2961), 1, "down selects two players");
+        press(&mut emulator, 21);
+        assert_eq!(byte(&emulator, 0x2961), 2, "down selects the score table");
+        press(&mut emulator, 21);
+        assert_eq!(
+            byte(&emulator, 0x2961),
+            2,
+            "the selection stops on the last item"
+        );
+        press(&mut emulator, 20);
+        press(&mut emulator, 20);
+        assert_eq!(byte(&emulator, 0x2961), 0, "up returns to one player");
+        press(&mut emulator, 20);
+        assert_eq!(
+            byte(&emulator, 0x2961),
+            0,
+            "the selection stops on the first item"
+        );
+        press(&mut emulator, 21);
+        press(&mut emulator, 21);
+        press(&mut emulator, 13);
+        advance(&mut emulator, 120);
+        assert_eq!(emulator.vm().pc(), 0xf5a, "the score table waits for a key");
+        assert_eq!(
+            &emulator.vm().memory()[0x2295..0x22bd],
+            b"mbx\0\0mbx\0\0mbx\0\0mbx\0\0mbx\0\0mbx\0\0mbx\0\0mbx\0\0",
+            "the score table lists eight names"
+        );
+        assert_eq!(
+            emulator.vm().memory()[0x22bd..0x22c1],
+            [1, 1, 1, 1],
+            "the score table holds four recorded results"
+        );
+        assert_eq!(
+            &emulator.vm().memory()[0x2d7b..0x2d80],
+            b"31:30",
+            "the score text shows a full board"
+        );
+        capture(&emulator, "crazy-checkers-scores");
+        press(&mut emulator, 27);
+        assert_eq!(emulator.vm().pc(), 0x1545, "escape closes the score table");
+        press(&mut emulator, 27);
+        advance(&mut emulator, 120);
+        assert_eq!(
+            emulator.vm().pc(),
+            0x1080,
+            "escape leaves the title for the credits"
+        );
+        capture(&emulator, "crazy-checkers-credits");
+        finish(&mut emulator);
+
+        let mut emulator = load(path);
+        advance(&mut emulator, 300);
+        press(&mut emulator, 13);
+        press(&mut emulator, 13);
+        assert_eq!(
+            emulator.vm().pc(),
+            0xce6,
+            "the one-player name form waits for a key"
+        );
+        assert_eq!(byte(&emulator, 0x2235), 0, "the player name starts empty");
+        assert_eq!(
+            &emulator.vm().memory()[0x223d..0x2241],
+            b"comp",
+            "the computer is named"
+        );
+        assert_eq!(byte(&emulator, 0x2d7c), 0, "the name length starts empty");
+        press(&mut emulator, 13);
+        assert_eq!(
+            emulator.vm().pc(),
+            0x1545,
+            "an empty name returns to the title"
+        );
+        assert_eq!(byte(&emulator, 0x2d7e), 1, "the empty name is rejected");
+        assert_eq!(
+            byte(&emulator, 0x2d7f),
+            13,
+            "the rejection records the Enter key"
+        );
+        press(&mut emulator, 13);
+        assert_eq!(emulator.vm().pc(), 0xce6, "the name form reopens");
+        assert_eq!(byte(&emulator, 0x2d7e), 0, "reopening clears the rejection");
+        for key in *b"abc" {
+            press(&mut emulator, key);
+        }
+        assert_eq!(
+            &emulator.vm().memory()[0x2235..0x2238],
+            b"abc",
+            "the typed name is stored"
+        );
+        assert_eq!(
+            byte(&emulator, 0x2d7c),
+            3,
+            "the name length follows the typing"
+        );
+        press(&mut emulator, 13);
+        assert_eq!(
+            emulator.vm().pc(),
+            0x1fc9,
+            "a three-letter name starts the board"
+        );
+        assert_eq!(
+            byte(&emulator, 0x2234),
+            1,
+            "the board runs in one-player mode"
+        );
+        assert_eq!(byte(&emulator, 0x2232), 3, "white starts with three pieces");
+        assert_eq!(byte(&emulator, 0x2233), 3, "black starts with three pieces");
+        assert_eq!(
+            byte(&emulator, 0x2230),
+            2,
+            "the cursor starts on the second cell"
+        );
+        for (cell, owner) in [(0, 1), (4, 2), (26, 2), (34, 1), (56, 1), (60, 2)] {
+            assert_eq!(board(&emulator, cell), owner, "cell {cell} starts occupied");
+        }
+        capture(&emulator, "crazy-checkers-board");
+
+        press(&mut emulator, 21);
+        assert_eq!(byte(&emulator, 0x2230), 3);
+        press(&mut emulator, 21);
+        assert_eq!(byte(&emulator, 0x2230), 4);
+        press(&mut emulator, 21);
+        assert_eq!(
+            byte(&emulator, 0x2230),
+            5,
+            "the cursor reaches the column bottom"
+        );
+        press(&mut emulator, 13);
+        assert_eq!(
+            byte(&emulator, 0x2231),
+            0,
+            "a black piece cannot be selected"
+        );
+        assert_eq!(board(&emulator, 4), 2, "the black piece stays put");
+        press(&mut emulator, 21);
+        assert_eq!(
+            byte(&emulator, 0x2230),
+            5,
+            "down stops at the column bottom"
+        );
+        for (step, cursor) in [(1, 4), (2, 3), (3, 2), (4, 1)] {
+            press(&mut emulator, 20);
+            assert_eq!(byte(&emulator, 0x2230), cursor, "up step {step}");
+        }
+        press(&mut emulator, 20);
+        assert_eq!(byte(&emulator, 0x2230), 1, "up stops at the column top");
+
+        for (step, cursor) in [6, 12, 19, 27, 36, 44, 51, 57, 57].into_iter().enumerate() {
+            press(&mut emulator, 22);
+            assert_eq!(byte(&emulator, 0x2230), cursor, "right step {}", step + 1);
+        }
+        for (step, cursor) in [52, 46, 39, 31, 23, 16, 10, 5, 5].into_iter().enumerate() {
+            press(&mut emulator, 23);
+            assert_eq!(byte(&emulator, 0x2230), cursor, "left step {}", step + 1);
+        }
+        capture(&emulator, "crazy-checkers-cursor");
+        for _ in 0..4 {
+            press(&mut emulator, 20);
+        }
+        assert_eq!(
+            byte(&emulator, 0x2230),
+            1,
+            "the cursor returns to the top corner"
+        );
+
+        press(&mut emulator, 13);
+        assert_eq!(byte(&emulator, 0x2231), 1, "the white piece is selected");
+        for (cell, marker) in [
+            (1, 8),
+            (2, 9),
+            (5, 8),
+            (6, 8),
+            (7, 9),
+            (11, 9),
+            (12, 9),
+            (13, 9),
+        ] {
+            assert_eq!(
+                board(&emulator, cell),
+                marker,
+                "cell {cell} shows a move marker"
+            );
+        }
+        assert_eq!(board(&emulator, 3), 0, "unmarked cells stay empty");
+        capture(&emulator, "crazy-checkers-markers");
+
+        press(&mut emulator, 22);
+        assert_eq!(byte(&emulator, 0x2230), 6, "right moves onto a marked cell");
+        press(&mut emulator, 13);
+        let mut settled = false;
+        for _ in 0..600 {
+            let result = emulator.run_frame().unwrap();
+            assert!(
+                !matches!(result.status, FrameStatus::Halted(_)),
+                "the game continues"
+            );
+            if emulator.vm().pc() == 0x1fc9 && matches!(result.status, FrameStatus::WaitingForInput)
+            {
+                settled = true;
+                break;
+            }
+        }
+        assert!(settled, "the computer reply returns control to the board");
+        assert_eq!(
+            byte(&emulator, 0x2230),
+            36,
+            "the cursor follows the computer move"
+        );
+        assert_eq!(byte(&emulator, 0x2231), 0, "the selection is cleared");
+        assert_eq!(byte(&emulator, 0x2232), 4, "white gains a piece");
+        assert_eq!(byte(&emulator, 0x2233), 4, "black answers with a piece");
+        assert_eq!(board(&emulator, 5), 1, "white occupies the marked cell");
+        assert_eq!(board(&emulator, 35), 2, "black occupies its answer cell");
+        for cell in [1, 2, 6, 7, 11, 12, 13] {
+            assert_eq!(board(&emulator, cell), 0, "the move markers are cleared");
+        }
+        capture(&emulator, "crazy-checkers-moved");
+        assert!(
+            emulator.files_mut().take_dirty_files().is_empty(),
+            "a move writes no files"
+        );
+
+        press(&mut emulator, 27);
+        assert_eq!(emulator.vm().pc(), 0x227e, "escape asks before leaving");
+        capture(&emulator, "crazy-checkers-confirm");
+        press(&mut emulator, 110);
+        assert_eq!(
+            emulator.vm().pc(),
+            0x1fc9,
+            "answering no returns to the board"
+        );
+        press(&mut emulator, 27);
+        press(&mut emulator, 121);
+        advance(&mut emulator, 120);
+        assert_eq!(
+            emulator.vm().pc(),
+            0x1080,
+            "answering yes leaves for the credits"
+        );
+        finish(&mut emulator);
+
+        let mut emulator = load(path);
+        advance(&mut emulator, 300);
+        press(&mut emulator, 13);
+        press(&mut emulator, 21);
+        assert_eq!(
+            byte(&emulator, 0x2961),
+            1,
+            "the two-player item is selected"
+        );
+        press(&mut emulator, 13);
+        assert_eq!(
+            emulator.vm().pc(),
+            0xce6,
+            "the two-player name form waits for a key"
+        );
+        assert_eq!(byte(&emulator, 0x2235), 0, "the first name starts empty");
+        assert_eq!(byte(&emulator, 0x223d), 0, "the second name starts empty");
+        press(&mut emulator, 13);
+        assert_eq!(
+            emulator.vm().pc(),
+            0xce6,
+            "an empty first name advances to the second name"
+        );
+        assert_eq!(byte(&emulator, 0x2d7e), 1, "the first entry is recorded");
+        press(&mut emulator, 13);
+        assert_eq!(
+            emulator.vm().pc(),
+            0x1545,
+            "an empty second name returns to the title"
+        );
+        assert_eq!(byte(&emulator, 0x2d7e), 2, "the empty name is rejected");
+        assert_eq!(
+            byte(&emulator, 0x2d7f),
+            13,
+            "the rejection records the Enter key"
+        );
+        press(&mut emulator, 13);
+        assert_eq!(emulator.vm().pc(), 0xce6, "the name form reopens");
+        assert_eq!(byte(&emulator, 0x2d7e), 0, "reopening clears the rejection");
+        for key in *b"abcd" {
+            press(&mut emulator, key);
+        }
+        assert_eq!(
+            emulator.vm().pc(),
+            0xce6,
+            "four letters advance to the second name"
+        );
+        assert_eq!(
+            &emulator.vm().memory()[0x2235..0x2239],
+            b"abcd",
+            "the first name is kept"
+        );
+        assert_eq!(byte(&emulator, 0x223d), 0, "the second name is still empty");
+        assert_eq!(byte(&emulator, 0x2d7e), 1, "the first name is accepted");
+        for key in *b"defg" {
+            press(&mut emulator, key);
+        }
+        assert_eq!(
+            emulator.vm().pc(),
+            0x1fc9,
+            "four letters start the two-player board"
+        );
+        assert_eq!(
+            &emulator.vm().memory()[0x223d..0x2241],
+            b"defg",
+            "the second name is kept"
+        );
+        assert_eq!(
+            byte(&emulator, 0x2234),
+            0,
+            "the board runs in two-player mode"
+        );
+        assert_eq!(byte(&emulator, 0x2232), 3, "white starts with three pieces");
+        assert_eq!(byte(&emulator, 0x2233), 3, "black starts with three pieces");
+        assert_eq!(
+            byte(&emulator, 0x2230),
+            2,
+            "the cursor starts on the second cell"
+        );
+        for (cell, owner) in [(0, 1), (4, 2), (26, 2), (34, 1), (56, 1), (60, 2)] {
+            assert_eq!(board(&emulator, cell), owner, "cell {cell} starts occupied");
+        }
+        capture(&emulator, "crazy-checkers-two-players");
+
+        press(&mut emulator, 27);
+        assert_eq!(emulator.vm().pc(), 0x227e, "escape asks before leaving");
+        press(&mut emulator, 121);
+        advance(&mut emulator, 120);
+        assert_eq!(
+            emulator.vm().pc(),
+            0x1080,
+            "answering yes leaves for the credits"
+        );
+        finish(&mut emulator);
+    }
+}
