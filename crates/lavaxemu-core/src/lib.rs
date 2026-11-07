@@ -8,7 +8,7 @@ mod system;
 mod vfs;
 mod vm;
 
-pub use display::{BufferTarget, Display, DrawOperation, Transform};
+pub use display::{BufferTarget, Display, DisplayTheme, DrawOperation, Transform};
 pub use emulator::{Emulator, FrameResult, FrameStatus};
 pub use error::{Error, Result};
 pub use input::{InputState, PointerState};

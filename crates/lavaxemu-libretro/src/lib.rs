@@ -9,7 +9,7 @@ use std::{
 };
 
 use ffi::*;
-use lavaxemu_core::{Emulator, PointerState, Program};
+use lavaxemu_core::{DisplayTheme, Emulator, PointerState, Program};
 
 const FRAMES_PER_SECOND: f64 = 60.0;
 const AUDIO_SAMPLE_RATE: f64 = 44_100.0;
@@ -314,6 +314,10 @@ pub unsafe extern "C" fn retro_load_game(info: *const GameInfo) -> bool {
         let mut core = core();
         core.video.clear();
         core.emulator = Some(emulator);
+        let environment = core.callbacks.environment;
+        if let Some(emulator) = core.emulator.as_mut() {
+            emulator.set_display_theme(read_theme_option(environment));
+        }
         true
     })
 }
@@ -348,6 +352,12 @@ pub extern "C" fn retro_run() {
 
         if core.emulator.is_none() {
             return;
+        }
+        let environment = core.callbacks.environment;
+        if core_options_updated(environment)
+            && let Some(emulator) = core.emulator.as_mut()
+        {
+            emulator.set_display_theme(read_theme_option(environment));
         }
         let mut video = std::mem::take(&mut core.video);
         let emulator = core.emulator.as_mut().expect("emulator was checked");
@@ -557,7 +567,106 @@ fn configure_frontend(environment: EnvironmentCallback) -> bool {
         ptr::from_mut(&mut performance_level).cast(),
     );
     register_input_descriptors(environment);
+    register_core_options(environment);
     true
+}
+
+const THEME_KEY: &CStr = c"lavaxemu_theme";
+const THEME_DESC: &CStr = c"Monochrome color scheme";
+const THEME_INFO: &CStr = c"Color scheme for monochrome programs. Classic reproduces the green LCD of the original console; White shows black text on a white background.";
+const THEME_DEFAULT: &CStr = c"classic";
+
+/// Value list shared by the v1 and v2 option definitions: two entries plus
+/// the null terminator slots the interface requires.
+static THEME_VALUES: [CoreOptionValue; CORE_OPTION_VALUES_MAX] = {
+    let mut values = [CoreOptionValue {
+        value: ptr::null(),
+        label: ptr::null(),
+    }; CORE_OPTION_VALUES_MAX];
+    values[0] = CoreOptionValue {
+        value: c"classic".as_ptr(),
+        label: c"Classic (green LCD)".as_ptr(),
+    };
+    values[1] = CoreOptionValue {
+        value: c"white".as_ptr(),
+        label: c"White (black text)".as_ptr(),
+    };
+    values
+};
+
+static THEME_DEFINITION_V1: CoreOptionDefinition = CoreOptionDefinition {
+    key: THEME_KEY.as_ptr(),
+    desc: THEME_DESC.as_ptr(),
+    info: THEME_INFO.as_ptr(),
+    values: THEME_VALUES,
+    default_value: THEME_DEFAULT.as_ptr(),
+};
+
+static THEME_DEFINITION_V2: CoreOptionV2Definition = CoreOptionV2Definition {
+    key: THEME_KEY.as_ptr(),
+    desc: THEME_DESC.as_ptr(),
+    info: THEME_INFO.as_ptr(),
+    category_key: ptr::null(),
+    values: THEME_VALUES,
+    default_value: THEME_DEFAULT.as_ptr(),
+};
+
+static CORE_OPTIONS_V1: CoreOptions = CoreOptions {
+    definitions: ptr::from_ref(&THEME_DEFINITION_V1),
+    num_definitions: 1,
+};
+
+static CORE_OPTIONS_V2: CoreOptionsV2 = CoreOptionsV2 {
+    categories: ptr::null(),
+    definitions: ptr::from_ref(&THEME_DEFINITION_V2),
+    num_categories: 0,
+    num_definitions: 1,
+};
+
+/// Publish the display-theme core option, preferring the v2 interface and
+/// falling back to v1 so older frontends still see the setting.
+fn register_core_options(environment: EnvironmentCallback) {
+    if call_environment(
+        environment,
+        ENVIRONMENT_SET_CORE_OPTIONS_V2,
+        ptr::from_ref(&CORE_OPTIONS_V2).cast_mut().cast(),
+    ) {
+        return;
+    }
+    call_environment(
+        environment,
+        ENVIRONMENT_SET_CORE_OPTIONS,
+        ptr::from_ref(&CORE_OPTIONS_V1).cast_mut().cast(),
+    );
+}
+
+/// True when the frontend reports that a core option value changed.
+fn core_options_updated(environment: EnvironmentCallback) -> bool {
+    let mut updated = false;
+    call_environment(
+        environment,
+        ENVIRONMENT_GET_VARIABLE_UPDATE,
+        ptr::from_mut(&mut updated).cast(),
+    ) && updated
+}
+
+/// Read the display theme from the frontend's core option store, defaulting
+/// to the classic look when the variable is missing or unknown.
+fn read_theme_option(environment: EnvironmentCallback) -> DisplayTheme {
+    let mut variable = Variable {
+        key: THEME_KEY.as_ptr(),
+        value: ptr::null(),
+    };
+    if call_environment(
+        environment,
+        ENVIRONMENT_GET_VARIABLE,
+        ptr::from_mut(&mut variable).cast(),
+    ) && !variable.value.is_null()
+        && unsafe { CStr::from_ptr(variable.value) } == c"white"
+    {
+        return DisplayTheme::White;
+    }
+    DisplayTheme::Classic
 }
 
 fn register_input_descriptors(environment: EnvironmentCallback) {
@@ -713,14 +822,23 @@ fn import_directory(
 #[cfg(test)]
 mod tests {
     use super::*;
-    use std::sync::atomic::{AtomicU32, Ordering};
+    use std::sync::atomic::{AtomicBool, AtomicU32, Ordering};
 
     static VIDEO_WIDTH: AtomicU32 = AtomicU32::new(0);
 
-    unsafe extern "C" fn environment(command: u32, _data: *mut c_void) -> bool {
+    unsafe extern "C" fn environment(command: u32, data: *mut c_void) -> bool {
+        // Answer the theme variable so the load path exercises the option
+        // plumbing end to end.
+        if command == ENVIRONMENT_GET_VARIABLE {
+            let variable = unsafe { data.cast::<Variable>().as_mut().unwrap() };
+            variable.value = c"white".as_ptr();
+            return true;
+        }
         command == ENVIRONMENT_SET_PIXEL_FORMAT
             || command == ENVIRONMENT_SET_INPUT_DESCRIPTORS
             || command == ENVIRONMENT_SET_PERFORMANCE_LEVEL
+            || command == ENVIRONMENT_SET_CORE_OPTIONS_V2
+            || command == ENVIRONMENT_GET_VARIABLE_UPDATE
     }
 
     unsafe extern "C" fn video(_data: *const c_void, width: u32, _height: u32, _pitch: usize) {
@@ -806,5 +924,78 @@ mod tests {
             meta: ptr::null(),
         };
         assert!(!unsafe { retro_load_game(&info) });
+    }
+
+    static V2_ACCEPTED: AtomicBool = AtomicBool::new(false);
+    static V1_ACCEPTED: AtomicBool = AtomicBool::new(false);
+
+    unsafe extern "C" fn accepts_v2_options(command: u32, _data: *mut c_void) -> bool {
+        if command == ENVIRONMENT_SET_CORE_OPTIONS_V2 {
+            V2_ACCEPTED.store(true, Ordering::Relaxed);
+            return true;
+        }
+        false
+    }
+
+    unsafe extern "C" fn accepts_v1_options(command: u32, _data: *mut c_void) -> bool {
+        if command == ENVIRONMENT_SET_CORE_OPTIONS {
+            V1_ACCEPTED.store(true, Ordering::Relaxed);
+            return true;
+        }
+        false
+    }
+
+    #[test]
+    fn registers_core_options_with_v2_and_v1_fallback() {
+        V2_ACCEPTED.store(false, Ordering::Relaxed);
+        V1_ACCEPTED.store(false, Ordering::Relaxed);
+        register_core_options(Some(accepts_v2_options));
+        assert!(V2_ACCEPTED.load(Ordering::Relaxed));
+        assert!(!V1_ACCEPTED.load(Ordering::Relaxed));
+
+        V2_ACCEPTED.store(false, Ordering::Relaxed);
+        V1_ACCEPTED.store(false, Ordering::Relaxed);
+        register_core_options(Some(accepts_v1_options));
+        assert!(!V2_ACCEPTED.load(Ordering::Relaxed));
+        assert!(V1_ACCEPTED.load(Ordering::Relaxed));
+    }
+
+    #[test]
+    fn reads_the_theme_from_frontend_variables() {
+        unsafe extern "C" fn white(command: u32, data: *mut c_void) -> bool {
+            if command == ENVIRONMENT_GET_VARIABLE {
+                let variable = unsafe { data.cast::<Variable>().as_mut().unwrap() };
+                variable.value = c"white".as_ptr();
+                return true;
+            }
+            false
+        }
+        unsafe extern "C" fn unknown_value(command: u32, data: *mut c_void) -> bool {
+            if command == ENVIRONMENT_GET_VARIABLE {
+                let variable = unsafe { data.cast::<Variable>().as_mut().unwrap() };
+                variable.value = c"amber".as_ptr();
+                return true;
+            }
+            false
+        }
+        unsafe extern "C" fn missing_value(command: u32, data: *mut c_void) -> bool {
+            if command == ENVIRONMENT_GET_VARIABLE {
+                let variable = unsafe { data.cast::<Variable>().as_mut().unwrap() };
+                variable.value = ptr::null();
+                return true;
+            }
+            false
+        }
+
+        assert_eq!(read_theme_option(Some(white)), DisplayTheme::White);
+        assert_eq!(
+            read_theme_option(Some(unknown_value)),
+            DisplayTheme::Classic
+        );
+        assert_eq!(
+            read_theme_option(Some(missing_value)),
+            DisplayTheme::Classic
+        );
+        assert_eq!(read_theme_option(None), DisplayTheme::Classic);
     }
 }

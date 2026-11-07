@@ -34,6 +34,9 @@ being progressively improved.
 - **System API bridge** — 87 firmware services for display, input, files,
   memory, audio, and utilities
 - **Indexed-color display** — 160×240 resolution with 256-color palette
+- **Display themes** — monochrome programs default to the classic green LCD
+  and can be switched to black-on-white (`--theme white` in standalone, or the
+  core option in RetroArch)
 - **Keyboard and pointer input** — full keyboard mapping with mouse/touch
   support
 - **Virtual file system** — sandboxed file access with selective write-back

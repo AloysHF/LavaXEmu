@@ -1,6 +1,6 @@
 use crc32fast::hash;
 
-use crate::{Emulator, Error, GUEST_MEMORY_SIZE, Result};
+use crate::{DisplayTheme, Emulator, Error, GUEST_MEMORY_SIZE, Result};
 
 const STATE_MAGIC: [u8; 4] = *b"LXST";
 const STATE_VERSION: u16 = 2;
@@ -68,7 +68,13 @@ impl Emulator {
             ));
         }
 
+        // The theme is not part of the serialized state; keep the host's
+        // current choice instead of the default the restore would produce.
+        let theme = self.display.theme();
         *self = restored;
+        if theme != DisplayTheme::default() {
+            self.display.set_theme(theme);
+        }
         Ok(())
     }
 }
@@ -114,5 +120,26 @@ mod tests {
         let valid_state = emulator.save_state().unwrap();
         let mut other = Emulator::new(program(0x05));
         assert!(other.load_state(&valid_state).is_err());
+    }
+
+    #[test]
+    fn applies_display_theme_and_preserves_guest_palettes() {
+        // A non-default host theme stays in effect after a restore, overriding
+        // whatever palette the state happened to carry.
+        let emulator = Emulator::new(program(0x04));
+        let state = emulator.save_state().unwrap();
+        let mut restored = Emulator::new(program(0x04));
+        restored.set_display_theme(DisplayTheme::White);
+        restored.load_state(&state).unwrap();
+        assert_eq!(restored.display.palette()[0], [255, 255, 255]);
+
+        // Under the default theme a restore is applied verbatim, so guest
+        // palette overrides survive the round trip.
+        let mut guest = Emulator::new(program(0x04));
+        guest.display.set_palette_rgba(0, &[[200, 0, 0, 255]]);
+        let guest_state = guest.save_state().unwrap();
+        let mut restored_guest = Emulator::new(program(0x04));
+        restored_guest.load_state(&guest_state).unwrap();
+        assert_eq!(restored_guest.display.palette()[0], [200, 0, 0]);
     }
 }

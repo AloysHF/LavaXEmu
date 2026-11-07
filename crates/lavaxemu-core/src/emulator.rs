@@ -1,6 +1,6 @@
 use crate::{
-    BufferTarget, Display, DrawOperation, GraphicsMode, InputState, Program, Result, RunOutcome,
-    VirtualFileSystem, Vm,
+    BufferTarget, Display, DisplayTheme, DrawOperation, GraphicsMode, InputState, Program, Result,
+    RunOutcome, VirtualFileSystem, Vm,
 };
 use serde::{Deserialize, Serialize};
 
@@ -277,6 +277,11 @@ impl Emulator {
 
     pub fn set_command_line(&mut self, command_line: impl Into<Vec<u8>>) {
         self.command_line = command_line.into();
+    }
+
+    /// Select the color scheme used for the monochrome display.
+    pub fn set_display_theme(&mut self, theme: DisplayTheme) {
+        self.display.set_theme(theme);
     }
 
     pub fn run_frame(&mut self) -> Result<FrameResult> {

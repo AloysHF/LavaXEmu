@@ -7,9 +7,13 @@ pub const ENVIRONMENT_SET_MESSAGE: u32 = 6;
 pub const ENVIRONMENT_SET_PERFORMANCE_LEVEL: u32 = 8;
 pub const ENVIRONMENT_SET_PIXEL_FORMAT: u32 = 10;
 pub const ENVIRONMENT_SET_INPUT_DESCRIPTORS: u32 = 11;
+pub const ENVIRONMENT_GET_VARIABLE: u32 = 15;
+pub const ENVIRONMENT_GET_VARIABLE_UPDATE: u32 = 17;
 pub const ENVIRONMENT_SET_SUPPORT_NO_GAME: u32 = 18;
 #[cfg(not(target_os = "emscripten"))]
 pub const ENVIRONMENT_GET_LOG_INTERFACE: u32 = 27;
+pub const ENVIRONMENT_SET_CORE_OPTIONS: u32 = 56;
+pub const ENVIRONMENT_SET_CORE_OPTIONS_V2: u32 = 60;
 
 pub const LOG_DEBUG: u32 = 0;
 pub const LOG_INFO: u32 = 1;
@@ -115,4 +119,78 @@ pub struct InputDescriptor {
     pub index: u32,
     pub id: u32,
     pub description: *const c_char,
+}
+
+/// Number of value slots per core option definition (libretro constant).
+pub const CORE_OPTION_VALUES_MAX: usize = 128;
+
+// The core-options structs are plain-data FFI records. The core only ever
+// hands the frontend pointers to `'static` instances of them, so sharing them
+// across threads is sound; the raw pointers would otherwise block `static`.
+unsafe impl Sync for CoreOptionValue {}
+unsafe impl Sync for CoreOptionDefinition {}
+unsafe impl Sync for CoreOptionV2Category {}
+unsafe impl Sync for CoreOptionV2Definition {}
+unsafe impl Sync for CoreOptions {}
+unsafe impl Sync for CoreOptionsV2 {}
+
+/// Key/value pair queried through `RETRO_ENVIRONMENT_GET_VARIABLE`.
+#[repr(C)]
+pub struct Variable {
+    pub key: *const c_char,
+    pub value: *const c_char,
+}
+
+#[derive(Clone, Copy)]
+#[repr(C)]
+pub struct CoreOptionValue {
+    pub value: *const c_char,
+    pub label: *const c_char,
+}
+
+#[derive(Clone, Copy)]
+#[repr(C)]
+pub struct CoreOptionDefinition {
+    pub key: *const c_char,
+    pub desc: *const c_char,
+    pub info: *const c_char,
+    pub values: [CoreOptionValue; CORE_OPTION_VALUES_MAX],
+    pub default_value: *const c_char,
+}
+
+#[derive(Clone, Copy)]
+#[repr(C)]
+pub struct CoreOptionV2Category {
+    pub key: *const c_char,
+    pub desc: *const c_char,
+    pub info: *const c_char,
+}
+
+#[derive(Clone, Copy)]
+#[repr(C)]
+pub struct CoreOptionV2Definition {
+    pub key: *const c_char,
+    pub desc: *const c_char,
+    pub info: *const c_char,
+    pub category_key: *const c_char,
+    pub values: [CoreOptionValue; CORE_OPTION_VALUES_MAX],
+    pub default_value: *const c_char,
+}
+
+/// `retro_core_options`: the v1 core-options interface.
+#[derive(Clone, Copy)]
+#[repr(C)]
+pub struct CoreOptions {
+    pub definitions: *const CoreOptionDefinition,
+    pub num_definitions: usize,
+}
+
+/// `retro_core_options_v2`: the v2 core-options interface.
+#[derive(Clone, Copy)]
+#[repr(C)]
+pub struct CoreOptionsV2 {
+    pub categories: *const CoreOptionV2Category,
+    pub definitions: *const CoreOptionV2Definition,
+    pub num_categories: usize,
+    pub num_definitions: usize,
 }

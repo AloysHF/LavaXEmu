@@ -67,6 +67,12 @@ display module manages:
 - Conversion to XRGB8888 for window display
 - Conversion to RGB888 for PNG screenshots
 
+The default monochrome palette is the classic green LCD. A host-selected
+`DisplayTheme` (`classic` or `white`) overrides the monochrome background and
+foreground defaults; it survives resets, graphics-mode switches, and save-state
+loads, while guests that explicitly redefine palette entries keep doing so.
+Color modes are unaffected.
+
 The desktop frontend converts the completed screen to 32-bit XRGB for `minifb`.
 The libretro core outputs RGB565 to the frontend.
 
