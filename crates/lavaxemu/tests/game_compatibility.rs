@@ -19772,3 +19772,257 @@ fn crazy_checkers_versions_walk_menus_start_both_modes_and_trade_moves() {
         finish(&mut emulator);
     }
 }
+
+#[test]
+#[ignore = "requires LAVAX_GAME_ROOT with the game corpus"]
+fn bai_bai_kuai_pao_versions_walk_menus_start_the_stage_and_scroll_back() {
+    for path in [
+        "LAVA1 白白快跑/已打包的/白白快跑.pac",
+        "LAVA1 白白快跑/未打包的/LAVA/白白快跑.lav",
+    ] {
+        let byte = |emulator: &Emulator, address: usize| emulator.vm().memory()[address];
+        let frame = |emulator: &Emulator| emulator.display().indexed_frame().to_vec();
+        let frame_difference =
+            |left: &[u8], right: &[u8]| left.iter().zip(right).filter(|(a, b)| a != b).count();
+
+        let mut emulator = load(path);
+        advance(&mut emulator, 300);
+        assert_eq!(emulator.vm().pc(), 0x80c, "the splash waits for a key");
+        capture(&emulator, "bai-bai-kuai-pao-splash");
+
+        press(&mut emulator, 13);
+        advance(&mut emulator, 60);
+        assert_eq!(emulator.vm().pc(), 0x1d49, "the level list waits for a key");
+        assert_eq!(
+            &emulator.vm().memory()[0x1400..0x1410],
+            &[
+                0xc9, 0xcf, 0xcf, 0xc2, 0xd1, 0xa1, 0xd4, 0xf1, 0xb5, 0xda, 0x20, 0x31, 0x20, 0xb9,
+                0xd8, 0x20,
+            ],
+            "the level list offers the first level"
+        );
+        assert_eq!(
+            byte(&emulator, 0x429c),
+            1,
+            "the only unlocked level is selected"
+        );
+        assert_eq!(byte(&emulator, 0x429e), 1, "the level mirror is selected");
+        let levels = frame(&emulator);
+        capture(&emulator, "bai-bai-kuai-pao-levels");
+        let expected_progress = if path.contains("已打包的") {
+            vec![("/lavadata/bbkpv.dat".to_owned(), vec![0u8])]
+        } else {
+            Vec::new()
+        };
+        assert_eq!(
+            emulator.files_mut().take_dirty_files(),
+            expected_progress,
+            "the level list creates a missing progress file and reuses an existing one"
+        );
+        press(&mut emulator, 20);
+        assert_eq!(frame(&emulator), levels, "up keeps the only level");
+        assert_eq!(byte(&emulator, 0x429c), 1, "up keeps the level selected");
+        press(&mut emulator, 21);
+        assert_eq!(frame(&emulator), levels, "down keeps the only level");
+        assert_eq!(byte(&emulator, 0x429e), 1, "down keeps the level mirror");
+
+        press(&mut emulator, 27);
+        advance(&mut emulator, 60);
+        assert_eq!(emulator.vm().pc(), 0x1bcb, "escape opens the main menu");
+        assert_eq!(
+            byte(&emulator, 0x429c),
+            1,
+            "the first menu item starts selected"
+        );
+        let menu = frame(&emulator);
+        capture(&emulator, "bai-bai-kuai-pao-menu");
+
+        for expected in [2, 3, 4, 1] {
+            press(&mut emulator, 21);
+            assert_eq!(
+                byte(&emulator, 0x429c),
+                expected,
+                "down moves the menu cursor"
+            );
+            assert_eq!(
+                byte(&emulator, 0x429e),
+                expected,
+                "the menu mirror follows down"
+            );
+        }
+        for expected in [4, 3, 2, 1] {
+            press(&mut emulator, 20);
+            assert_eq!(
+                byte(&emulator, 0x429c),
+                expected,
+                "up moves the menu cursor"
+            );
+            assert_eq!(
+                byte(&emulator, 0x429e),
+                expected,
+                "the menu mirror follows up"
+            );
+        }
+
+        press(&mut emulator, 21);
+        press(&mut emulator, 13);
+        advance(&mut emulator, 60);
+        assert_eq!(
+            emulator.vm().pc(),
+            0x1d7d,
+            "the locked map editor explains itself"
+        );
+        assert_eq!(
+            &emulator.vm().memory()[0x1400..0x1411],
+            &[
+                0xc7, 0xeb, 0xcf, 0xc8, 0xcd, 0xa8, 0xb9, 0xfd, 0xcb, 0xf9, 0xd3, 0xd0, 0xb9, 0xd8,
+                0xbf, 0xa8, 0x2e,
+            ],
+            "the message asks for every level to be cleared first"
+        );
+        capture(&emulator, "bai-bai-kuai-pao-locked-editor");
+        press(&mut emulator, 97);
+        advance(&mut emulator, 60);
+        assert_eq!(frame(&emulator), menu, "a key returns to the menu");
+        assert_eq!(
+            byte(&emulator, 0x429c),
+            1,
+            "returning resets the menu cursor"
+        );
+
+        press(&mut emulator, 21);
+        press(&mut emulator, 21);
+        press(&mut emulator, 13);
+        advance(&mut emulator, 60);
+        assert_eq!(emulator.vm().pc(), 0x1ef8, "the about page waits for a key");
+        assert!(frame(&emulator) != menu, "the about page replaces the menu");
+        capture(&emulator, "bai-bai-kuai-pao-about");
+        press(&mut emulator, 97);
+        advance(&mut emulator, 60);
+        assert_eq!(frame(&emulator), menu, "a key leaves the about page");
+
+        press(&mut emulator, 21);
+        press(&mut emulator, 21);
+        press(&mut emulator, 21);
+        press(&mut emulator, 13);
+        advance(&mut emulator, 60);
+        assert_eq!(
+            emulator.vm().pc(),
+            0x1fa8,
+            "the author page waits for a key"
+        );
+        assert!(
+            frame(&emulator) != menu,
+            "the author page replaces the menu"
+        );
+        capture(&emulator, "bai-bai-kuai-pao-author");
+        press(&mut emulator, 97);
+        advance(&mut emulator, 60);
+        assert_eq!(frame(&emulator), menu, "a key leaves the author page");
+
+        assert!(
+            emulator.files_mut().take_dirty_files().is_empty(),
+            "the sub pages write nothing"
+        );
+
+        press(&mut emulator, 13);
+        advance(&mut emulator, 60);
+        assert_eq!(frame(&emulator), levels, "start returns to the level list");
+        press(&mut emulator, 13);
+        advance(&mut emulator, 60);
+        assert_eq!(emulator.vm().pc(), 0x1063, "the first level starts");
+        assert_eq!(byte(&emulator, 0x4248), 5, "the player starts with five HP");
+        let start = frame(&emulator);
+        capture(&emulator, "bai-bai-kuai-pao-stage");
+
+        for _ in 0..5 {
+            press(&mut emulator, 100);
+        }
+        assert_eq!(
+            byte(&emulator, 0x4238),
+            5,
+            "five right steps scroll the stage"
+        );
+        let scrolled = frame(&emulator);
+        assert!(
+            frame_difference(&scrolled, &start) > start.len() / 10,
+            "walking right changes the stage"
+        );
+        for _ in 0..5 {
+            press(&mut emulator, 97);
+        }
+        assert_eq!(
+            byte(&emulator, 0x4238),
+            0x71,
+            "five left steps bring the view back"
+        );
+        let restored = frame(&emulator);
+        assert!(
+            frame_difference(&restored, &start) < start.len() / 20,
+            "walking back restores the scenery"
+        );
+        assert!(
+            frame_difference(&restored, &scrolled) > start.len() / 10,
+            "the scrolled stage is not the restored stage"
+        );
+        assert_eq!(byte(&emulator, 0x4248), 5, "walking keeps five HP");
+        capture(&emulator, "bai-bai-kuai-pao-returned");
+
+        press(&mut emulator, 25);
+        advance(&mut emulator, 60);
+        assert_eq!(emulator.vm().pc(), 0x411, "help waits for a key");
+        assert_eq!(
+            &emulator.vm().memory()[0x1400..0x1404],
+            b"WSAD",
+            "help lists the movement keys"
+        );
+        assert_eq!(
+            &emulator.vm().memory()[0x1468..0x1473],
+            b"HP:5  KEY:0",
+            "help shows the starting HP and key count"
+        );
+        capture(&emulator, "bai-bai-kuai-pao-help");
+        press(&mut emulator, 48);
+        advance(&mut emulator, 60);
+        assert_eq!(emulator.vm().pc(), 0x1063, "zero closes help");
+        assert_eq!(
+            frame(&emulator),
+            restored,
+            "closing help restores the stage"
+        );
+
+        press(&mut emulator, 27);
+        advance(&mut emulator, 60);
+        assert_eq!(emulator.vm().pc(), 0x12b0, "escape asks before leaving");
+        let prompt = frame(&emulator);
+        assert!(
+            frame_difference(&prompt, &restored) > 0,
+            "the prompt replaces the stage"
+        );
+        capture(&emulator, "bai-bai-kuai-pao-exit");
+        press(&mut emulator, 110);
+        advance(&mut emulator, 60);
+        assert_eq!(emulator.vm().pc(), 0x1063, "answering no resumes the stage");
+        assert_eq!(
+            frame(&emulator),
+            restored,
+            "answering no restores the stage"
+        );
+
+        press(&mut emulator, 27);
+        advance(&mut emulator, 60);
+        assert_eq!(emulator.vm().pc(), 0x12b0, "escape asks again");
+        press(&mut emulator, 121);
+        advance(&mut emulator, 60);
+        assert_eq!(frame(&emulator), menu, "answering yes returns to the menu");
+        assert_eq!(
+            byte(&emulator, 0x429c),
+            1,
+            "the menu cursor restarts on the first item"
+        );
+        assert!(
+            emulator.files_mut().take_dirty_files().is_empty(),
+            "the menus and the first stage write nothing else"
+        );
+    }
+}

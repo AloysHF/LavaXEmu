@@ -59,9 +59,10 @@ do not satisfy this status.
 - Biorhythm checked on 2026-11-08: one dedicated release workflow opens the birth-date form with its 2000/01/01 default, walks the three help pages with clamped ends and returns with Escape, rejects a year before 1900, a month above 12 and a day above 31 while accepting 1990/12/17, opens the query form with the same defaults, refuses a query on the birth date, reports 25/64/68 and 83/92/93 percent for the 1990/12/18 and 1990/12/24 queries with the next birthday and elapsed day counts, opens the about page, and halts with code 0 from the birth, refusal and result screens without writing files.
 - CrazyMap Editor checked on 2026-11-08: one dedicated release workflow clamps the menu selection in both directions, opens and pages the seven help screens, creates a named level with the fixed header, shows the level list with the trailing digit erased by the game's own opaque font background, paints and clears the 11x11 map through the letter keys, wraps the cursor at both edges, saves and reloads the painted cells, declines a discard prompt without writing, rewrites the level pack when leaving a populated list, exits the program from an empty list, and opens the built-in map without writing files.
 - Crazy Checkers checked on 2026-11-08: one dedicated release workflow clamps the three-item title menu, opens the score table with its eight stored names and full-board score, leaves the title for the credits and halts with code 0, rejects an empty one-player name and reopens the form, signs in with a three-letter name, clamps the cursor at the column bottom and top, walks right across all nine columns and back, selects a white piece to show its eight move markers, trades one move with the computer at 4:4 pieces, declines and then accepts the exit prompt, starts a two-player game through the four-letter automatic advance, and halts with code 0 from the credits without writing files.
-- 165 dedicated release workflows passed in this audit.
-- 235 of 324 entry points were loaded by those successful workflows.
-- 89 entry points still need dedicated workflow verification.
+- Bai Bai Kuai Pao checked on 2026-11-08: one dedicated release workflow covers the packaged and unpacked entries, leaves the splash for the single unlocked level, keeps the level list unchanged with the vertical keys, opens the four-entry main menu and wraps it in both directions, shows the locked map editor message, opens the about and author pages and returns to the menu, starts the first stage with five HP, scrolls the stage with five right steps and brings the scenery back with five left steps, opens the F5 help page with the movement keys and HUD, closes it with zero, declines and then accepts the exit prompt, creates the missing progress file only in the packaged build, and writes nothing else.
+- 166 dedicated release workflows passed in this audit.
+- 237 of 324 entry points were loaded by those successful workflows.
+- 87 entry points still need dedicated workflow verification.
 - The historical [startup gallery](Game-Compatibility.md) is a separate check
   and must not be interpreted as this workflow audit.
 
@@ -309,8 +310,8 @@ an optional screenshot directory. Keep each test's logs and captures separate.
 | 224 | `LAVA1 疯狂跳棋/疯狂跳棋.lav` | Game / game package | [Workflow passed: `crazy_checkers_versions_walk_menus_start_both_modes_and_trade_moves`](../crates/lavaxemu/tests/game_compatibility.rs#L19399) |
 | 225 | `LAVA1 疾龙云飞/打包的文件/bobo_cloud.pac` | Game / game package | [Workflow passed: `cloud_versions_configure_keys_jump_and_persist_the_configuration`](../crates/lavaxemu/tests/game_compatibility.rs#L2022) |
 | 226 | `LAVA1 疾龙云飞/未打包的文件/cloud_all.lav` | Game / game package | [Workflow passed: `cloud_versions_configure_keys_jump_and_persist_the_configuration`](../crates/lavaxemu/tests/game_compatibility.rs#L2022) |
-| 227 | `LAVA1 白白快跑/已打包的/白白快跑.pac` | Game / game package | Pending |
-| 228 | `LAVA1 白白快跑/未打包的/LAVA/白白快跑.lav` | Game / game package | Pending |
+| 227 | `LAVA1 白白快跑/已打包的/白白快跑.pac` | Game / game package | [Workflow passed: `bai_bai_kuai_pao_versions_walk_menus_start_the_stage_and_scroll_back`](../crates/lavaxemu/tests/game_compatibility.rs#L19778) |
+| 228 | `LAVA1 白白快跑/未打包的/LAVA/白白快跑.lav` | Game / game package | [Workflow passed: `bai_bai_kuai_pao_versions_walk_menus_start_the_stage_and_scroll_back`](../crates/lavaxemu/tests/game_compatibility.rs#L19778) |
 | 229 | `LAVA1 白金贪吃蛇/白金贪吃蛇.lav` | Game / game package | Pending |
 | 230 | `LAVA1 百战天虫即时版/VS版/GVmaker/天虫即时vs.lav` | Game / game package | Pending |
 | 231 | `LAVA1 百战天虫即时版/天虫即时.lav` | Game / game package | Pending |

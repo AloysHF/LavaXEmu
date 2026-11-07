@@ -3432,3 +3432,35 @@ without an execution error alone does not establish playability.
   `0x1fc9`, and `y` leaves for the credits at pc `0x1080`, where any key halts
   with code 0.
 - Playing a move and leaving the game write no files.
+
+## Bai Bai Kuai Pao (LAVA1 白白快跑)
+
+- Content: `LAVA1 白白快跑/已打包的/白白快跑.pac` and
+  `LAVA1 白白快跑/未打包的/LAVA/白白快跑.lav`.
+- The splash waits at pc `0x80c`. Enter opens the level list at pc `0x1d49`
+  with the text `上下选择第 1 关` at `0x1400` and both selection words
+  `0x429c`/`0x429e` set to 1. Up and Down leave the frame, the words and the
+  single unlocked level unchanged.
+- Escape opens the four-entry main menu (开始游戏, 地图编辑, 关于游戏,
+  作者简介) at pc `0x1bcb`. Both words wrap with Down 1→2→3→4→1 and with Up
+  1→4→3→2→1.
+- 地图编辑 waits at pc `0x1d7d` with `请先通过所有关卡.` at `0x1400`.
+  关于游戏 waits at pc `0x1ef8` and 作者简介 at pc `0x1fa8`; any other key
+  returns to the menu with the cursor reset to 1 and a pixel-identical menu
+  frame. Dismissing a sub page with Enter also activates the menu item under
+  the cursor, so the workflow uses a letter key.
+- 开始游戏 returns to the level list with the same frame. Enter starts the
+  first stage at pc `0x1063` with the HP word `0x4248` set to 5.
+- F5 opens the help page at pc `0x411`: `WSAD` at `0x1400`, the movement and
+  action text up to `0x145b`, and `HP:5  KEY:0` at `0x1468`. The `0` key closes
+  help and restores the stage frame.
+- The player screen position is the word `0x4238` (0x70). Five right presses
+  (`d`) step it 0x78, 0x7f, 0x87, 0x8e, 0x05 as the view scrolls right and the
+  player approaches the left edge. Five left presses (`a`) bring it back
+  0x8f, 0x87, 0x80, 0x78, 0x71 and restore the scenery; only the player sprite
+  keeps a one-pixel offset. HP stays 5.
+- Escape opens `按Y键退出.` at pc `0x12b0`. `n` resumes the stage at pc
+  `0x1063` with the frame restored; `y` returns to the initial menu frame.
+- The packaged build ships no progress file, so the first level-list entry
+  creates `/lavadata/bbkpv.dat` with byte 0; the loose build ships that file
+  and only reads it. The menus and the stage write nothing else.
