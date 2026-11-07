@@ -11527,3 +11527,99 @@ fn ninja_versions_keep_the_default_name_win_a_battle_and_restore_both_slots() {
         }
     }
 }
+
+#[test]
+#[ignore = "requires the local game corpus via LAVAX_GAME_ROOT"]
+fn love_versions_save_and_restore_both_native_slots_from_an_empty_file() {
+    fn position(e: &Emulator) -> (u8, u16, u16) {
+        let m = e.vm().memory();
+        (
+            m[0x4972],
+            u16::from(m[0x4968]) + u16::from(m[0x496c]),
+            u16::from(m[0x4969]) + u16::from(m[0x496d]),
+        )
+    }
+    fn key(e: &mut Emulator, k: u8) {
+        e.input_mut().release_all();
+        for frame in 0..120 {
+            e.input_mut().set_keys((frame < 3).then_some(k));
+            advance(e, 1);
+        }
+    }
+    fn open_field(e: &mut Emulator) {
+        advance(e, 1200);
+        for _ in 0..20 {
+            key(e, 13);
+        }
+        assert_eq!(position(e), (1, 5, 26));
+    }
+    fn system_menu(e: &mut Emulator) {
+        key(e, 25);
+        for _ in 0..4 {
+            key(e, 22);
+        }
+        key(e, 13);
+    }
+    fn save(e: &mut Emulator, slot: usize) -> Vec<u8> {
+        system_menu(e);
+        key(e, 13);
+        if slot == 2 {
+            key(e, 21);
+        }
+        key(e, 13);
+        let data = e.files().file("/LavaData/Love_Save.dat").unwrap().to_vec();
+        assert_eq!(data.len(), 4000);
+        capture(e, &format!("love-slot-{slot}-saved"));
+        data
+    }
+    for (file, label) in [("Love_I.lav", "love-loose"), ("Love.pac", "love-package")] {
+        let path = if file == "Love.pac" {
+            fixture_path_with_size(file, Some(219_064))
+        } else {
+            fixture_path_with_size(file, Some(35_867))
+        };
+        let mut e = load(&path);
+        open_field(&mut e);
+        capture(&e, &format!("{label}-opening-field"));
+        let first_point = e.clone();
+        let second = save(&mut e, 2);
+        assert!(second[..2000].iter().all(|&byte| byte == 0));
+        assert!(second[2000..].iter().any(|&byte| byte != 0));
+
+        let mut earlier = first_point;
+        key(&mut earlier, 23);
+        key(&mut earlier, 21);
+        assert_eq!(position(&earlier), (1, 4, 27));
+        capture(&earlier, &format!("{label}-moved-field"));
+        earlier
+            .files_mut()
+            .import_file("/LavaData/Love_Save.dat", second.clone());
+        let combined = save(&mut earlier, 1);
+        assert_eq!(&combined[2000..], &second[2000..]);
+        assert_ne!(&combined[..2000], &combined[2000..]);
+
+        for (slot, expected) in [(1, (1, 4, 27)), (2, (1, 5, 26))] {
+            let mut restored = load(&path);
+            restored
+                .files_mut()
+                .import_file("/LavaData/Love_Save.dat", combined.clone());
+            open_field(&mut restored);
+            system_menu(&mut restored);
+            key(&mut restored, 21);
+            key(&mut restored, 13);
+            if slot == 2 {
+                key(&mut restored, 21);
+            }
+            key(&mut restored, 13);
+            assert_eq!(position(&restored), expected);
+            assert_eq!(
+                restored.files().file("/LavaData/Love_Save.dat"),
+                Some(combined.as_slice())
+            );
+            capture(&restored, &format!("{label}-slot-{slot}-restored"));
+            key(&mut restored, 23);
+            assert_ne!(position(&restored), expected);
+            capture(&restored, &format!("{label}-slot-{slot}-continued"));
+        }
+    }
+}

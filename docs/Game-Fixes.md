@@ -2308,3 +2308,19 @@ without an execution error alone does not establish playability.
   locally; game content, saves and captures are not distributed.
 - Other encounters, spell learning, the seven-person quest and the ending
   remain unverified.
+
+## Love (情怨)
+
+- When slot two is chosen before any save file exists, the game attempts to seek
+  2,000 bytes past the empty file. The seek fails, but the save reports success
+  after writing the first slot at offset zero. Extend the existing native save
+  space repair to this exact release fingerprint, reserving two slots before
+  the original write. Preserve existing bytes and keep general file seeking
+  unchanged. A negative fingerprint test protects unrelated programs.
+- Replay the loose and packaged versions through the opening map, real movement
+  and system menu. Save the opening location to slot two first, then move to a
+  distinct tile and write slot one. Check the 4,000-byte save file, preserve the
+  second slot, restore both locations after fresh starts, and continue moving.
+  Review captures locally; game data, saves and captures are not
+  distributed.
+- Later encounters, story chapters, and the ending remain unverified.

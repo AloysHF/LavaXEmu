@@ -440,6 +440,7 @@ impl Program {
         let save_slot_site = match (image.len(), crc32fast::hash(&image)) {
             (33_999, 0xdf90_d7c3) if image[0x1e71..0x1e75] == [0x3d, 0x14, 0x17, 0] => Some(0x1e71),
             (33_741, 0xe7b4_ee06) if image[0x1e86..0x1e8a] == [0x3d, 0xe4, 0x16, 0] => Some(0x1e86),
+            (35_867, 0x9bfa_51fd) if image[0x2034..0x2038] == [0x3d, 0x0c, 0x17, 0] => Some(0x2034),
             (35_434, 0xb148_19de) if image[0x20c4..0x20c8] == [0x3d, 0xf9, 0x17, 0] => Some(0x20c4),
             _ => None,
         };
@@ -656,6 +657,7 @@ mod tests {
         for (length, site, call) in [
             (33_999, 0x1e71, [0x3d, 0x14, 0x17, 0]),
             (33_741, 0x1e86, [0x3d, 0xe4, 0x16, 0]),
+            (35_867, 0x2034, [0x3d, 0x0c, 0x17, 0]),
             (35_434, 0x20c4, [0x3d, 0xf9, 0x17, 0]),
         ] {
             let mut original = image(0, 0, 0);

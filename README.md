@@ -48,6 +48,8 @@ being progressively improved.
   programs without uploading them
 
 Compatibility evidence is tracked in the [workflow audit](docs/Game-Corpus-Audit.md).
+Love preserves both native save slots, including when slot two is saved first.
+The workflow checks movement, distinct save points, and cold restoration.
 Ninja preserves the complete default name and both native save slots, including
 when slot two is written first. Its workflow covers the opening story, forest
 combat, level-up rewards and restoring two distinct points.
