@@ -11820,3 +11820,85 @@ fn poker_battle_bets_replaces_a_card_and_settles_a_hand() {
     assert_eq!(selected.vm().pc(), 0x1690);
     capture(&selected, "poker-battle-next-bet");
 }
+
+#[test]
+#[ignore = "requires the local game corpus via LAVAX_GAME_ROOT"]
+fn plane_shooter_enters_practice_and_accepts_board_controls() {
+    fn tap(e: &mut Emulator, key: u8) {
+        e.input_mut().release_all();
+        e.input_mut().set_keys([key]);
+        advance(e, 1);
+        e.input_mut().release_all();
+        advance(e, 59);
+    }
+    fn region(e: &Emulator, x0: usize, x1: usize, y0: usize, y1: usize) -> Vec<u8> {
+        let width = usize::from(e.display().width());
+        e.display()
+            .indexed_frame()
+            .chunks_exact(width)
+            .skip(y0)
+            .take(y1 - y0)
+            .flat_map(|row| row[x0..x1].iter().copied())
+            .collect()
+    }
+    let path = fixture_path_with_size("打飞机.lav", Some(11_229));
+    let mut title = load(&path);
+    advance(&mut title, 1200);
+    assert_eq!(title.vm().pc(), 0x2758);
+    assert!(
+        title
+            .display()
+            .indexed_frame()
+            .iter()
+            .any(|&pixel| pixel != title.display().indexed_frame()[0]),
+        "the title and mode choices must be visible"
+    );
+    capture(&title, "plane-shooter-title");
+
+    let mut game = title.clone();
+    tap(&mut game, 13);
+    assert_eq!(game.vm().pc(), 0x1554);
+    capture(&game, "plane-shooter-practice-board");
+
+    let mut idle = game.clone();
+    advance(&mut idle, 60);
+    let idle_board = region(&idle, 80, 145, 12, 76);
+    let mut directional_frames = Vec::new();
+    for (index, key) in [20, 21, 22, 23].into_iter().enumerate() {
+        let mut moved = game.clone();
+        tap(&mut moved, key);
+        let board = region(&moved, 80, 145, 12, 76);
+        assert_ne!(
+            board, idle_board,
+            "direction key {key} must move the visible board cursor"
+        );
+        directional_frames.push(board);
+        capture(&moved, &format!("plane-shooter-direction-{index}"));
+    }
+    directional_frames.sort();
+    directional_frames.dedup();
+    assert_eq!(
+        directional_frames.len(),
+        4,
+        "each direction must select a distinct board position"
+    );
+
+    let mut selected = game.clone();
+    tap(&mut selected, 13);
+    assert_ne!(
+        selected.display().indexed_frame(),
+        idle.display().indexed_frame(),
+        "Enter must perform a visible board action"
+    );
+    capture(&selected, "plane-shooter-board-action");
+
+    let mut exit_prompt = game;
+    tap(&mut exit_prompt, 27);
+    assert_eq!(exit_prompt.vm().pc(), 0x165e);
+    assert_ne!(
+        region(&exit_prompt, 45, 115, 22, 56),
+        region(&idle, 45, 115, 22, 56),
+        "Escape must show the game's exit confirmation"
+    );
+    capture(&exit_prompt, "plane-shooter-exit-confirmation");
+}

@@ -174,6 +174,8 @@ Battle Blocks device and computer builds have a workflow for both players’
 controls, line clearing and scoring, pause, native results and normal exit.
 Monkey River has a workflow for road placement, overlap rejection, failure and
 retry, an eight-placement successful crossing, instructions and normal exit.
+Plane Shooter reaches single-player practice and has a workflow for board
+cursor movement, selection and the in-game exit confirmation.
 
 ## Usage
 

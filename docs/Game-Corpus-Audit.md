@@ -18,9 +18,9 @@ do not satisfy this status.
 - Shared guest text memory checked on 2026-11-01: all 75 dedicated release workflows passed after the text-buffer repair and state migration.
 - Inverted TextOut checked on 2026-11-01: all 77 dedicated release workflows passed after honoring the source-inversion flag.
 - Virtual storage capacity checked on 2026-11-05: all 95 existing dedicated release workflows passed after the DiskCheck repair.
-- 119 dedicated release workflows passed in this audit.
-- 182 of 324 entry points were loaded by those successful workflows.
-- 142 entry points still need dedicated workflow verification.
+- 120 dedicated release workflows passed in this audit.
+- 183 of 324 entry points were loaded by those successful workflows.
+- 141 entry points still need dedicated workflow verification.
 - The historical [startup gallery](Game-Compatibility.md) is a separate check
   and must not be interpreted as this workflow audit.
 
@@ -197,7 +197,7 @@ an optional screenshot directory. Keep each test's logs and captures separate.
 | 153 | `LAVA1 战略1号1.0/战略1号.pac` | Game / game package | [Workflow passed: `strategy_one_versions_show_the_battlefield_and_accept_orders`](../crates/lavaxemu/tests/game_compatibility.rs#L11666) |
 | 154 | `LAVA1 战略1号1.0/非pac/战略1号.lav` | Game / game package | [Workflow passed: `strategy_one_versions_show_the_battlefield_and_accept_orders`](../crates/lavaxemu/tests/game_compatibility.rs#L11666) |
 | 155 | `LAVA1 扑克大战/扑克大战.lav` | Game / game package | [Workflow passed: `poker_battle_bets_replaces_a_card_and_settles_a_hand`](../crates/lavaxemu/tests/game_compatibility.rs#L11737) |
-| 156 | `LAVA1 打飞机/打飞机.lav` | Game / game package | Pending |
+| 156 | `LAVA1 打飞机/打飞机.lav` | Game / game package | [Workflow passed: `plane_shooter_enters_practice_and_accepts_board_controls`](../crates/lavaxemu/tests/game_compatibility.rs#L11826) |
 | 157 | `LAVA1 扫雷/扫雷.lav` | Game / game package | Pending |
 | 158 | `LAVA1 扳手腕/扳手腕.lav` | Game / game package | Pending |
 | 159 | `LAVA1 找茬/大家来找茬.lav` | Game / game package | Pending |

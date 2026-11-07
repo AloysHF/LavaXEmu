@@ -2356,3 +2356,13 @@ without an execution error alone does not establish playability.
   betting round.
 - Reaching the stated long-term money target, additional rounds, and other
   result paths remain unverified.
+
+## Plane Shooter (打飞机)
+
+- Startup-only evidence had not covered the practice board or its controls. No
+  emulator runtime defect was reproduced.
+- A dedicated release workflow enters single-player practice, checks all four
+  direction keys select distinct board positions, checks Enter changes the
+  board display, and verifies Escape opens the in-game exit confirmation.
+- Two-player mode, complete plane attacks, and round outcomes remain
+  unverified.
