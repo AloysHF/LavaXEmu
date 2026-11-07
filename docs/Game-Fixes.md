@@ -2324,3 +2324,12 @@ without an execution error alone does not establish playability.
   Review captures locally; game data, saves and captures are not
   distributed.
 - Later encounters, story chapters, and the ending remain unverified.
+
+## My World: Other Realm map test
+
+- The map-test release boots through its opening text to a visible outdoor area.
+  No emulator behavior defect was reproduced, so no runtime patch was needed.
+- A dedicated release workflow checks the rendered map and compares down, left,
+  and right movement against an idle clone at the same frame. Only the map-test
+  release is covered; story progress, encounters, saving, and other areas remain
+  unverified.

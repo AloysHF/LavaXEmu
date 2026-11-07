@@ -18,9 +18,9 @@ do not satisfy this status.
 - Shared guest text memory checked on 2026-11-01: all 75 dedicated release workflows passed after the text-buffer repair and state migration.
 - Inverted TextOut checked on 2026-11-01: all 77 dedicated release workflows passed after honoring the source-inversion flag.
 - Virtual storage capacity checked on 2026-11-05: all 95 existing dedicated release workflows passed after the DiskCheck repair.
-- 116 dedicated release workflows passed in this audit.
-- 178 of 324 entry points were loaded by those successful workflows.
-- 146 entry points still need dedicated workflow verification.
+- 117 dedicated release workflows passed in this audit.
+- 179 of 324 entry points were loaded by those successful workflows.
+- 145 entry points still need dedicated workflow verification.
 - The historical [startup gallery](Game-Compatibility.md) is a separate check
   and must not be interpreted as this workflow audit.
 
@@ -193,7 +193,7 @@ an optional screenshot directory. Keep each test's logs and captures separate.
 | 149 | `LAVA1 情怨/pac/Love.pac` | Game / game package | [Workflow passed: `love_versions_save_and_restore_both_native_slots_from_an_empty_file`](../crates/lavaxemu/tests/game_compatibility.rs#L11533) |
 | 150 | `LAVA1 情怨/非pac/Love_I.lav` | Game / game package | [Workflow passed: `love_versions_save_and_restore_both_native_slots_from_an_empty_file`](../crates/lavaxemu/tests/game_compatibility.rs#L11533) |
 | 151 | `LAVA1 我的世界~霸王屎/我的世界.lav` | Game / game package | [Workflow passed: `my_world_creates_a_character_and_moves_on_the_map`](../crates/lavaxemu/tests/game_compatibility.rs#L1037) |
-| 152 | `LAVA1 我的世界异界版/我的世界.lav` | Game / game package | Pending |
+| 152 | `LAVA1 我的世界异界版/我的世界.lav` | Game / game package | [Workflow passed: `my_world_other_realm_reaches_the_map_and_moves`](../crates/lavaxemu/tests/game_compatibility.rs#L11629) |
 | 153 | `LAVA1 战略1号1.0/战略1号.pac` | Game / game package | Pending |
 | 154 | `LAVA1 战略1号1.0/非pac/战略1号.lav` | Game / game package | Pending |
 | 155 | `LAVA1 扑克大战/扑克大战.lav` | Game / game package | Pending |

@@ -11623,3 +11623,40 @@ fn love_versions_save_and_restore_both_native_slots_from_an_empty_file() {
         }
     }
 }
+
+#[test]
+#[ignore = "requires the local game corpus via LAVAX_GAME_ROOT"]
+fn my_world_other_realm_reaches_the_map_and_moves() {
+    let mut emulator = load("LAVA1 我的世界异界版/我的世界.lav");
+    let keys = [13, b'l', b'a', b'v', b'a', 13, 13, 13, 13, 13];
+    for frame in 0..3600 {
+        if frame >= 900 {
+            let input = frame - 900;
+            emulator.input_mut().set_keys(
+                (input % 60 < 3 && input / 60 < keys.len())
+                    .then_some(keys[(input / 60) % keys.len()]),
+            );
+        }
+        advance(&mut emulator, 1);
+    }
+    emulator.input_mut().set_keys([]);
+    let map = emulator.display().indexed_frame().to_vec();
+    assert!(
+        map.iter().any(|&pixel| pixel != map[0]),
+        "map must be visible"
+    );
+    capture(&emulator, "my-world-other-realm-map");
+
+    let mut idle = emulator.clone();
+    advance(&mut idle, 60);
+    capture(&idle, "my-world-other-realm-idle");
+    for (key, direction) in [(21, "down"), (22, "left"), (23, "right")] {
+        let moved = input_branch(&emulator, key);
+        assert_ne!(
+            moved.display().indexed_frame(),
+            idle.display().indexed_frame(),
+            "{direction} must move the created character"
+        );
+        capture(&moved, &format!("my-world-other-realm-{direction}"));
+    }
+}
