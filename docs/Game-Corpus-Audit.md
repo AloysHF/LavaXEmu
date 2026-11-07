@@ -55,9 +55,10 @@ do not satisfy this status.
 - War Sword Full checked on 2026-11-08: one dedicated release workflow leaves the splash into the four-icon title, clamps the entry selection in both directions, falls back from a missing save to the options, toggles and clamps the map and difficulty options, types a name, starts the default size screen and clamps the width and height at their minima, generates the custom-size and default 20x15 maps with fixed cells, moves and blocks the hero in all four directions, opens the unfinished and resource field messages, closes the system menu from all four stub entries without writing files, shows the help notice, walks the map editor through its hint, cursor, both start markers and quit key, and falls back from the download entry to the default map.
 - Crawler Continent Chronicle checked on 2026-11-08: one dedicated release workflow loads the title art and loading screen, waits through the auto-playing prologue, opens the dialogue and advances three pages with the script pointer, skips the rest with Escape, reaches the animated logo, and holds a key to exit with code 0 without writing files. The package contains only the prologue and logo, with no menu or gameplay entry.
 - Bomb Man checked on 2026-11-08: one dedicated release workflow waits out the countdown and title animation, walks the title, mode and map screens, checks the two-player/single-player toggle and the four-map wrap, plays a solo bomb to the failure and credits screens, and plays a duel bomb to player one's win and credits with halt code 0 without writing files.
-- 161 dedicated release workflows passed in this audit.
-- 230 of 324 entry points were loaded by those successful workflows.
-- 94 entry points still need dedicated workflow verification.
+- Cat-Dog War 2 checked on 2026-11-08: one dedicated release workflow walks the help and key-guide pages, checks the three difficulty settings and their CPU power values, opens the single-player arena, item and combat menus with wrapping item selection, charges a strike until the opponent's HP drops, leaves through the exit and credits screens with halt code 0, then opens the two-player arena, both players' menus and item selection, and returns to the title without writing files.
+- 162 dedicated release workflows passed in this audit.
+- 231 of 324 entry points were loaded by those successful workflows.
+- 93 entry points still need dedicated workflow verification.
 - The historical [startup gallery](Game-Compatibility.md) is a separate check
   and must not be interpreted as this workflow audit.
 
@@ -294,7 +295,7 @@ an optional screenshot directory. Keep each test's logs and captures separate.
 | 213 | `LAVA1 煞魔剑正式版/【煞魔剑】 正式版.lav` | Game / game package | [Workflow passed: `war_sword_full_splash_menu_options_editor_and_field_messages`](../crates/lavaxemu/tests/game_compatibility.rs#L17917) |
 | 214 | `LAVA1 爬虫大陆编年史/爬虫大陆.lav` | Game / game package | [Workflow passed: `crawler_chronicle_intro_pages_logo_and_halt`](../crates/lavaxemu/tests/game_compatibility.rs#L18381) |
 | 215 | `LAVA1 版炸弹人/BomB.lav` | Game / game package | [Workflow passed: `bomb_man_splash_menus_solo_failure_and_duel_win`](../crates/lavaxemu/tests/game_compatibility.rs#L18448) |
-| 216 | `LAVA1 猫狗大战2/猫狗大战Ⅱ.lav` | Game / game package | Pending |
+| 216 | `LAVA1 猫狗大战2/猫狗大战Ⅱ.lav` | Game / game package | [Workflow passed: `cat_dog_war_2_menus_battle_and_credits`](../crates/lavaxemu/tests/game_compatibility.rs#L18583) |
 | 217 | `LAVA1 生死时速II/生死时速Ⅱ（修改版）.lav` | Game / game package | [Workflow passed: `modified_speed_racing_steers_and_returns_from_the_score_screen`](../crates/lavaxemu/tests/game_compatibility.rs#L601) |
 | 218 | `LAVA1 生物钟/生物钟.lav` | Utility / education | Pending |
 | 219 | `LAVA1 疯狂F2/F2.lav` | Game / game package | [Workflow passed: `crazy_f2_counts_presses_and_finishes_the_timed_round`](../crates/lavaxemu/tests/game_compatibility.rs#L499) |

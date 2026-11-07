@@ -3297,3 +3297,30 @@ without an execution error alone does not establish playability.
   the explosion burns the cell and shows `玩家 1 获胜!!` at pc `0x287c`, the
   credits at pc `0x28a8`, and halts with code 0 at pc `0x28ae`.
 - The game writes no files.
+
+## Cat-Dog War 2 (LAVA1 猫狗大战2)
+
+- Content: `LAVA1 猫狗大战2/猫狗大战Ⅱ.lav` as a single file.
+- The title screen at pc `0x3985` lists `1.单人版`, `2.双人版`, and `3.帮助`.
+  Item 1 opens the difficulty screen at pc `0x20d4` (`1.容易`, `2.普通`,
+  `3.困难`); the chosen key is stored at `0x2004` and sets the CPU power byte
+  at `0x2027` to 90, 60, or 40.
+- The single-player arena waits at pc `0x3203`; its HP bytes `0x2005` and
+  `0x2007` start at 20. The first combat menu opens at pc `0x2f28`, where
+  Down opens the item menu at pc `0x24cc`; the item index `0x202d` starts at 1,
+  steps with Up/Down, and wraps between 1 and 4. Confirming an item returns to
+  the arena, sets `0x2025` to 1, and advances the turn counter `0x2009`.
+- The second combat menu at pc `0x2f0a` charges power while Space is held
+  (`0x200b` rises and the meter `0x2021` fills). After the strike animation
+  the arena returns at pc `0x3203`, Jerry's HP drops from 20 to 18, the turn
+  counter advances, and the meter refills to 120.
+- Escape at the arena opens the leave screen at pc `0x3404`; any key returns
+  to the title. Escape at the title opens the credits at pc `0x206c`, and any
+  key halts with code 0 at pc `0x2070`.
+- Help pages: item 3 opens `==游戏帮助==` at pc `0x21b2`; any key opens
+  `==按键说明==` at pc `0x225b`, and any key returns to the title.
+- Two-player mode opens the duel arena at pc `0x3651`. Player one uses the
+  pc `0x2f28` menu and confirms the item at pc `0x24cc`; player two's menu is
+  pc `0x2f75`, opens the item menu at pc `0x2add`, and confirms with the `A`
+  key (`0x61`). Escape leaves the duel through pc `0x3848` back to the title.
+- The game writes no files.

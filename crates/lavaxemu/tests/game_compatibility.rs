@@ -18577,3 +18577,200 @@ fn bomb_man_splash_menus_solo_failure_and_duel_win() {
         "the game writes nothing"
     );
 }
+
+#[test]
+#[ignore = "requires LAVAX_GAME_ROOT with the game corpus"]
+fn cat_dog_war_2_menus_battle_and_credits() {
+    const PATH: &str = "LAVA1 猫狗大战2/猫狗大战Ⅱ.lav";
+
+    let mut emulator = load(PATH);
+    let byte = |emulator: &Emulator, address: usize| emulator.vm().memory()[address];
+    advance(&mut emulator, 300);
+    assert_eq!(emulator.vm().pc(), 0x3985, "the title screen runs");
+    capture(&emulator, "cat-dog-war-2-title");
+
+    press(&mut emulator, 109);
+    assert_eq!(emulator.vm().pc(), 0x21b2, "the help page opens");
+    capture(&emulator, "cat-dog-war-2-help");
+    press(&mut emulator, 13);
+    assert_eq!(emulator.vm().pc(), 0x225b, "the key guide page opens");
+    capture(&emulator, "cat-dog-war-2-keys");
+    press(&mut emulator, 13);
+    assert_eq!(emulator.vm().pc(), 0x3985, "the title returns");
+
+    press(&mut emulator, 98);
+    assert_eq!(emulator.vm().pc(), 0x20d4, "the difficulty screen opens");
+    capture(&emulator, "cat-dog-war-2-difficulty");
+    press(&mut emulator, 98);
+    assert_eq!(emulator.vm().pc(), 0x3203, "the easy arena waits for a key");
+    assert_eq!(
+        byte(&emulator, 0x2004),
+        98,
+        "the easy difficulty is recorded"
+    );
+    assert_eq!(byte(&emulator, 0x2005), 0x14, "Tom starts at full HP");
+    assert_eq!(byte(&emulator, 0x2007), 0x14, "Jerry starts at full HP");
+    assert_eq!(byte(&emulator, 0x2027), 0x5a, "the easy CPU power is 90");
+    capture(&emulator, "cat-dog-war-2-easy-arena");
+
+    press(&mut emulator, 13);
+    assert_eq!(emulator.vm().pc(), 0x2f28, "the combat menu opens");
+    capture(&emulator, "cat-dog-war-2-combat");
+    press(&mut emulator, 21);
+    assert_eq!(emulator.vm().pc(), 0x24cc, "the item menu opens");
+    assert_eq!(byte(&emulator, 0x202d), 1, "the first item is selected");
+    press(&mut emulator, 21);
+    assert_eq!(byte(&emulator, 0x202d), 2, "down selects the next item");
+    press(&mut emulator, 20);
+    assert_eq!(byte(&emulator, 0x202d), 1, "up selects the previous item");
+    press(&mut emulator, 20);
+    assert_eq!(byte(&emulator, 0x202d), 4, "up wraps to the last item");
+    capture(&emulator, "cat-dog-war-2-items");
+    press(&mut emulator, 13);
+    assert_eq!(
+        emulator.vm().pc(),
+        0x3203,
+        "confirming the item returns to the arena"
+    );
+    assert_eq!(byte(&emulator, 0x2025), 1, "the turn passes");
+    assert_eq!(byte(&emulator, 0x2009), 4, "one turn has been taken");
+
+    press(&mut emulator, 13);
+    assert_eq!(emulator.vm().pc(), 0x2f0a, "the second combat menu opens");
+    hold(&mut emulator, 32, 60);
+    assert_eq!(
+        emulator.vm().pc(),
+        0x2f0a,
+        "the strike animation keeps the menu"
+    );
+    assert_eq!(
+        byte(&emulator, 0x200b),
+        0x66,
+        "holding space raises the power"
+    );
+    assert_eq!(
+        byte(&emulator, 0x2021),
+        0x24,
+        "the strike meter is charging"
+    );
+    capture(&emulator, "cat-dog-war-2-strike");
+    advance(&mut emulator, 340);
+    assert_eq!(
+        emulator.vm().pc(),
+        0x3203,
+        "the strike returns to the arena"
+    );
+    assert_eq!(byte(&emulator, 0x2007), 0x12, "Jerry loses two HP");
+    assert_eq!(byte(&emulator, 0x2005), 0x14, "Tom keeps full HP");
+    assert_eq!(byte(&emulator, 0x2009), 5, "the exchange advances the turn");
+    assert_eq!(byte(&emulator, 0x2021), 0x78, "the strike meter refills");
+    capture(&emulator, "cat-dog-war-2-hit");
+
+    press(&mut emulator, 27);
+    assert_eq!(emulator.vm().pc(), 0x3404, "escape leaves the match");
+    capture(&emulator, "cat-dog-war-2-exit");
+    press(&mut emulator, 13);
+    assert_eq!(emulator.vm().pc(), 0x3985, "leaving returns to the title");
+
+    press(&mut emulator, 98);
+    assert_eq!(
+        emulator.vm().pc(),
+        0x20d4,
+        "the difficulty screen opens again"
+    );
+    press(&mut emulator, 109);
+    assert_eq!(emulator.vm().pc(), 0x3203, "the hard arena waits for a key");
+    assert_eq!(
+        byte(&emulator, 0x2004),
+        109,
+        "the hard difficulty is recorded"
+    );
+    assert_eq!(byte(&emulator, 0x2027), 0x28, "the hard CPU power is 40");
+    capture(&emulator, "cat-dog-war-2-hard-arena");
+    press(&mut emulator, 27);
+    assert_eq!(emulator.vm().pc(), 0x3404, "escape leaves the hard match");
+    press(&mut emulator, 13);
+    assert_eq!(emulator.vm().pc(), 0x3985, "the title returns again");
+    press(&mut emulator, 27);
+    assert_eq!(emulator.vm().pc(), 0x206c, "the credits show");
+    capture(&emulator, "cat-dog-war-2-credits");
+    let mut halted = None;
+    emulator.input_mut().set_keys([13]);
+    for _ in 0..30 {
+        if let FrameStatus::Halted(code) = emulator.run_frame().unwrap().status {
+            halted = Some(code);
+            break;
+        }
+    }
+    emulator.input_mut().set_keys([]);
+    assert_eq!(halted, Some(0), "the credits end the program");
+    assert_eq!(emulator.vm().pc(), 0x2070, "the exit path runs");
+
+    let mut emulator = load(PATH);
+    advance(&mut emulator, 300);
+    press(&mut emulator, 110);
+    assert_eq!(
+        emulator.vm().pc(),
+        0x3651,
+        "the two-player arena waits for a key"
+    );
+    assert_eq!(byte(&emulator, 0x2005), 0x14, "Tom starts at full HP");
+    assert_eq!(byte(&emulator, 0x2007), 0x14, "Jerry starts at full HP");
+    capture(&emulator, "cat-dog-war-2-duel-arena");
+    press(&mut emulator, 13);
+    assert_eq!(
+        emulator.vm().pc(),
+        0x2f28,
+        "the first player's combat menu opens"
+    );
+    press(&mut emulator, 21);
+    assert_eq!(
+        emulator.vm().pc(),
+        0x24cc,
+        "the first player's item menu opens"
+    );
+    assert_eq!(byte(&emulator, 0x202d), 1, "the first item is selected");
+    press(&mut emulator, 13);
+    assert_eq!(
+        emulator.vm().pc(),
+        0x3651,
+        "confirming the item passes the turn"
+    );
+    assert_eq!(
+        byte(&emulator, 0x2025),
+        1,
+        "the second player's turn starts"
+    );
+    press(&mut emulator, 13);
+    assert_eq!(
+        emulator.vm().pc(),
+        0x2f75,
+        "the second player's combat menu opens"
+    );
+    capture(&emulator, "cat-dog-war-2-duel-menu");
+    press(&mut emulator, 120);
+    assert_eq!(
+        emulator.vm().pc(),
+        0x2add,
+        "the second player's item menu opens"
+    );
+    assert_eq!(byte(&emulator, 0x202d), 4, "the last item is selected");
+    capture(&emulator, "cat-dog-war-2-duel-items");
+    press(&mut emulator, 97);
+    assert_eq!(
+        emulator.vm().pc(),
+        0x3651,
+        "confirming the item passes the turn back"
+    );
+    assert_eq!(byte(&emulator, 0x2025), 0, "the first player's turn starts");
+    press(&mut emulator, 27);
+    assert_eq!(emulator.vm().pc(), 0x3848, "escape leaves the duel");
+    capture(&emulator, "cat-dog-war-2-duel-exit");
+    press(&mut emulator, 13);
+    assert_eq!(emulator.vm().pc(), 0x3985, "the duel returns to the title");
+
+    assert!(
+        emulator.files_mut().take_dirty_files().is_empty(),
+        "the game writes nothing"
+    );
+}
