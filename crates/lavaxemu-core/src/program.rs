@@ -417,10 +417,12 @@ impl Program {
             image[0x2ee6] = 0x3b;
             image[0x2ee7..0x2eea].copy_from_slice(&redraw.to_le_bytes()[..3]);
         }
-        if image.len() == 33_999
-            && crc32fast::hash(&image) == 0xdf90_d7c3
-            && image[0x1e71..0x1e75] == [0x3d, 0x14, 0x17, 0]
-        {
+        let save_slot_site = match (image.len(), crc32fast::hash(&image)) {
+            (33_999, 0xdf90_d7c3) if image[0x1e71..0x1e75] == [0x3d, 0x14, 0x17, 0] => Some(0x1e71),
+            (33_741, 0xe7b4_ee06) if image[0x1e86..0x1e8a] == [0x3d, 0xe4, 0x16, 0] => Some(0x1e86),
+            _ => None,
+        };
+        if let Some(site) = save_slot_site {
             // Reserve both native save slots before this release seeks to either one.
             let trampoline = image.len() as u32;
             image.extend_from_slice(&[0x0e, 9, 0, 0x01, 0, 0x01, 2, 0xb2, 0x38]);
@@ -432,9 +434,12 @@ impl Program {
             image.extend_from_slice(&pad_loop.to_le_bytes()[..3]);
             let done = image.len() as u32;
             image[done_branch..done_branch + 3].copy_from_slice(&done.to_le_bytes()[..3]);
-            image.extend_from_slice(&[0x3d, 0x14, 0x17, 0, 0x3b, 0x75, 0x1e, 0]);
-            image[0x1e71] = 0x3b;
-            image[0x1e72..0x1e75].copy_from_slice(&trampoline.to_le_bytes()[..3]);
+            let original = image[site..site + 4].to_vec();
+            image.extend_from_slice(&original);
+            image.push(0x3b);
+            image.extend_from_slice(&((site + 4) as u32).to_le_bytes()[..3]);
+            image[site] = 0x3b;
+            image[site + 1..site + 4].copy_from_slice(&trampoline.to_le_bytes()[..3]);
         }
         if image.len() == 9_748
             && crc32fast::hash(&image) == 0x420e_640b
@@ -623,13 +628,18 @@ mod tests {
 
     #[test]
     fn leaves_similar_two_slot_save_programs_unmodified() {
-        let mut original = image(0, 0, 0);
-        original.resize(33_999, 0);
-        original[0x1e71..0x1e75].copy_from_slice(&[0x3d, 0x14, 0x17, 0]);
-        let saved = original.clone();
-        let program = Program::load(&original).unwrap();
-        assert_eq!(original, saved);
-        assert_eq!(program.image(), original);
+        for (length, site, call) in [
+            (33_999, 0x1e71, [0x3d, 0x14, 0x17, 0]),
+            (33_741, 0x1e86, [0x3d, 0xe4, 0x16, 0]),
+        ] {
+            let mut original = image(0, 0, 0);
+            original.resize(length, 0);
+            original[site..site + 4].copy_from_slice(&call);
+            let saved = original.clone();
+            let program = Program::load(&original).unwrap();
+            assert_eq!(original, saved);
+            assert_eq!(program.image(), original);
+        }
     }
 
     #[test]

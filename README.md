@@ -48,6 +48,9 @@ being progressively improved.
   programs without uploading them
 
 Compatibility evidence is tracked in the [workflow audit](docs/Game-Corpus-Audit.md).
+Foreign Land prologue reserves both native save slots before writing, including
+when the second slot is saved first; its workflow covers the opening battle,
+school dialogue and saving/loading two distinct points.
 Ghost House supports matching native save-slot selection, with workflows for
 charms, stage progress, capture/restart, pause and both-slot saving/loading.
 Phantom Fighter has a workflow for movement bounds, pause/resume, shooting,

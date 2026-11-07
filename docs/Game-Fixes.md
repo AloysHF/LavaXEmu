@@ -2246,3 +2246,22 @@ without an execution error alone does not establish playability.
   menu and check normal exit; review all stage captures locally.
 - Other difficulty modes, later levels and the ending remain unverified. Game
   content, saved data and captures are not distributed.
+
+## Foreign Land prologue (异域传说序章)
+
+- Saving the second slot first reports success while only writing a 2,000-byte
+  first slot, because the guest seeks beyond an empty file before reserving the
+  second slot. Extend the fingerprinted native save-space repair to this release:
+  reserve 4,000 bytes without changing existing data, then perform its original
+  save routine. General file-seek behavior and original content remain unchanged.
+- Replay loose and packaged versions through the opening introduction, city
+  movement, a scripted battle, school stairs and the classroom conversation.
+  Check the native victory epilogue is reached; the opening enemy gives zero
+  experience and money, and the player's initial health remains intact.
+- Save the classroom point into slot two first, then the earlier city point into
+  slot one. Check both slots exist and the second slot is preserved byte for byte.
+  Read each slot in a fresh instance, verify position and character values, then
+  continue walking and exit through the system menu. Review captures locally.
+- The previously supported save-space repair also retains its two-slot regression.
+  Later areas, other battles, equipment crafting and the ending remain unverified.
+  Game content, save files and captures are not distributed.

@@ -18,9 +18,9 @@ do not satisfy this status.
 - Shared guest text memory checked on 2026-11-01: all 75 dedicated release workflows passed after the text-buffer repair and state migration.
 - Inverted TextOut checked on 2026-11-01: all 77 dedicated release workflows passed after honoring the source-inversion flag.
 - Virtual storage capacity checked on 2026-11-05: all 95 existing dedicated release workflows passed after the DiskCheck repair.
-- 112 dedicated release workflows passed in this audit.
-- 169 of 324 entry points were loaded by those successful workflows.
-- 155 entry points still need dedicated workflow verification.
+- 113 dedicated release workflows passed in this audit.
+- 171 of 324 entry points were loaded by those successful workflows.
+- 153 entry points still need dedicated workflow verification.
 - The historical [startup gallery](Game-Compatibility.md) is a separate check
   and must not be interpreted as this workflow audit.
 
@@ -183,8 +183,8 @@ an optional screenshot directory. Keep each test's logs and captures separate.
 | 139 | `LAVA1 幻影战机/幻影战机.lav` | Game / game package | [Workflow passed: `phantom_fighter_moves_pauses_destroys_enemies_and_reaches_stage_two`](../crates/lavaxemu/tests/game_compatibility.rs#L10712) |
 | 140 | `LAVA1 幽灵屋/105(打包后的).pac` | Game / game package | [Workflow passed: `ghost_house_versions_collect_charms_clear_stage_pause_and_restore_both_save_slots`](../crates/lavaxemu/tests/game_compatibility.rs#L10827) |
 | 141 | `LAVA1 幽灵屋/105.lav` | Game / game package | [Workflow passed: `ghost_house_versions_collect_charms_clear_stage_pause_and_restore_both_save_slots`](../crates/lavaxemu/tests/game_compatibility.rs#L10827) |
-| 142 | `LAVA1 异域传说序章/Land.pac` | Game / game package | Pending |
-| 143 | `LAVA1 异域传说序章/非pac/Land.lav` | Game / game package | Pending |
+| 142 | `LAVA1 异域传说序章/Land.pac` | Game / game package | [Workflow passed: `foreign_land_versions_fight_follow_the_school_story_and_preserve_both_save_slots`](../crates/lavaxemu/tests/game_compatibility.rs#L10987) |
+| 143 | `LAVA1 异域传说序章/非pac/Land.lav` | Game / game package | [Workflow passed: `foreign_land_versions_fight_follow_the_school_story_and_preserve_both_save_slots`](../crates/lavaxemu/tests/game_compatibility.rs#L10987) |
 | 144 | `LAVA1 强力钻土机/强力钻土机(Tc800).lav` | Game / game package | Pending |
 | 145 | `LAVA1 强力钻土机/强力钻土机(其它机型).lav` | Game / game package | Pending |
 | 146 | `LAVA1 强力钻土机/强力钻土机(模拟器).lav` | Game / game package | Pending |

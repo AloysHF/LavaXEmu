@@ -10981,3 +10981,172 @@ fn ghost_house_versions_collect_charms_clear_stage_pause_and_restore_both_save_s
         assert!(halted);
     }
 }
+
+#[test]
+#[ignore = "requires the local game corpus via LAVAX_GAME_ROOT"]
+fn foreign_land_versions_fight_follow_the_school_story_and_preserve_both_save_slots() {
+    fn word(e: &Emulator, a: usize) -> u16 {
+        u16::from_le_bytes(e.vm().memory()[a..a + 2].try_into().unwrap())
+    }
+    fn position(e: &Emulator) -> (u8, u16, u16) {
+        let m = e.vm().memory();
+        (
+            m[0x4972],
+            u16::from(m[0x4968]) + u16::from(m[0x496c]),
+            u16::from(m[0x4969]) + u16::from(m[0x496d]),
+        )
+    }
+    fn key(e: &mut Emulator, k: u8, frames: usize, held: usize) {
+        e.input_mut().release_all();
+        for frame in 0..frames {
+            e.input_mut().set_keys((frame < held).then_some(k));
+            advance(e, 1);
+        }
+    }
+    fn repeated(e: &mut Emulator, k: u8, count: usize, frames: usize, held: usize) {
+        for _ in 0..count {
+            key(e, k, frames, held);
+        }
+    }
+    fn system_menu(e: &mut Emulator) {
+        key(e, 25, 120, 3);
+        repeated(e, 22, 4, 120, 3);
+        key(e, 13, 120, 3);
+    }
+    fn save(e: &mut Emulator, slot: usize, label: &str) -> Vec<u8> {
+        system_menu(e);
+        key(e, 13, 120, 3);
+        if slot == 2 {
+            key(e, 21, 120, 3);
+        }
+        capture(e, &format!("{label}-slot-{slot}-save-choice"));
+        key(e, 13, 120, 3);
+        let file = e.files().file("/LavaData/Land_Save.dat").unwrap().to_vec();
+        assert_eq!(file.len(), 4000);
+        capture(e, &format!("{label}-slot-{slot}-saved"));
+        file
+    }
+    for (file, label) in [("Land.lav", "land-loose"), ("Land.pac", "land-package")] {
+        let path = fixture_path(file);
+        let mut e = load(&path);
+        advance(&mut e, 1200);
+        capture(&e, &format!("{label}-title"));
+        for i in 0..10 {
+            key(&mut e, 13, 180, 18);
+            if i == 0 {
+                capture(&e, &format!("{label}-introduction"));
+            }
+        }
+        assert_eq!(position(&e), (1, 46, 4));
+        let beginning = e.clone();
+        capture(&e, &format!("{label}-outside-home"));
+        repeated(&mut e, 23, 20, 40, 1);
+        assert_eq!(position(&e), (1, 27, 4));
+        repeated(&mut e, 21, 3, 40, 1);
+        repeated(&mut e, 23, 22, 40, 1);
+        repeated(&mut e, 20, 3, 40, 1);
+        key(&mut e, 13, 40, 1);
+        assert_eq!(position(&e), (1, 19, 4));
+        repeated(&mut e, 21, 3, 120, 1);
+        key(&mut e, 23, 120, 1);
+        repeated(&mut e, 13, 4, 120, 1);
+        assert_eq!(position(&e), (1, 19, 6));
+        assert_eq!(e.vm().pc(), 0x10c4);
+        assert_eq!(word(&e, 0x4bcd), 10);
+        capture(&e, &format!("{label}-first-battle"));
+        key(&mut e, 13, 180, 3);
+        capture(&e, &format!("{label}-attack"));
+        key(&mut e, 13, 180, 3);
+        let bp = e.vm().local_bp() as usize;
+        assert_eq!(&e.vm().memory()[bp..bp + 3], [0xc5, 0x63, 0]);
+        assert_eq!(word(&e, 0x48c8), 200);
+        assert_eq!(word(&e, 0x48cc), 0);
+        assert_eq!(word(&e, 0x4901), 240);
+        capture(&e, &format!("{label}-victory"));
+        repeated(&mut e, 13, 10, 180, 3);
+        repeated(&mut e, 23, 14, 40, 1);
+        repeated(&mut e, 20, 4, 40, 1);
+        assert_eq!(position(&e), (1, 2, 3));
+        repeated(&mut e, 21, 4, 40, 1);
+        repeated(&mut e, 22, 5, 40, 1);
+        repeated(&mut e, 20, 3, 40, 1);
+        assert_eq!(position(&e), (1, 44, 19));
+        capture(&e, &format!("{label}-school-entrance"));
+        repeated(&mut e, 20, 5, 120, 1);
+        repeated(&mut e, 13, 10, 120, 1);
+        assert_eq!(position(&e), (1, 44, 17));
+        repeated(&mut e, 23, 4, 40, 1);
+        repeated(&mut e, 20, 3, 40, 1);
+        repeated(&mut e, 13, 7, 40, 1);
+        assert_eq!(position(&e), (1, 31, 18));
+        capture(&e, &format!("{label}-school-stairs"));
+        repeated(&mut e, 20, 8, 40, 1);
+        assert_eq!(position(&e), (1, 11, 18));
+        capture(&e, &format!("{label}-classroom"));
+        for (i, k) in [22, 22, 22, 22, 20, 20]
+            .into_iter()
+            .chain(std::iter::repeat_n(13, 16))
+            .enumerate()
+        {
+            key(&mut e, k, 120, 1);
+            if [0, 2, 10, 13].contains(&i) {
+                capture(&e, &format!("{label}-classroom-dialogue-{i}"));
+            }
+        }
+        assert_eq!(position(&e), (1, 11, 18));
+        capture(&e, &format!("{label}-friends-departed"));
+        let second = save(&mut e, 2, label);
+        assert!(second[..2000].iter().all(|&byte| byte == 0));
+        let mut earlier = beginning;
+        earlier
+            .files_mut()
+            .import_file("/LavaData/Land_Save.dat", second.clone());
+        let combined = save(&mut earlier, 1, label);
+        assert_eq!(&combined[2000..], &second[2000..]);
+        assert_ne!(&combined[..2000], &combined[2000..]);
+        for (slot, expected) in [(1, (1, 46, 4)), (2, (1, 11, 18))] {
+            let mut restored = load(&path);
+            restored
+                .files_mut()
+                .import_file("/LavaData/Land_Save.dat", combined.clone());
+            advance(&mut restored, 1200);
+            for k in [21, 13] {
+                key(&mut restored, k, 120, 3);
+            }
+            if slot == 2 {
+                key(&mut restored, 21, 120, 3);
+            }
+            capture(&restored, &format!("{label}-slot-{slot}-load-choice"));
+            for _ in 0..2 {
+                key(&mut restored, 13, 120, 3);
+            }
+            assert_eq!(position(&restored), expected);
+            assert_eq!(word(&restored, 0x48c8), 200);
+            assert_eq!(word(&restored, 0x48ca), 60);
+            assert_eq!(word(&restored, 0x4901), 240);
+            assert_eq!(word(&restored, 0x48ce), 3);
+            assert_eq!(
+                restored.files().file("/LavaData/Land_Save.dat"),
+                Some(combined.as_slice())
+            );
+            capture(&restored, &format!("{label}-slot-{slot}-restored"));
+            repeated(&mut restored, 21, 3, 40, 1);
+            assert_ne!(position(&restored), expected);
+            capture(&restored, &format!("{label}-slot-{slot}-continued"));
+            system_menu(&mut restored);
+            repeated(&mut restored, 21, 3, 120, 3);
+            capture(&restored, &format!("{label}-slot-{slot}-quit-choice"));
+            let mut halted = false;
+            for frame in 0..600 {
+                restored
+                    .input_mut()
+                    .set_keys((frame < 3 || (180..183).contains(&frame)).then_some(13));
+                if restored.run_frame().unwrap().status == FrameStatus::Halted(0) {
+                    halted = true;
+                    break;
+                }
+            }
+            assert!(halted);
+        }
+    }
+}
