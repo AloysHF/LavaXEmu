@@ -39,11 +39,12 @@ do not satisfy this status.
 - Happy Gomoku checked on 2026-11-07: the title toggles both modes, the cursor wraps around a 13-by-13 board, solo stones and the AI reply are checked, undo removes a round, restart clears the board, and five black stones in two-player mode show the win overlay and keep the score for a white-starting rematch.
 - Rubber House checked on 2026-11-07: the title walks all five entries, opens the seven-page rules and the settings, fills and cancels the key binding, shows both locked entries, halts from the exit entry, starts level 1 through the prompt, and covers right walking with bead collection, the left drop, idle and vertical keys, plus both pause answers.
 - Wuxia checked on 2026-11-07: the title walks all three entries with bidirectional wrapping, 初涉武林 plays the night dialog into the room scene, 游龙再现 opens the two-slot load menu and reports the empty slot, Escape returns to the selected title entry, and 豹隐山林 halts the program.
+- Pipe Works checked on 2026-11-07: the title walks all six entries with clamped rows and reading-order columns, opens the manual, high-score list, difficulty selector and both about pages, starts the logo splash into the animated board with a moving cursor, returns with Escape, and halts from the exit entry.
 - Rotary Slot Machine checked on 2026-11-07: one dedicated release workflow checks the splash and menu with bidirectional wrapping, both pages of the instructions and version screens, starting a round with 20 credits, betting and withdrawing on two columns, a deterministic spin and result, the quit dialog cancel/confirm paths, and the menu exit item.
 - Bottomless Pit checked on 2026-11-07: one dedicated release workflow cycles the three difficulty levels, starts a fall, checks the horizontal-only steering, waits for the floor counter, saves the replay record through the `Yes?` prompt, replays it without input, and aborts with Escape.
-- 146 dedicated release workflows passed in this audit.
-- 214 of 324 entry points were loaded by those successful workflows.
-- 110 entry points still need dedicated workflow verification.
+- 147 dedicated release workflows passed in this audit.
+- 215 of 324 entry points were loaded by those successful workflows.
+- 109 entry points still need dedicated workflow verification.
 - The historical [startup gallery](Game-Compatibility.md) is a separate check
   and must not be interpreted as this workflow audit.
 
@@ -263,7 +264,7 @@ an optional screenshot directory. Keep each test's logs and captures separate.
 | 196 | `LAVA1 橡皮屋/橡皮屋.lav` | Game / game package | [Workflow passed: `rubber_house_menu_settings_and_level_one`](../crates/lavaxemu/tests/game_compatibility.rs#L14613) |
 | 197 | `LAVA1 欢乐五子棋/欢乐五子棋.lav` | Game / game package | [Workflow passed: `happy_gomoku_menu_places_stones_undoes_restarts_and_detects_a_win`](../crates/lavaxemu/tests/game_compatibility.rs#L14799) |
 | 198 | `LAVA1 武侠/武侠.lav` | Game / game package | [Workflow passed: `wuxia_title_menu_save_slots_and_story_intro`](../crates/lavaxemu/tests/game_compatibility.rs#L14973) |
-| 199 | `LAVA1 水管工/PC模拟器端/水管工.lav` | Game / game package | Pending |
+| 199 | `LAVA1 水管工/PC模拟器端/水管工.lav` | Game / game package | [Workflow passed: `pipe_works_menu_screens_gameplay_and_exit`](../crates/lavaxemu/tests/game_compatibility.rs#L15082) |
 | 200 | `LAVA1 水管工/文曲星端/水管工.lav` | Game / game package | Pending |
 | 201 | `LAVA1 江湖--海贼王传说/world.lav` | Game / game package | Pending |
 | 202 | `LAVA1 江湖-混沌初开/world.lav` | Game / game package | Pending |

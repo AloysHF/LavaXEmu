@@ -2833,3 +2833,26 @@ without an execution error alone does not establish playability.
   `0x3868`.
 - The rest of the intro, actual gameplay, saving, combat and the remaining story
   branches remain unverified.
+
+## Pipe Works (水管工)
+
+- Content: `LAVA1 水管工/PC模拟器端/水管工.lav`.
+- The title menu waits at pc `0x479f` with 开始游戏 / 游戏设定 in the top row,
+  游戏手册 / 关于游戏 in the middle row and 榜上有名 / 结束游戏 in the bottom
+  row. The selected cell blinks inverted. Up and Down move inside a column and
+  stop at the first and last rows. Left and Right step through the entries in
+  reading order; Left on 开始游戏 and Right on 结束游戏 land on the neighbouring
+  column of the same row.
+- 游戏手册 opens a single illustrated control page at pc `0x444b`; Down returns
+  to the title. 榜上有名 opens the 水管英雄榜 at pc `0x2d26`, which lists five
+  default `Pipe Hero` scores (100, 90, 80, 70, 60); Enter returns.
+- 游戏设定 opens the 难度设定 selector at pcs `0x4380`-`0x43ff` with the
+  entries 简单, 中等 and 困难 plus a blinking marker. Down moves the marker and
+  Enter confirms and returns to the title. 关于游戏 shows two text pages at pcs
+  `0x453b` and `0x4632`; Down advances and then returns to the title.
+- 开始游戏 shows the studio logo splash (pc `0x2803` / `0x2826`) and then the
+  pipe board. The plumber timer in the right panel animates, and the arrow keys
+  move the grid cursor (Escape returns to the title). 结束游戏 shows the same
+  splash and halts the program with code 0.
+- Pipe placement, rotation, scoring, the effect of the selected difficulty on a
+  round, level completion and high-score saving remain unverified.
