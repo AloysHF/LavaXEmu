@@ -3201,3 +3201,55 @@ without an execution error alone does not establish playability.
   remain unverified, as do the 下载 map source and the separate `正式版`
   distribution. The upper size caps were probed manually but are not asserted
   by the workflow.
+
+## War Sword Full (煞魔剑正式版)
+
+- Content: `LAVA1 煞魔剑正式版/【煞魔剑】 正式版.lav`.
+- The splash waits at pc `0x6cee`-`0x6cfd`. Enter opens the four-icon title
+  menu at pc `0x4790`-`0x488f` with 开始 / 载入 / 地图 / 帮助. The selection at
+  `0x1b0c` starts at 1; Right walks 2, 3, 4 and clamps at 4, Left walks back
+  to 1 and clamps at 1 (unlike `煞魔剑A`, which wraps).
+- 载入 without a save opens the options screen at pc `0x4590`-`0x45ab` with
+  the row at `0x1b14` set to 0, the map choice at `0x3af0` set to 1 (随机) and
+  the difficulty at `0x3ae0` set to 2 (标准). Escape returns to the title
+  menu and resets the selection to 1.
+- The options screen has three rows. The map row clamps `0x3af0` at 1 and 2,
+  the difficulty row clamps `0x3ae0` at 1 (简单) and 3 (困难), and the name row
+  stores uppercase letters in the buffer at `0x2c67` terminated at `0x2c6b`.
+  The row index `0x1b14` stops at 2.
+- The size screen runs at pc `0x1e17`-`0x1e2a`. The width byte at `0x3b29`
+  starts at 20 and the height byte at `0x3b2b` starts at 15. Left clamps the
+  width at 20 and Down clamps the height at 15; Right and Up increase them.
+- Enter generates the map, which waits at pc `0x67c4`-`0x67ef`. The dimensions
+  are stored at `0x3ae5`/`0x3ae6`, the difficulty at `0x3ae0`, the map choice
+  at `0x3af0`, the hero at `0x3ade`/`0x3adf` and the city resources at
+  `0x3ae9`/`0x3aeb`. Cells are four-byte records at `0x2d66 + (y * 20 + x) * 4`.
+  The generated map depends on the input history, so the exact scripted run is
+  asserted: the top row is all wall `[0, 2, 0x64, 0]`, the start temple is
+  `[0, 3, 0x43, 0]`, (10,3) is open `[0, 0, 0, 0]`, (11,3) is wall
+  `[0, 2, 0x81, 0]`, (10,2) is `[0, 3, 0x22, 0]` and (10,1) is
+  `[0, 2, 1, 0]`.
+- Right moves the hero to (10,3) and the wall at (11,3) blocks the next step;
+  Up reaches (10,2) and (10,1), Left reaches (9,1) and Down reaches (9,2).
+- Enter on the start city shows `未完成`; Enter on the resource city at (10,2)
+  shows `矿产资源 / 让英雄来开发吧~`. Both share the message loop at pc
+  `0x1cbf`-`0x1cd0` and Enter returns to the map.
+- Escape opens the system menu `系统菜单: 1存档 2退出 3快速存档 4快存后关机`
+  in the same loop. Keys 1-4 return to the map with the hero unchanged,
+  Escape reopens the menu, and nothing is written to disk.
+- 帮助 opens the notice at pc `0x3bed`; Enter returns to the title menu and
+  resets the selection to 1.
+- 地图 opens the size screen (default 20x15), the same notice and then the
+  editor canvas at pc `0x50f3`-`0x5106`. Enter opens the hint at pc
+  `0x223c`-`0x2249` (`必须确定开始位置 / 按s(确定)c(电脑)键`); Escape closes
+  it. The cursor starts at (1,1), Right and Down move it, `s` stores the
+  player start at `0x3ada`/`0x3adb`, `c` stores the computer start at
+  `0x3adc`/`0x3add`, Escape does not leave the editor and `q` returns to the
+  title menu with the selection reset to 1. The editor writes no files.
+- 下载 without a map file falls back to the generated map at pc
+  `0x67c4`-`0x67ef`: the choice at `0x3af0` stays 2, the map is 20x15, the
+  hero starts at (9,3) and (11,3) is the wall `[0, 2, 0x81, 0]`.
+- Building, unit management, combat, the resource economy, actual saving, the
+  下载 map source, editor save and reload, and the upper size caps remain
+  unverified; the upper caps and the width-times-height limit were probed
+  manually but are not asserted by the workflow.

@@ -17911,3 +17911,467 @@ fn war_sword_a_splash_stub_menus_options_map_and_field_messages() {
     );
     capture(&sizing, "war-a-size-min");
 }
+
+#[test]
+#[ignore = "requires the local game corpus via LAVAX_GAME_ROOT"]
+fn war_sword_full_splash_menu_options_editor_and_field_messages() {
+    const PATH: &str = "LAVA1 煞魔剑正式版/【煞魔剑】 正式版.lav";
+    let byte = |emulator: &Emulator, address: usize| emulator.vm().memory()[address];
+    let cell = |emulator: &Emulator, x: usize, y: usize| {
+        let address = 0x2d66 + (y * 20 + x) * 4;
+        let memory = emulator.vm().memory();
+        [
+            memory[address],
+            memory[address + 1],
+            memory[address + 2],
+            memory[address + 3],
+        ]
+    };
+    let at =
+        |emulator: &Emulator, low: usize, high: usize| (low..=high).contains(&emulator.vm().pc());
+    let hero = |emulator: &Emulator| (byte(emulator, 0x3ade), byte(emulator, 0x3adf));
+    let start = || {
+        let mut emulator = load(PATH);
+        advance(&mut emulator, 60);
+        press(&mut emulator, 13);
+        press(&mut emulator, 13);
+        press(&mut emulator, 21);
+        press(&mut emulator, 21);
+        press(&mut emulator, 13);
+        advance(&mut emulator, 60);
+        press(&mut emulator, 13);
+        advance(&mut emulator, 240);
+        emulator
+    };
+
+    let mut menu = load(PATH);
+    advance(&mut menu, 60);
+    assert!(
+        at(&menu, 0x6cee, 0x6cfd),
+        "the splash screen waits for a key"
+    );
+    capture(&menu, "war-full-splash");
+    press(&mut menu, 13);
+    assert!(at(&menu, 0x4790, 0x488f), "the title menu runs");
+    assert_eq!(byte(&menu, 0x1b0c), 1, "the start entry is selected");
+    capture(&menu, "war-full-menu");
+    for expected in [2, 3, 4] {
+        press(&mut menu, 22);
+        assert_eq!(
+            byte(&menu, 0x1b0c),
+            expected,
+            "right selects the next entry"
+        );
+    }
+    press(&mut menu, 22);
+    assert_eq!(byte(&menu, 0x1b0c), 4, "right stops at the help entry");
+    for expected in [3, 2, 1] {
+        press(&mut menu, 23);
+        assert_eq!(
+            byte(&menu, 0x1b0c),
+            expected,
+            "left selects the previous entry"
+        );
+    }
+    press(&mut menu, 23);
+    assert_eq!(byte(&menu, 0x1b0c), 1, "left stops at the start entry");
+
+    let mut load_entry = load(PATH);
+    advance(&mut load_entry, 60);
+    press(&mut load_entry, 13);
+    press(&mut load_entry, 22);
+    assert_eq!(byte(&load_entry, 0x1b0c), 2, "the load entry is selected");
+    press(&mut load_entry, 13);
+    advance(&mut load_entry, 60);
+    assert!(
+        at(&load_entry, 0x4590, 0x45ab),
+        "a missing save falls back to the options"
+    );
+    assert_eq!(
+        byte(&load_entry, 0x1b14),
+        0,
+        "the map row is selected by default"
+    );
+    assert_eq!(
+        byte(&load_entry, 0x3af0),
+        1,
+        "the random map is selected by default"
+    );
+    assert_eq!(
+        byte(&load_entry, 0x3ae0),
+        2,
+        "the standard difficulty is selected by default"
+    );
+    capture(&load_entry, "war-full-load-options");
+    press(&mut load_entry, 27);
+    advance(&mut load_entry, 60);
+    assert!(
+        at(&load_entry, 0x4790, 0x488f),
+        "escape returns to the title menu"
+    );
+    assert_eq!(
+        byte(&load_entry, 0x1b0c),
+        1,
+        "the start entry is selected again"
+    );
+
+    let mut options = load(PATH);
+    advance(&mut options, 60);
+    press(&mut options, 13);
+    press(&mut options, 13);
+    advance(&mut options, 60);
+    assert!(at(&options, 0x4590, 0x45ab), "the options screen runs");
+    assert_eq!(byte(&options, 0x1b14), 0, "the map row is selected");
+    assert_eq!(byte(&options, 0x3af0), 1, "the random map is selected");
+    assert_eq!(
+        byte(&options, 0x3ae0),
+        2,
+        "the standard difficulty is selected"
+    );
+    capture(&options, "war-full-options");
+    press(&mut options, 22);
+    assert_eq!(
+        byte(&options, 0x3af0),
+        2,
+        "right selects the downloaded map"
+    );
+    press(&mut options, 22);
+    assert_eq!(
+        byte(&options, 0x3af0),
+        2,
+        "right stops at the downloaded map"
+    );
+    press(&mut options, 23);
+    assert_eq!(byte(&options, 0x3af0), 1, "left selects the random map");
+    press(&mut options, 23);
+    assert_eq!(byte(&options, 0x3af0), 1, "left stops at the random map");
+    press(&mut options, 21);
+    assert_eq!(byte(&options, 0x1b14), 1, "down selects the difficulty row");
+    press(&mut options, 22);
+    assert_eq!(
+        byte(&options, 0x3ae0),
+        3,
+        "right selects the hard difficulty"
+    );
+    press(&mut options, 22);
+    assert_eq!(
+        byte(&options, 0x3ae0),
+        3,
+        "right stops at the hard difficulty"
+    );
+    press(&mut options, 23);
+    assert_eq!(
+        byte(&options, 0x3ae0),
+        2,
+        "left returns to the standard difficulty"
+    );
+    press(&mut options, 23);
+    assert_eq!(
+        byte(&options, 0x3ae0),
+        1,
+        "left selects the easy difficulty"
+    );
+    press(&mut options, 23);
+    assert_eq!(
+        byte(&options, 0x3ae0),
+        1,
+        "left stops at the easy difficulty"
+    );
+    press(&mut options, 21);
+    assert_eq!(byte(&options, 0x1b14), 2, "down selects the name row");
+    press(&mut options, 21);
+    assert_eq!(byte(&options, 0x1b14), 2, "down stops at the name row");
+    for key in *b"play" {
+        press(&mut options, key);
+    }
+    assert_eq!(
+        &options.vm().memory()[0x2c67..0x2c6b],
+        &b"PLAY"[..],
+        "the name is stored in upper case"
+    );
+    assert_eq!(
+        byte(&options, 0x2c6b),
+        0,
+        "the name buffer ends after four characters"
+    );
+    press(&mut options, 13);
+    advance(&mut options, 60);
+    assert!(at(&options, 0x1e17, 0x1e2a), "the size screen opens");
+    assert_eq!(byte(&options, 0x3b29), 20, "the width starts at twenty");
+    assert_eq!(byte(&options, 0x3b2b), 15, "the height starts at fifteen");
+    capture(&options, "war-full-size");
+    press(&mut options, 23);
+    assert_eq!(byte(&options, 0x3b29), 20, "the width stops at twenty");
+    press(&mut options, 21);
+    assert_eq!(byte(&options, 0x3b2b), 15, "the height stops at fifteen");
+    press(&mut options, 22);
+    assert_eq!(byte(&options, 0x3b29), 21, "right widens the map");
+    press(&mut options, 20);
+    assert_eq!(byte(&options, 0x3b2b), 16, "up heightens the map");
+    capture(&options, "war-full-size-custom");
+    press(&mut options, 13);
+    advance(&mut options, 300);
+    assert!(at(&options, 0x67c4, 0x67ef), "the generated map runs");
+    assert_eq!(byte(&options, 0x3ae5), 21, "the custom width is used");
+    assert_eq!(byte(&options, 0x3ae6), 16, "the custom height is used");
+    assert_eq!(hero(&options), (9, 3), "the hero starts on the temple");
+    capture(&options, "war-full-custom-map");
+
+    let mut map = start();
+    assert!(at(&map, 0x67c4, 0x67ef), "the generated map runs");
+    assert_eq!(byte(&map, 0x3ae0), 2, "the standard difficulty is used");
+    assert_eq!(byte(&map, 0x3af0), 1, "the random map is used");
+    assert_eq!(byte(&map, 0x3ae5), 20, "the map is twenty wide");
+    assert_eq!(byte(&map, 0x3ae6), 15, "the map is fifteen high");
+    assert_eq!(
+        byte(&map, 0x3ae9),
+        124,
+        "the player city has one hundred twenty-four"
+    );
+    assert_eq!(byte(&map, 0x3aeb), 200, "the computer city has two hundred");
+    assert_eq!(hero(&map), (9, 3), "the hero starts on the temple");
+    for x in 0..20 {
+        assert_eq!(
+            cell(&map, x, 0),
+            [0, 2, 0x64, 0],
+            "the top border is a wall"
+        );
+    }
+    assert_eq!(
+        cell(&map, 9, 3),
+        [0, 3, 0x43, 0],
+        "the temple sits under the hero"
+    );
+    assert_eq!(cell(&map, 10, 3), [0, 0, 0, 0], "the tile east is empty");
+    assert_eq!(
+        cell(&map, 11, 3),
+        [0, 2, 0x81, 0],
+        "the forest sits east of the empty tile"
+    );
+    assert_eq!(
+        cell(&map, 10, 2),
+        [0, 3, 0x22, 0],
+        "the resource sits north of the empty tile"
+    );
+    assert_eq!(
+        cell(&map, 10, 1),
+        [0, 2, 1, 0],
+        "the forest sits north of the resource"
+    );
+    capture(&map, "war-full-map");
+    press(&mut map, 22);
+    assert_eq!(hero(&map), (10, 3), "right moves the hero");
+    press(&mut map, 22);
+    assert_eq!(hero(&map), (10, 3), "the forest blocks the hero");
+    press(&mut map, 20);
+    assert_eq!(hero(&map), (10, 2), "up moves onto the resource");
+    press(&mut map, 20);
+    assert_eq!(hero(&map), (10, 1), "up moves onto the northern forest");
+    press(&mut map, 23);
+    assert_eq!(hero(&map), (9, 1), "left moves back to the temple column");
+    press(&mut map, 21);
+    assert_eq!(hero(&map), (9, 2), "down returns towards the temple");
+    capture(&map, "war-full-walk");
+
+    let mut city = start();
+    press(&mut city, 13);
+    assert!(at(&city, 0x1cbf, 0x1cd0), "the field prompt runs");
+    assert_eq!(
+        &city.vm().memory()[0x1c97..0x1c9d],
+        &[0xce, 0xb4, 0xcd, 0xea, 0xb3, 0xc9],
+        "the temple reports the unfinished game"
+    );
+    capture(&city, "war-full-message-city");
+    press(&mut city, 13);
+    assert!(at(&city, 0x67c4, 0x67ef), "the prompt returns to the map");
+
+    let mut resource = start();
+    press(&mut resource, 22);
+    press(&mut resource, 20);
+    assert_eq!(hero(&resource), (10, 2), "the hero reaches the resource");
+    press(&mut resource, 13);
+    assert!(at(&resource, 0x1cbf, 0x1cd0), "the resource prompt runs");
+    assert_eq!(
+        &resource.vm().memory()[0x1c97..0x1c9f],
+        &[0xbf, 0xf3, 0xb2, 0xfa, 0xd7, 0xca, 0xd4, 0xb4],
+        "the resource is named"
+    );
+    assert_eq!(
+        &resource.vm().memory()[0x1ca0..0x1caf],
+        &[
+            0xc8, 0xc3, 0xd3, 0xa2, 0xd0, 0xdb, 0xc0, 0xb4, 0xbf, 0xaa, 0xb7, 0xa2, 0xb0, 0xc9,
+            0x7e
+        ],
+        "the resource asks for a hero"
+    );
+    capture(&resource, "war-full-message-resource");
+    press(&mut resource, 13);
+    assert!(
+        at(&resource, 0x67c4, 0x67ef),
+        "the resource prompt returns to the map"
+    );
+
+    let mut system = start();
+    press(&mut system, 27);
+    assert!(at(&system, 0x1cbf, 0x1cd0), "the system prompt runs");
+    assert_eq!(
+        &system.vm().memory()[0x1c97..0x1ca0],
+        &[0xcf, 0xb5, 0xcd, 0xb3, 0xb2, 0xcb, 0xb5, 0xa5, 0x3a],
+        "the system menu is labelled"
+    );
+    capture(&system, "war-full-system-menu");
+    for key in [49, 50, 51, 52] {
+        press(&mut system, key);
+        assert!(
+            at(&system, 0x67c4, 0x67ef),
+            "the system entry returns to the map"
+        );
+        assert_eq!(hero(&system), (9, 3), "the hero stays put");
+        if key != 52 {
+            press(&mut system, 27);
+            assert!(
+                at(&system, 0x1cbf, 0x1cd0),
+                "escape reopens the system menu"
+            );
+        }
+    }
+    assert!(
+        system.files_mut().take_dirty_files().is_empty(),
+        "the system entries write nothing"
+    );
+
+    let mut help = load(PATH);
+    advance(&mut help, 60);
+    press(&mut help, 13);
+    for _ in 0..3 {
+        press(&mut help, 22);
+    }
+    assert_eq!(byte(&help, 0x1b0c), 4, "the help entry is selected");
+    press(&mut help, 13);
+    advance(&mut help, 60);
+    assert_eq!(help.vm().pc(), 0x3bed, "the help notice waits for a key");
+    capture(&help, "war-full-help-notice");
+    press(&mut help, 13);
+    advance(&mut help, 60);
+    assert!(
+        at(&help, 0x4790, 0x488f),
+        "the notice returns to the title menu"
+    );
+    assert_eq!(byte(&help, 0x1b0c), 1, "the start entry is selected again");
+
+    let mut editor = load(PATH);
+    advance(&mut editor, 60);
+    press(&mut editor, 13);
+    press(&mut editor, 22);
+    press(&mut editor, 22);
+    assert_eq!(byte(&editor, 0x1b0c), 3, "the map entry is selected");
+    press(&mut editor, 13);
+    advance(&mut editor, 60);
+    assert!(at(&editor, 0x1e17, 0x1e2a), "the editor asks for the size");
+    assert_eq!(byte(&editor, 0x3b29), 20, "the editor starts twenty wide");
+    assert_eq!(byte(&editor, 0x3b2b), 15, "the editor starts fifteen high");
+    press(&mut editor, 13);
+    advance(&mut editor, 60);
+    assert_eq!(editor.vm().pc(), 0x3bed, "the editor shows the help notice");
+    press(&mut editor, 13);
+    advance(&mut editor, 120);
+    assert!(at(&editor, 0x50f3, 0x5106), "the map editor runs");
+    capture(&editor, "war-full-editor");
+    press(&mut editor, 13);
+    advance(&mut editor, 60);
+    assert!(at(&editor, 0x223c, 0x2249), "the editor hint dialog runs");
+    assert_eq!(
+        &editor.vm().memory()[0x1c81..0x1c91],
+        &[
+            0xb1, 0xd8, 0xd0, 0xeb, 0xc8, 0xb7, 0xb6, 0xa8, 0xbf, 0xaa, 0xca, 0xbc, 0xce, 0xbb,
+            0xd6, 0xc3
+        ],
+        "the hint asks for the start positions"
+    );
+    assert_eq!(
+        &editor.vm().memory()[0x1c92..0x1ca4],
+        &[
+            0xb0, 0xb4, 0x73, 0x28, 0xcd, 0xe6, 0xbc, 0xd2, 0x29, 0x63, 0x28, 0xb5, 0xe7, 0xc4,
+            0xd4, 0x29, 0xbc, 0xfc
+        ],
+        "the hint names the marker keys"
+    );
+    capture(&editor, "war-full-editor-dialog");
+    press(&mut editor, 27);
+    advance(&mut editor, 60);
+    assert!(at(&editor, 0x50f3, 0x5106), "escape closes the hint");
+    assert_eq!(hero(&editor), (1, 1), "the cursor starts in the corner");
+    press(&mut editor, 22);
+    assert_eq!(hero(&editor), (2, 1), "right moves the cursor");
+    press(&mut editor, 21);
+    assert_eq!(hero(&editor), (2, 2), "down moves the cursor");
+    press(&mut editor, 115);
+    assert_eq!(
+        (byte(&editor, 0x3ada), byte(&editor, 0x3adb)),
+        (2, 2),
+        "s marks the player start"
+    );
+    press(&mut editor, 99);
+    assert_eq!(
+        (byte(&editor, 0x3adc), byte(&editor, 0x3add)),
+        (2, 2),
+        "c marks the computer start"
+    );
+    press(&mut editor, 27);
+    assert!(
+        at(&editor, 0x50f3, 0x5106),
+        "escape does not leave the editor"
+    );
+    press(&mut editor, 113);
+    advance(&mut editor, 60);
+    assert!(at(&editor, 0x4790, 0x488f), "q returns to the title menu");
+    assert_eq!(
+        byte(&editor, 0x1b0c),
+        1,
+        "the start entry is selected again"
+    );
+    assert!(
+        editor.files_mut().take_dirty_files().is_empty(),
+        "the editor writes nothing on exit"
+    );
+
+    let mut download = load(PATH);
+    advance(&mut download, 60);
+    press(&mut download, 13);
+    press(&mut download, 13);
+    press(&mut download, 22);
+    assert_eq!(byte(&download, 0x3af0), 2, "the downloaded map is selected");
+    press(&mut download, 21);
+    press(&mut download, 21);
+    press(&mut download, 13);
+    advance(&mut download, 60);
+    assert!(at(&download, 0x1e17, 0x1e2a), "the size screen opens");
+    press(&mut download, 13);
+    advance(&mut download, 240);
+    assert!(
+        at(&download, 0x67c4, 0x67ef),
+        "the map runs without a map file"
+    );
+    assert_eq!(
+        byte(&download, 0x3af0),
+        2,
+        "the downloaded map entry is kept"
+    );
+    assert_eq!(
+        byte(&download, 0x3ae5),
+        20,
+        "the fallback map is twenty wide"
+    );
+    assert_eq!(
+        byte(&download, 0x3ae6),
+        15,
+        "the fallback map is fifteen high"
+    );
+    assert_eq!(hero(&download), (9, 3), "the hero starts on the temple");
+    assert_eq!(
+        cell(&download, 11, 3),
+        [0, 2, 0x81, 0],
+        "the fallback map matches the random map"
+    );
+    capture(&download, "war-full-download-map");
+}
