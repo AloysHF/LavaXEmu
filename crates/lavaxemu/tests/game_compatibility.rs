@@ -14185,3 +14185,89 @@ fn fly_ten_thousand_meters_adjusts_speed_and_climbs() {
     }
     assert!(halted, "Escape exits from the credits screen");
 }
+
+#[test]
+#[ignore = "requires the local game corpus via LAVAX_GAME_ROOT"]
+fn moon_city_reaches_the_village_and_handles_menu_items() {
+    let mut emulator = load("LAVA1 月光城/Moon.pac");
+    advance(&mut emulator, 300);
+    assert_eq!(emulator.vm().pc(), 0x286, "the title menu waits");
+    capture(&emulator, "moon-title");
+    let title = emulator.clone();
+
+    let mut loose = load("LAVA1 月光城/非pac/Moon.lav");
+    advance(&mut loose, 300);
+    assert_eq!(
+        loose.display().indexed_frame(),
+        title.display().indexed_frame(),
+        "the packaged and loose entries render the same title"
+    );
+
+    let mut loading = title.clone();
+    press(&mut loading, 21);
+    press(&mut loading, 13);
+    assert_eq!(loading.vm().pc(), 0x1191, "the load item opens two slots");
+    capture(&loading, "moon-load-slots");
+    press(&mut loading, 13);
+    capture(&loading, "moon-load-failure");
+    let mut back = false;
+    for _ in 0..600 {
+        if loading.vm().pc() == 0x286 {
+            back = true;
+            break;
+        }
+        advance(&mut loading, 1);
+    }
+    assert!(back, "a missing record returns to the title");
+
+    press(&mut emulator, 13);
+    assert_eq!(emulator.vm().pc(), 0x122d, "a new game asks for a name");
+    capture(&emulator, "moon-name");
+    press(&mut emulator, 13);
+    assert_ne!(
+        emulator.vm().pc(),
+        0x122d,
+        "an empty name enters the village"
+    );
+    capture(&emulator, "moon-village");
+
+    let mut still = emulator.clone();
+    advance(&mut still, 70);
+    let mut views = Vec::new();
+    for key in [20, 21, 22, 23] {
+        let mut moved = emulator.clone();
+        hold(&mut moved, key, 40);
+        capture(&moved, &format!("moon-{key}"));
+        let frame = moved.display().indexed_frame().to_vec();
+        assert!(
+            frame != still.display().indexed_frame(),
+            "each arrow key changes the village view"
+        );
+        views.push(frame);
+    }
+    for (index, frame) in views.iter().enumerate() {
+        for other in &views[index + 1..] {
+            assert_ne!(frame, other, "the four arrow keys move in four directions");
+        }
+    }
+
+    let mut quitter = title.clone();
+    for _ in 0..3 {
+        press(&mut quitter, 21);
+    }
+    press(&mut quitter, 13);
+    let mut halted = false;
+    for _ in 0..300 {
+        if matches!(
+            quitter
+                .run_frame()
+                .expect("game must execute without errors")
+                .status,
+            FrameStatus::Halted(_)
+        ) {
+            halted = true;
+            break;
+        }
+    }
+    assert!(halted, "the exit item halts the program");
+}

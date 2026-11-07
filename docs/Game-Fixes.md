@@ -2700,3 +2700,17 @@ without an execution error alone does not establish playability.
   pc `0xbd7`.
 - The speed value's effect on obstacle speed, the 10000-meter goal, scoring,
   the LIFE counter and how altitude affects collisions remain unverified.
+
+## Moon City (月光城)
+
+- Content: `LAVA1 月光城/Moon.pac` and `LAVA1 月光城/非pac/Moon.lav`.
+- Startup-only evidence had not covered the menu items, character creation or
+  the village.
+- The packaged and loose entries render an identical title after 300 frames;
+  the title menu waits at pc `0x286`.
+- The load item opens the two save slots at pc `0x1191`. Loading a missing slot
+  reports a failed read and returns to the title.
+- A new game asks for a name at pc `0x122d`; an empty name enters the village.
+  All four arrow keys change the rendered view in four distinct directions.
+- The exit item shuts the program down at pc `0x2f61`.
+- Save persistence, combat, dialogue and later maps remain unverified.

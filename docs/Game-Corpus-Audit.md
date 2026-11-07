@@ -32,11 +32,12 @@ do not satisfy this status.
 - Down 100 Floors checked on 2026-11-07: the title and two credit screens gate the run, Left and Right steer the character while Up and Down leave the frame unchanged at that point, and an unattended run reaches the game-over screen.
 - Hold 20 Seconds checked on 2026-11-07: the title menu starts a survival run, all four arrow keys move the player to distinct positions, steering into the falling field ends the run with a result overlay, and Enter starts the next run.
 - Fly 10000 Meters checked on 2026-11-07: the title starts the flight, F4 opens the speed adjustment, Up and Down change and restore the speed value, holding a key lifts the plane, and an unattended flight ends on credits that Escape closes.
+- Moon City checked on 2026-11-07: the packaged and loose entries render the same title, the load item reports a missing record and returns, a new game takes an empty name into the village with four-direction movement, and the exit item halts the program.
 - Rotary Slot Machine checked on 2026-11-07: one dedicated release workflow checks the splash and menu with bidirectional wrapping, both pages of the instructions and version screens, starting a round with 20 credits, betting and withdrawing on two columns, a deterministic spin and result, the quit dialog cancel/confirm paths, and the menu exit item.
 - Bottomless Pit checked on 2026-11-07: one dedicated release workflow cycles the three difficulty levels, starts a fall, checks the horizontal-only steering, waits for the floor counter, saves the replay record through the `Yes?` prompt, replays it without input, and aborts with Escape.
-- 139 dedicated release workflows passed in this audit.
-- 206 of 324 entry points were loaded by those successful workflows.
-- 118 entry points still need dedicated workflow verification.
+- 140 dedicated release workflows passed in this audit.
+- 208 of 324 entry points were loaded by those successful workflows.
+- 116 entry points still need dedicated workflow verification.
 - The historical [startup gallery](Game-Compatibility.md) is a separate check
   and must not be interpreted as this workflow audit.
 
@@ -242,8 +243,8 @@ an optional screenshot directory. Keep each test's logs and captures separate.
 | 182 | `LAVA1 是男人就飞10000米/是男人就飞10000米.lav` | Game / game package | [Workflow passed: `fly_ten_thousand_meters_adjusts_speed_and_climbs`](../crates/lavaxemu/tests/game_compatibility.rs#L14109) |
 | 183 | `LAVA1 暗子象棋/暗子象棋.pac` | Game / game package | [Workflow passed: `dark_chess_loads_the_board_and_responds_to_moves`](../crates/lavaxemu/tests/game_compatibility.rs#L130) |
 | 184 | `LAVA1 暗子象棋/未打包/暗子象棋.lav` | Game / game package | [Workflow passed: `dark_chess_loads_the_board_and_responds_to_moves`](../crates/lavaxemu/tests/game_compatibility.rs#L130) |
-| 185 | `LAVA1 月光城/Moon.pac` | Game / game package | Pending |
-| 186 | `LAVA1 月光城/非pac/Moon.lav` | Game / game package | Pending |
+| 185 | `LAVA1 月光城/Moon.pac` | Game / game package | [Workflow passed: `moon_city_reaches_the_village_and_handles_menu_items`](../crates/lavaxemu/tests/game_compatibility.rs#L14191) |
+| 186 | `LAVA1 月光城/非pac/Moon.lav` | Game / game package | [Workflow passed: `moon_city_reaches_the_village_and_handles_menu_items`](../crates/lavaxemu/tests/game_compatibility.rs#L14191) |
 | 187 | `LAVA1 未知/game.lav` | Game / game package | Pending |
 | 188 | `LAVA1 极速狂飙/极速狂飙.lav` | Game / game package | [Workflow passed: `speed_racing_loads_the_track_and_responds_to_steering`](../crates/lavaxemu/tests/game_compatibility.rs#L553) |
 | 189 | `LAVA1 极限斗地主/极限斗地主.lav` | Game / game package | [Workflow passed: `extreme_landlord_versions_deal_select_play_and_save`](../crates/lavaxemu/tests/game_compatibility.rs#L1424) |
