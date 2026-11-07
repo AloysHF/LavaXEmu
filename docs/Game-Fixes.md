@@ -3711,3 +3711,65 @@ without an execution error alone does not establish playability.
 - The move count is formatted into `0x2a8f` and the level number into
   `0x2a95`. The game writes no files. No additional emulator changes were
   required.
+
+
+## Sprite Island 5 (LAVA1 精灵岛5-勇者之旅)
+
+- Content: `LAVA1 精灵岛5-勇者之旅/精灵岛5.lav` and the packaged
+  `精灵岛5.pac`. The package embeds an earlier build and its own map, so
+  the packaged entry runs at shifted addresses; the flows and state
+  layout are the same.
+- Both builds show a first splash and wait at `0x30af` (packaged
+  `0x30ca`), a studio splash at `0x30c1` (`0x30dc`), and the six-entry
+  main menu at `0x2ddb` (`0x2df6`). The menu has two columns: start,
+  settings, journey, manual, about and quit. The selection is a local;
+  Left and Right step it by one with clamping at `0..=5`, Up subtracts
+  two only above one, and Down adds two only below four.
+- Settings open at `0x2086` (`0x20a1`) with three rows selected by a
+  local: enemy, speed and difficulty. Up and Down wrap the row over
+  `0..=2`. The enemy choice at `0x2088` wraps over `0..=3` and is copied
+  to `0x208a`; speed at `0x208c` starts at ten, changes by twenty with
+  Left and Right, and clamps to `0..=140`; difficulty at `0x2090` is one
+  for `普通` on Left and two for `困难` on Right. Lives at `0x208e`
+  start at five.
+- Enter on the settings screen writes three bytes, enemy/speed/difficulty,
+  to `/LavaData/SprCfig.dat` with a `/GVMData` fallback and returns to the
+  menu. Startup reads the same file before the splash and mirrors the
+  enemy choice into `0x208a`.
+- Start opens the level intro at `0x2fab` (`0x2fc6`); Enter then enters
+  the play loop at `0x3886` (`0x38a1`). The player x and y words are at
+  `0x2366` and `0x2368`, facing at `0x236a`, the animation counter at
+  `0x236e`, and the raw input direction at `0x2370`. Movement steps one
+  eight-pixel tile every eight frames while the position stays aligned.
+- The map is read from `/LavaData/SprMap.dat` (packaged build) or through
+  the flat `/SprMap.dat` fallback (unpacked build) into the 18x10 word
+  grid at `0x2096`. The first row is
+  `-1, -1, -1, -1, -1, 9, -1, 9, -1, -1, -1, 1, 1, 1, 1, -1, 1, -1`.
+- `p` pauses at `0x169c` with `PAUSE [输入]继续`; any key resumes the
+  unchanged level. Escape leaves the level for the menu, resetting the
+  score and the lives.
+- An enemy that overlaps the player within three pixels decrements
+  `0x208e` and draws `哎呀！被捉住了` at `0x3652` (`0x366d`). Enter
+  resets the player to `(0, 0)`, respawns the enemies and re-enters the
+  level. When the life count falls below zero the game shows
+  `ＧＡＭＥ ＯＶＥＲ` and Enter returns to the menu; this branch is not
+  covered by the audit workflow.
+- `s` opens the save list at `0x2805` (`0x2820`) and `r` the load list
+  at the same address. The four slots wrap in both directions with the
+  arrows; Enter saves `/LavaData/SprSav1.dat` through `SprSav4.dat`.
+- Each slot file is 29 bytes for the first level. The header stores the
+  low byte of score `0x2372`, enemy `0x2088`, `0x208a`, `0x21fe`,
+  `0x2200`, `0x2202`, lives `0x208e`, x `0x2366`, y `0x2368`,
+  `0x236c`, facing `0x236a` and input direction `0x2370`. One 17-byte
+  enemy record follows for each entry through `0x208a`, read from
+  `0x2204` with a 22-byte stride.
+- Loading a slot restores the header fields, including the lives, and
+  re-enters the level. Loading an empty slot shows `没有存档数据!` at
+  `0x2341` (`0x235c`) and returns to the menu.
+- The manual opens at `0x2969` (`0x2984`) and turns five pages at
+  `0x2a06, 0x2aa0, 0x2b36, 0x2bca` (`0x2a21, 0x2abb, 0x2b51, 0x2be5`)
+  before returning. About shows the credits at `0x2c6d` (`0x2c88`) and
+  returns on a key. Quit shows the same credits and exits through `sys13`
+  with code 0 at `0x2f6f` (`0x2f8a`). Both builds write identical slot
+  bytes for the audit script. No additional emulator changes were
+  required.

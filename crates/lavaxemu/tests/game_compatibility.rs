@@ -22243,3 +22243,285 @@ fn allout_solves_the_first_board_and_advances_to_the_next() {
         "the game writes no files"
     );
 }
+
+#[test]
+#[ignore = "requires LAVAX_GAME_ROOT with the game corpus"]
+fn sprite_island_five_runs_the_menu_settings_saves_and_first_level() {
+    struct Build {
+        path: &'static str,
+        splash: usize,
+        credits: usize,
+        menu: usize,
+        intro: usize,
+        play: usize,
+        caught: usize,
+        resume: usize,
+        settings: usize,
+        list: usize,
+        empty: usize,
+        manual: [usize; 5],
+        about: usize,
+        halt: usize,
+        halted_pc: usize,
+    }
+    const BUILDS: [Build; 2] = [
+        Build {
+            path: "LAVA1 精灵岛5-勇者之旅/精灵岛5.lav",
+            splash: 0x30af,
+            credits: 0x30c1,
+            menu: 0x2ddb,
+            intro: 0x2fab,
+            play: 0x3886,
+            caught: 0x3652,
+            resume: 0x38cc,
+            settings: 0x2086,
+            list: 0x2805,
+            empty: 0x2341,
+            manual: [0x2969, 0x2a06, 0x2aa0, 0x2b36, 0x2bca],
+            about: 0x2c6d,
+            halt: 0x2c6d,
+            halted_pc: 0x2f6f,
+        },
+        Build {
+            path: "LAVA1 精灵岛5-勇者之旅/精灵岛5.pac",
+            splash: 0x30ca,
+            credits: 0x30dc,
+            menu: 0x2df6,
+            intro: 0x2fc6,
+            play: 0x38a1,
+            caught: 0x366d,
+            resume: 0x38e7,
+            settings: 0x20a1,
+            list: 0x2820,
+            empty: 0x235c,
+            manual: [0x2984, 0x2a21, 0x2abb, 0x2b51, 0x2be5],
+            about: 0x2c88,
+            halt: 0x2c88,
+            halted_pc: 0x2f8a,
+        },
+    ];
+    let word = |emulator: &Emulator, index: usize| {
+        let memory = emulator.vm().memory();
+        i16::from_le_bytes([memory[0x2096 + index * 2], memory[0x2096 + index * 2 + 1]])
+    };
+    for build in BUILDS {
+        let path = build.path;
+
+        let mut settings = load(path);
+        advance(&mut settings, 30);
+        assert_eq!(settings.vm().pc(), build.splash, "the splash waits");
+        press(&mut settings, 13);
+        assert_eq!(settings.vm().pc(), build.credits, "the second splash waits");
+        press(&mut settings, 13);
+        assert_eq!(settings.vm().pc(), build.menu, "the menu waits");
+        press(&mut settings, 22);
+        press(&mut settings, 13);
+        assert_eq!(
+            settings.vm().pc(),
+            build.settings,
+            "the settings screen waits"
+        );
+        assert_eq!(
+            &settings.vm().memory()[0x2086..0x2096],
+            &[0, 0, 0, 0, 0, 0, 10, 0, 5, 0, 1, 0, 0, 0, 13, 0],
+            "the settings start from their defaults"
+        );
+        press(&mut settings, 20);
+        press(&mut settings, 22);
+        assert_eq!(
+            settings.vm().memory()[0x2090],
+            2,
+            "up wraps to the difficulty row"
+        );
+        press(&mut settings, 21);
+        press(&mut settings, 23);
+        assert_eq!(
+            &settings.vm().memory()[0x2088..0x208c],
+            &[3, 0, 3, 0],
+            "left wraps the enemy choice and mirrors it"
+        );
+        press(&mut settings, 21);
+        press(&mut settings, 22);
+        press(&mut settings, 22);
+        assert_eq!(
+            settings.vm().memory()[0x208c],
+            0,
+            "right stops at the fastest speed"
+        );
+        press(&mut settings, 23);
+        assert_eq!(settings.vm().memory()[0x208c], 20);
+        press(&mut settings, 13);
+        assert_eq!(settings.vm().pc(), build.menu, "enter stores the settings");
+        let files = settings.files_mut().take_dirty_files();
+        let config = files
+            .iter()
+            .find(|(path, _)| path == "/lavadata/sprcfig.dat")
+            .expect("the settings must be saved")
+            .1
+            .as_slice();
+        assert_eq!(config, [3, 20, 2], "the file stores the three choices");
+
+        let mut seeded = load(path);
+        seeded
+            .files_mut()
+            .import_file("/LavaData/SprCfig.dat", vec![2, 60, 2]);
+        advance(&mut seeded, 30);
+        press(&mut seeded, 13);
+        press(&mut seeded, 13);
+        press(&mut seeded, 22);
+        press(&mut seeded, 13);
+        assert_eq!(seeded.vm().pc(), build.settings);
+        assert_eq!(
+            &seeded.vm().memory()[0x2088..0x208c],
+            &[2, 0, 2, 0],
+            "the stored enemy choice loads at startup"
+        );
+        assert_eq!(seeded.vm().memory()[0x208c], 60, "the stored speed loads");
+        assert_eq!(
+            seeded.vm().memory()[0x2090],
+            2,
+            "the stored difficulty loads"
+        );
+
+        let mut level = load(path);
+        advance(&mut level, 30);
+        assert_eq!(level.vm().pc(), build.splash);
+        press(&mut level, 13);
+        press(&mut level, 13);
+        press(&mut level, 13);
+        assert_eq!(level.vm().pc(), build.intro, "enter opens the level intro");
+        press(&mut level, 13);
+        assert_eq!(level.vm().pc(), build.play, "enter starts the first level");
+        assert_eq!(
+            [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17]
+                .map(|index| word(&level, index)),
+            [
+                -1, -1, -1, -1, -1, 9, -1, 9, -1, -1, -1, 1, 1, 1, 1, -1, 1, -1
+            ],
+            "the level map loads into the tile grid"
+        );
+        assert_eq!(&level.vm().memory()[0x2366..0x236c], &[0, 0, 0, 0, 4, 0]);
+        advance(&mut level, 400);
+        assert_eq!(
+            level.vm().pc(),
+            build.caught,
+            "idling gets the player caught"
+        );
+        assert_eq!(level.vm().memory()[0x208e], 4, "one life is lost");
+        assert_eq!(&level.vm().memory()[0x2366..0x236a], &[0, 0, 0, 0]);
+        press(&mut level, 13);
+        assert_eq!(level.vm().pc(), build.play, "enter restarts the level");
+        hold(&mut level, 22, 40);
+        assert_eq!(
+            &level.vm().memory()[0x2366..0x236c],
+            &[48, 0, 0, 0, 3, 0],
+            "holding right moves three tiles"
+        );
+        hold(&mut level, 112, 10);
+        assert_eq!(level.vm().pc(), 0x169c, "p pauses the level");
+        assert_eq!(
+            &level.vm().memory()[0x2366..0x236a],
+            &[48, 0, 0, 0],
+            "pausing keeps the position"
+        );
+        press(&mut level, 13);
+        assert_eq!(level.vm().pc(), build.resume, "any key resumes the level");
+        hold(&mut level, 115, 10);
+        assert_eq!(level.vm().pc(), build.list, "s opens the save list");
+        press(&mut level, 13);
+        assert_eq!(level.vm().pc(), build.resume, "enter returns to the level");
+        let files = level.files_mut().take_dirty_files();
+        let save = files
+            .iter()
+            .find(|(path, _)| path == "/lavadata/sprsav1.dat")
+            .expect("the first slot must be written")
+            .1
+            .as_slice();
+        assert_eq!(save.len(), 29, "the slot record is twenty-nine bytes");
+        assert_eq!(
+            [save[0], save[6], save[7], save[8], save[10], save[11]],
+            [0, 4, 48, 0, 3, 3],
+            "the record stores score, lives, position and facing"
+        );
+
+        press(&mut level, 27);
+        assert_eq!(level.vm().pc(), build.menu, "escape leaves the level");
+        assert_eq!(
+            level.vm().memory()[0x208e],
+            5,
+            "escaping restores the lives"
+        );
+        press(&mut level, 21);
+        press(&mut level, 13);
+        assert_eq!(level.vm().pc(), build.list, "the journey list opens");
+        press(&mut level, 13);
+        assert_eq!(level.vm().pc(), build.play, "enter loads the first slot");
+        assert_eq!(
+            &level.vm().memory()[0x2366..0x236a],
+            &[48, 0, 0, 0],
+            "loading restores the saved position"
+        );
+        assert_eq!(level.vm().memory()[0x208e], 4, "loading restores the lives");
+
+        press(&mut level, 27);
+        press(&mut level, 21);
+        press(&mut level, 13);
+        press(&mut level, 22);
+        press(&mut level, 13);
+        assert_eq!(
+            level.vm().pc(),
+            build.empty,
+            "an empty slot reports missing data"
+        );
+        assert_eq!(
+            level.vm().memory()[0x208e],
+            5,
+            "the failed load changes nothing"
+        );
+        press(&mut level, 13);
+        assert_eq!(
+            level.vm().pc(),
+            build.menu,
+            "the report returns to the menu"
+        );
+
+        press(&mut level, 22);
+        press(&mut level, 13);
+        assert_eq!(
+            level.vm().pc(),
+            build.manual[0],
+            "the manual opens at its first page"
+        );
+        for page in &build.manual[1..] {
+            press(&mut level, 13);
+            assert_eq!(level.vm().pc(), *page, "each key turns one page");
+        }
+        press(&mut level, 13);
+        assert_eq!(level.vm().pc(), build.menu, "the last page returns");
+
+        press(&mut level, 22);
+        press(&mut level, 13);
+        assert_eq!(level.vm().pc(), build.about, "about shows the credits");
+        press(&mut level, 13);
+        assert_eq!(level.vm().pc(), build.menu, "the credits return");
+
+        press(&mut level, 22);
+        press(&mut level, 13);
+        assert_eq!(level.vm().pc(), build.halt, "quitting shows the credits");
+        level.input_mut().set_keys([13]);
+        let mut halted = None;
+        for _ in 0..10 {
+            if let FrameStatus::Halted(code) = level.run_frame().unwrap().status {
+                halted = Some(code);
+                break;
+            }
+        }
+        level.input_mut().set_keys([]);
+        assert_eq!(halted, Some(0), "the credits exit the program");
+        assert_eq!(
+            level.vm().pc(),
+            build.halted_pc,
+            "the program stops cleanly"
+        );
+    }
+}

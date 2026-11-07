@@ -67,9 +67,10 @@ do not satisfy this status.
 - FreeCell checked on 2026-11-08: one dedicated release workflow loads the fixed deal 346 with its exact 52-card tableau, wraps the column cursor in both directions, selects and deselects a card with a frame-identical drop, refuses an invalid three-onto-jack move, plays a valid tableau move, parks, picks up and places cards in both free cells, auto-plays an ace to the foundation, walks the Escape menu and the exit confirmation by cancel and halt, replays and re-deals with F1/F2/F3 including the deal-number and TIMES inputs, and writes no files.
 - SpaceWar checked on 2026-11-08: one dedicated release workflow leaves the splash for the three-speed menu with wrapping in both directions and an Escape halt, starts the first stage with five lives at the fixed ship position, clamps the ship at all four screen edges, fires a bullet that climbs and expires, scores one, two and three kills with the matching hud digits, reaches game over on the last life, and returns through the acknowledgement and splash to the reset speed menu without writing files.
 - All Out checked on 2026-11-08: one dedicated release workflow checks the level intro and quit prompts, cursor clamping in all four directions, cross flips at a corner and the centre, the five-move solve that lights all 25 cells, the move counter, and the immediate load of the second board with reset counters, without writing files.
-- 173 dedicated release workflows passed in this audit.
-- 246 of 324 entry points were loaded by those successful workflows.
-- 78 entry points still need dedicated workflow verification.
+- Sprite Island 5 checked on 2026-11-08: one dedicated release workflow covers the packaged and unpacked entries, walks both splash screens into the six-entry menu, opens the three-row settings screen with its defaults, wraps the enemy and row choices, clamps the speed and stores enemy/speed/difficulty in the config file, reloads that file at startup, loads the first level with its tile grid, gets the player caught for one life, moves three tiles right, pauses and resumes, saves the first slot with its twenty-nine-byte record, escapes to the menu, loads the slot back with the saved position and lives, reports an empty slot, pages the five-page manual, opens the about credits, and halts with code 0 from the quit credits.
+- 174 dedicated release workflows passed in this audit.
+- 248 of 324 entry points were loaded by those successful workflows.
+- 76 entry points still need dedicated workflow verification.
 - The historical [startup gallery](Game-Compatibility.md) is a separate check
   and must not be interpreted as this workflow audit.
 
@@ -332,8 +333,8 @@ an optional screenshot directory. Keep each test's logs and captures separate.
 | 239 | `LAVA1 空当接龙/空当接龙.lav` | Game / game package | [Workflow passed: `freecell_deals_moves_cards_and_walks_the_menus`](../crates/lavaxemu/tests/game_compatibility.rs#L21614) |
 | 240 | `LAVA1 空间战争/SpaceWar.lav` | Game / game package | [Workflow passed: `space_war_walks_the_speed_menu_and_fights_the_first_wave`](../crates/lavaxemu/tests/game_compatibility.rs#L21924) |
 | 241 | `LAVA1 类似十全十美/allout.lav` | Game / game package | [Workflow passed: `allout_solves_the_first_board_and_advances_to_the_next`](../crates/lavaxemu/tests/game_compatibility.rs#L22067) |
-| 242 | `LAVA1 精灵岛5-勇者之旅/精灵岛5.lav` | Game / game package | Pending |
-| 243 | `LAVA1 精灵岛5-勇者之旅/精灵岛5.pac` | Game / game package | Pending |
+| 242 | `LAVA1 精灵岛5-勇者之旅/精灵岛5.lav` | Game / game package | [Workflow passed: `sprite_island_five_runs_the_menu_settings_saves_and_first_level`](../crates/lavaxemu/tests/game_compatibility.rs#L22249) |
+| 243 | `LAVA1 精灵岛5-勇者之旅/精灵岛5.pac` | Game / game package | [Workflow passed: `sprite_island_five_runs_the_menu_settings_saves_and_first_level`](../crates/lavaxemu/tests/game_compatibility.rs#L22249) |
 | 244 | `LAVA1 绝对下落/分步安装/绝对下落.lav` | Game / game package | Pending |
 | 245 | `LAVA1 美少女梦工厂2黑白版/PM2.lav` | Game / game package | [Workflow passed: `princess_maker_2_shows_stats_executes_a_plan_and_reloads_its_save`](../crates/lavaxemu/tests/game_compatibility.rs#L1616) |
 | 246 | `LAVA1 翼剑天殇/翼剑天殇.pac` | Game / game package | Pending |
