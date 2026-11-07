@@ -17628,3 +17628,286 @@ fn war_sword_menu_options_random_map_turn_editor_help_and_load_errors() {
         "q returns to the first menu entry"
     );
 }
+
+#[test]
+#[ignore = "requires the local game corpus via LAVAX_GAME_ROOT"]
+fn war_sword_a_splash_stub_menus_options_map_and_field_messages() {
+    const PATH: &str = "LAVA1 煞魔剑A/煞魔剑A.lav";
+    let byte = |emulator: &Emulator, address: usize| emulator.vm().memory()[address];
+    let cell = |emulator: &Emulator, x: usize, y: usize| {
+        let address = 0x2cc6 + (y * 20 + x) * 4;
+        let memory = emulator.vm().memory();
+        [
+            memory[address],
+            memory[address + 1],
+            memory[address + 2],
+            memory[address + 3],
+        ]
+    };
+    let start = || {
+        let mut emulator = load(PATH);
+        advance(&mut emulator, 60);
+        press(&mut emulator, 13);
+        advance(&mut emulator, 30);
+        press(&mut emulator, 13);
+        advance(&mut emulator, 30);
+        press(&mut emulator, 21);
+        press(&mut emulator, 21);
+        advance(&mut emulator, 30);
+        press(&mut emulator, 112);
+        press(&mut emulator, 108);
+        press(&mut emulator, 97);
+        press(&mut emulator, 121);
+        advance(&mut emulator, 30);
+        press(&mut emulator, 13);
+        advance(&mut emulator, 120);
+        press(&mut emulator, 13);
+        advance(&mut emulator, 240);
+        emulator
+    };
+
+    let mut menu = load(PATH);
+    advance(&mut menu, 60);
+    capture(&menu, "war-a-splash");
+    press(&mut menu, 13);
+    assert!(
+        (0x47da..=0x488f).contains(&menu.vm().pc()),
+        "the title menu runs"
+    );
+    assert_eq!(byte(&menu, 0x1b0c), 1, "the start entry is selected");
+    capture(&menu, "war-a-menu");
+    for expected in [2, 3, 4, 1] {
+        press(&mut menu, 22);
+        assert_eq!(
+            byte(&menu, 0x1b0c),
+            expected,
+            "right moves through the menu entries"
+        );
+    }
+    press(&mut menu, 23);
+    assert_eq!(byte(&menu, 0x1b0c), 1, "left stops at the first menu entry");
+
+    for (moves, shot) in [
+        (1usize, "war-a-stub-load"),
+        (2, "war-a-stub-map"),
+        (3, "war-a-stub-help"),
+    ] {
+        let mut stub = load(PATH);
+        advance(&mut stub, 60);
+        press(&mut stub, 13);
+        for _ in 0..moves {
+            press(&mut stub, 22);
+        }
+        press(&mut stub, 13);
+        assert_eq!(
+            stub.vm().pc(),
+            0x3c35,
+            "the unfinished entry shows its notice"
+        );
+        capture(&stub, shot);
+        press(&mut stub, 13);
+        assert!(
+            (0x47da..=0x488f).contains(&stub.vm().pc()),
+            "the notice returns to the menu"
+        );
+        assert_eq!(
+            byte(&stub, 0x1b0c),
+            1,
+            "dismissing the notice resets the selection"
+        );
+    }
+
+    let mut walk = start();
+    assert!(
+        (0x6830..=0x685b).contains(&walk.vm().pc()),
+        "the generated map runs"
+    );
+    assert_eq!(byte(&walk, 0x3ae0), 2, "standard difficulty is the default");
+    assert_eq!(byte(&walk, 0x3af0), 1, "the random map type persists");
+    assert_eq!(byte(&walk, 0x3ae5), 20, "the map is twenty wide");
+    assert_eq!(byte(&walk, 0x3ae6), 15, "the map is fifteen high");
+    assert_eq!(byte(&walk, 0x3ae9), 124, "standard difficulty health");
+    assert_eq!(byte(&walk, 0x3aeb), 200, "standard difficulty mana");
+    assert_eq!(byte(&walk, 0x3ade), 9, "the hero starts in column nine");
+    assert_eq!(byte(&walk, 0x3adf), 3, "the hero starts in row three");
+    for x in 0..20 {
+        assert_eq!(cell(&walk, x, 0), [0, 2, 0x64, 0], "the top row is a wall");
+    }
+    assert_eq!(
+        cell(&walk, 9, 3),
+        [0, 3, 0x43, 0],
+        "the start tile is a city"
+    );
+    assert_eq!(
+        cell(&walk, 10, 3),
+        [0, 0, 0, 0],
+        "the tile to the right is open"
+    );
+    assert_eq!(
+        cell(&walk, 11, 3),
+        [0, 2, 0x81, 0],
+        "the next tile is a wall"
+    );
+    assert_eq!(
+        cell(&walk, 10, 2),
+        [0, 3, 0x22, 0],
+        "the tile above is a city"
+    );
+    assert_eq!(cell(&walk, 10, 1), [0, 2, 1, 0], "the next tile is terrain");
+    capture(&walk, "war-a-map");
+
+    press(&mut walk, 22);
+    assert_eq!(
+        (byte(&walk, 0x3ade), byte(&walk, 0x3adf)),
+        (10, 3),
+        "right moves the hero"
+    );
+    press(&mut walk, 22);
+    assert_eq!(
+        (byte(&walk, 0x3ade), byte(&walk, 0x3adf)),
+        (10, 3),
+        "the wall blocks the hero"
+    );
+    press(&mut walk, 20);
+    assert_eq!(
+        (byte(&walk, 0x3ade), byte(&walk, 0x3adf)),
+        (10, 2),
+        "up moves the hero"
+    );
+    press(&mut walk, 20);
+    assert_eq!(
+        (byte(&walk, 0x3ade), byte(&walk, 0x3adf)),
+        (10, 1),
+        "up moves the hero again"
+    );
+    press(&mut walk, 23);
+    assert_eq!(
+        (byte(&walk, 0x3ade), byte(&walk, 0x3adf)),
+        (9, 1),
+        "left moves the hero"
+    );
+    press(&mut walk, 21);
+    assert_eq!(
+        (byte(&walk, 0x3ade), byte(&walk, 0x3adf)),
+        (9, 2),
+        "down moves the hero"
+    );
+    capture(&walk, "war-a-walk");
+
+    let mut empty = start();
+    press(&mut empty, 13);
+    assert!(
+        (0x1ceb..=0x1cfd).contains(&empty.vm().pc()),
+        "enter opens a field message"
+    );
+    assert_eq!(
+        &empty.vm().memory()[0x1c93..0x1c99],
+        &[0xCE, 0xB4, 0xCD, 0xEA, 0xB3, 0xC9],
+        "the unfinished notice is shown"
+    );
+    capture(&empty, "war-a-message-empty");
+    press(&mut empty, 13);
+    assert!(
+        (0x6830..=0x685b).contains(&empty.vm().pc()),
+        "the message returns to the map"
+    );
+
+    let mut resource = start();
+    press(&mut resource, 22);
+    press(&mut resource, 20);
+    assert_eq!(
+        (byte(&resource, 0x3ade), byte(&resource, 0x3adf)),
+        (10, 2),
+        "the hero stands on the resource tile"
+    );
+    press(&mut resource, 13);
+    assert!(
+        (0x1ceb..=0x1cfd).contains(&resource.vm().pc()),
+        "enter opens the resource message"
+    );
+    assert_eq!(
+        &resource.vm().memory()[0x1c93..0x1c9b],
+        &[0xBF, 0xF3, 0xB2, 0xFA, 0xD7, 0xCA, 0xD4, 0xB4],
+        "the resource notice is shown"
+    );
+    capture(&resource, "war-a-message-resource");
+    press(&mut resource, 13);
+    assert!(
+        (0x6830..=0x685b).contains(&resource.vm().pc()),
+        "the resource message returns to the map"
+    );
+
+    let mut system = start();
+    press(&mut system, 27);
+    assert!(
+        (0x1ceb..=0x1cfd).contains(&system.vm().pc()),
+        "escape opens the system menu"
+    );
+    assert_eq!(
+        &system.vm().memory()[0x1c93..0x1ca0],
+        &[
+            0xCF, 0xB5, 0xCD, 0xB3, 0xB2, 0xCB, 0xB5, 0xA5, 0x3A, 0x20, 0x31, 0xB4, 0xE6
+        ],
+        "the system menu lists its entries"
+    );
+    capture(&system, "war-a-system-menu");
+    for key in [49, 50, 51, 52] {
+        press(&mut system, key);
+        assert!(
+            (0x6830..=0x685b).contains(&system.vm().pc()),
+            "the system entry returns to the map"
+        );
+        assert_eq!(
+            (byte(&system, 0x3ade), byte(&system, 0x3adf)),
+            (9, 3),
+            "the hero stays put"
+        );
+        if key != 52 {
+            press(&mut system, 27);
+            assert!(
+                (0x1ceb..=0x1cfd).contains(&system.vm().pc()),
+                "escape reopens the system menu"
+            );
+        }
+    }
+    assert!(
+        system.files_mut().take_dirty_files().is_empty(),
+        "the stub save entries write nothing"
+    );
+
+    let mut sizing = load(PATH);
+    advance(&mut sizing, 60);
+    press(&mut sizing, 13);
+    press(&mut sizing, 13);
+    press(&mut sizing, 21);
+    press(&mut sizing, 21);
+    press(&mut sizing, 13);
+    assert!(
+        (0x1e43..=0x1e56).contains(&sizing.vm().pc()),
+        "the size screen opens"
+    );
+    assert_eq!(byte(&sizing, 0x3b29), 20, "the width starts at twenty");
+    assert_eq!(byte(&sizing, 0x3b2b), 15, "the height starts at fifteen");
+    capture(&sizing, "war-a-size");
+    for _ in 0..12 {
+        press(&mut sizing, 23);
+    }
+    assert_eq!(byte(&sizing, 0x3b29), 10, "the width stops at ten");
+    for _ in 0..2 {
+        press(&mut sizing, 23);
+    }
+    assert_eq!(byte(&sizing, 0x3b29), 10, "the width stays at ten");
+    for _ in 0..12 {
+        press(&mut sizing, 21);
+    }
+    assert_eq!(byte(&sizing, 0x3b2b), 5, "the height stops at five");
+    for _ in 0..2 {
+        press(&mut sizing, 21);
+    }
+    assert_eq!(byte(&sizing, 0x3b2b), 5, "the height stays at five");
+    assert!(
+        (0x1e43..=0x1e56).contains(&sizing.vm().pc()),
+        "the size screen keeps running"
+    );
+    capture(&sizing, "war-a-size-min");
+}
