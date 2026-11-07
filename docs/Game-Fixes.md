@@ -3106,3 +3106,55 @@ without an execution error alone does not establish playability.
   and halt the program with code 0 at pc `0x1626`.
 - Enemy torpedoes and the heart icons, the score value of each enemy type, the
   999-point flip, and the later levels remain unverified.
+
+## War Sword (煞魔剑)
+
+- Content: `LAVA1 煞魔剑/mywar1.lav`.
+- The splash screen waits at pc `0x72f6`-`0x7315` with the studio logo and
+  `欢迎使用 B.50815`. Enter opens the title menu at pc `0x4d90`-`0x4e45`
+  with four entries (开始 / 载入 / 地图 / 帮助). The selection at `0x44b7`
+  moves with Left and Right and clamps at the first and fourth entries.
+- 开始 opens the options screen at pc `0x4b96`-`0x4ba9`. The row at `0x44bd`
+  starts at 0 and stops at 2. The map choice at `0x20f5` starts at 1 (随机)
+  and toggles to 2 (下载) with both ends clamped; the difficulty at `0x20e5`
+  starts at 2 and moves through 1-3 with both ends clamped. Name entry on the
+  third row stores lowercase letters as uppercase in the buffer at `0x208c`
+  and records the length at `0x44bf`.
+- Enter on the name row opens the map-size screen at pc `0x1d91`-`0x1da4`.
+  The width is the little-endian word at `0x44b7` starting at 20 and the height
+  is the little-endian word at `0x44b9` starting at 15. Up and Down change the
+  height and clamp it at 15; Right and Left change the width and clamp it at 20.
+- Enter starts the generated map, which waits at pc `0x6dc7`-`0x6e06`. The
+  cursor is at `0x20e3`/`0x20e4` starting at (9,3) and the turn counter is
+  `0x20db`. Cells are four-byte records at `0x2170 + (y * 20 + x) * 4`. The
+  default random 20x15 map places a temple at (9,3) with the record
+  `[0, 3, 0x25, 0]`, terrain at (9,1) with `[0, 2, 0x64, 0]` and an empty
+  border cell at (10,3). The generated map depends on the input history, so
+  the values above are asserted for the exact scripted run.
+- Right steps to (10,3) and the empty border blocks the next step. Left walks
+  to column 6, Down reaches row 5 and Up reaches row 1, each stopping at the
+  blocking terrain. The cursor then walks back to the temple.
+- Enter on the temple opens the terrain info panel at pc `0x1c39`-`0x1c4c`
+  with the text id `0x2004` set to `0x35`; Escape returns to the map. Enter on
+  field terrain opens the build menu at pc `0x6001`-`0x6014` with the text id
+  `0x31`; Escape also returns to the map.
+- `p` advances the turn counter at `0x20db`.
+- Escape opens the system menu (1存档 2退出 3快速存档 4快存后退出) and Space
+  opens the memory-point panel (设置记忆点 按键1 2 3 4). Both share the panel
+  loop at pc `0x1c39`-`0x1c4c` and close with Escape.
+- 载入 without a save shows the missing-document dialog at pc
+  `0x21b0`-`0x21c3`; Enter returns to the menu with the first entry selected.
+- 帮助 opens pc `0x4168` with `热线帮助 / 请参考游戏自带文档`; Escape returns
+  to the menu and resets the selection to the first entry.
+- 地图 opens the editor through the size screen and the help page at pc
+  `0x4168`, then the canvas at pc `0x56f1`-`0x5704` with the cursor at (1,1).
+  Enter without a placed start position shows the same warning loop at pc
+  `0x21b0`-`0x21c3`. The tile keys write `t` `[0, 2, 0x64, 1]`,
+  `a` `[0, 7, 0x64, 1]`, `g` `[0, 3, 0xc8, 1]`, `e` `[0, 0, 0, 1]`,
+  `k` `[0, 0x11, 0, 1]`, `s` `[0, 0x10, 0x64, 1]` and `c` `[0, 1, 0x64, 1]`;
+  `s` also stores the start coordinates at `0x20df`/`0x20e0`, `c` stores the
+  city coordinates at `0x20e1`/`0x20e2`, and `q` returns to the menu with the
+  first entry selected.
+- The build actions behind the field menu, unit management, combat, the
+  resource economy and saving a started game remain unverified, as do the
+  separate `煞魔剑A` and `正式版` distributions.

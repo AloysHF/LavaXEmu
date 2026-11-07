@@ -17266,3 +17266,365 @@ fn bomb_submarine_menu_help_level_select_scoring_pause_and_exit() {
     assert_eq!(word(&timed, 0x2320), 1, "the selector keeps the level");
     capture(&timed, "bomb-time-up");
 }
+
+#[test]
+#[ignore = "requires the local game corpus via LAVAX_GAME_ROOT"]
+fn war_sword_menu_options_random_map_turn_editor_help_and_load_errors() {
+    const PATH: &str = "LAVA1 煞魔剑/mywar1.lav";
+    let byte = |emulator: &Emulator, address: usize| emulator.vm().memory()[address];
+    let word = |emulator: &Emulator, address: usize| {
+        u16::from_le_bytes([
+            emulator.vm().memory()[address],
+            emulator.vm().memory()[address + 1],
+        ])
+    };
+    let cell = |emulator: &Emulator, x: usize, y: usize| {
+        let address = 0x2170 + (y * 20 + x) * 4;
+        let memory = emulator.vm().memory();
+        [
+            memory[address],
+            memory[address + 1],
+            memory[address + 2],
+            memory[address + 3],
+        ]
+    };
+    let at =
+        |emulator: &Emulator, low: usize, high: usize| (low..=high).contains(&emulator.vm().pc());
+    let cursor = |emulator: &Emulator, x: u8, y: u8| {
+        byte(emulator, 0x20e3) == x && byte(emulator, 0x20e4) == y
+    };
+    let start_map = |emulator: &mut Emulator| {
+        advance(emulator, 60);
+        press(emulator, 13);
+        assert_eq!(
+            byte(emulator, 0x44b7),
+            1,
+            "the first menu entry is selected"
+        );
+        press(emulator, 13);
+        press(emulator, 21);
+        press(emulator, 21);
+        press(emulator, 13);
+        advance(emulator, 60);
+        assert_eq!(word(emulator, 0x44b7), 20, "the map width starts at twenty");
+        assert_eq!(
+            word(emulator, 0x44b9),
+            15,
+            "the map height starts at fifteen"
+        );
+        press(emulator, 13);
+        advance(emulator, 240);
+        assert!(at(emulator, 0x6dc7, 0x6e06), "the map view runs");
+        assert!(cursor(emulator, 9, 3), "the cursor starts on the temple");
+    };
+
+    let mut menu = load(PATH);
+    advance(&mut menu, 60);
+    assert!(
+        at(&menu, 0x72f6, 0x7315),
+        "the intro screen waits for a key"
+    );
+    capture(&menu, "war-intro");
+    press(&mut menu, 13);
+    assert_eq!(byte(&menu, 0x44b7), 1, "the first menu entry is selected");
+    capture(&menu, "war-menu");
+    for expected in [2, 3, 4] {
+        press(&mut menu, 22);
+        assert_eq!(
+            byte(&menu, 0x44b7),
+            expected,
+            "right selects the next entry"
+        );
+    }
+    press(&mut menu, 22);
+    assert_eq!(byte(&menu, 0x44b7), 4, "right stops at the help entry");
+    for expected in [3, 2, 1] {
+        press(&mut menu, 23);
+        assert_eq!(
+            byte(&menu, 0x44b7),
+            expected,
+            "left selects the previous entry"
+        );
+    }
+    press(&mut menu, 23);
+    assert_eq!(byte(&menu, 0x44b7), 1, "left stops at the start entry");
+    press(&mut menu, 13);
+    advance(&mut menu, 60);
+    assert_eq!(byte(&menu, 0x44bd), 0, "the map row is selected");
+    assert_eq!(byte(&menu, 0x20f5), 1, "the random map is selected");
+    assert_eq!(
+        byte(&menu, 0x20e5),
+        2,
+        "the standard difficulty is selected"
+    );
+    capture(&menu, "war-options");
+    press(&mut menu, 22);
+    assert_eq!(byte(&menu, 0x20f5), 2, "right selects the downloaded map");
+    press(&mut menu, 22);
+    assert_eq!(byte(&menu, 0x20f5), 2, "right stops at the downloaded map");
+    press(&mut menu, 23);
+    assert_eq!(byte(&menu, 0x20f5), 1, "left selects the random map");
+    press(&mut menu, 23);
+    assert_eq!(byte(&menu, 0x20f5), 1, "left stops at the random map");
+    press(&mut menu, 21);
+    assert_eq!(byte(&menu, 0x44bd), 1, "down selects the difficulty row");
+    press(&mut menu, 22);
+    assert_eq!(byte(&menu, 0x20e5), 3, "right selects the hard difficulty");
+    press(&mut menu, 22);
+    assert_eq!(byte(&menu, 0x20e5), 3, "right stops at the hard difficulty");
+    press(&mut menu, 23);
+    assert_eq!(
+        byte(&menu, 0x20e5),
+        2,
+        "left returns to the standard difficulty"
+    );
+    press(&mut menu, 23);
+    assert_eq!(byte(&menu, 0x20e5), 1, "left selects the easy difficulty");
+    press(&mut menu, 23);
+    assert_eq!(byte(&menu, 0x20e5), 1, "left stops at the easy difficulty");
+    press(&mut menu, 21);
+    assert_eq!(byte(&menu, 0x44bd), 2, "down selects the name row");
+    press(&mut menu, 21);
+    assert_eq!(byte(&menu, 0x44bd), 2, "down stops at the name row");
+    for key in *b"play" {
+        press(&mut menu, key);
+    }
+    assert_eq!(
+        &menu.vm().memory()[0x208c..0x2090],
+        b"PLAY",
+        "the typed name is stored"
+    );
+    assert_eq!(byte(&menu, 0x44bf), 4, "the name length is four");
+    capture(&menu, "war-name");
+    press(&mut menu, 13);
+    advance(&mut menu, 60);
+    assert_eq!(word(&menu, 0x44b7), 20, "the map width starts at twenty");
+    assert_eq!(word(&menu, 0x44b9), 15, "the map height starts at fifteen");
+    capture(&menu, "war-size");
+    press(&mut menu, 13);
+    advance(&mut menu, 240);
+    assert!(at(&menu, 0x6dc7, 0x6e06), "the map view runs");
+    assert!(cursor(&menu, 9, 3), "the cursor starts on the temple");
+    assert_eq!(byte(&menu, 0x20db), 0, "the turn counter starts at zero");
+    assert_eq!(
+        cell(&menu, 9, 3),
+        [0, 3, 0x25, 0],
+        "the temple map is generated"
+    );
+    assert_eq!(
+        cell(&menu, 9, 1),
+        [0, 2, 0x64, 0],
+        "the terrain row is generated"
+    );
+    assert_eq!(cell(&menu, 10, 3), [0, 0, 0, 0], "the map border is empty");
+    capture(&menu, "war-map");
+
+    press(&mut menu, 22);
+    assert!(cursor(&menu, 10, 3), "right moves east");
+    press(&mut menu, 22);
+    assert!(
+        cursor(&menu, 10, 3),
+        "the empty border blocks the eastern step"
+    );
+    for expected in [9, 8, 7, 6] {
+        press(&mut menu, 23);
+        assert!(cursor(&menu, expected, 3), "left moves west");
+    }
+    for expected in [4, 5, 5] {
+        press(&mut menu, 21);
+        assert!(cursor(&menu, 6, expected), "down moves south");
+    }
+    for expected in [4, 3, 2, 1, 1] {
+        press(&mut menu, 20);
+        assert!(cursor(&menu, 6, expected), "up moves north");
+    }
+    for expected in [2, 3, 4, 5] {
+        press(&mut menu, 21);
+        assert!(cursor(&menu, 6, expected), "down returns south");
+    }
+    for expected in [7, 8, 9] {
+        press(&mut menu, 22);
+        assert!(cursor(&menu, expected, 5), "right returns east");
+    }
+    for expected in [4, 3] {
+        press(&mut menu, 20);
+        assert!(cursor(&menu, 9, expected), "up returns north");
+    }
+    press(&mut menu, 13);
+    assert!(at(&menu, 0x1c39, 0x1c4c), "the temple info panel opens");
+    assert_eq!(
+        byte(&menu, 0x2004),
+        0x35,
+        "the temple info text is selected"
+    );
+    capture(&menu, "war-temple-info");
+    press(&mut menu, 27);
+    assert!(at(&menu, 0x6dc7, 0x6e06), "escape returns to the map");
+    press(&mut menu, 23);
+    assert!(cursor(&menu, 8, 3), "left moves onto the field");
+    press(&mut menu, 13);
+    assert!(
+        at(&menu, 0x6001, 0x6014),
+        "the build menu opens on the field"
+    );
+    assert_eq!(byte(&menu, 0x2004), 0x31, "the build menu text is selected");
+    capture(&menu, "war-build-menu");
+    press(&mut menu, 27);
+    assert!(at(&menu, 0x6dc7, 0x6e06), "escape returns to the map");
+    for expected in [1, 2, 3] {
+        press(&mut menu, b'p');
+        assert_eq!(byte(&menu, 0x20db), expected, "p advances the turn counter");
+    }
+
+    let mut panels = load(PATH);
+    start_map(&mut panels);
+    press(&mut panels, 27);
+    assert!(at(&panels, 0x1c39, 0x1c4c), "the system menu opens");
+    capture(&panels, "war-system-menu");
+    press(&mut panels, 27);
+    assert!(at(&panels, 0x6dc7, 0x6e06), "escape returns to the map");
+    press(&mut panels, 32);
+    assert!(at(&panels, 0x1c39, 0x1c4c), "the memory point panel opens");
+    capture(&panels, "war-memory-points");
+    press(&mut panels, 27);
+    assert!(at(&panels, 0x6dc7, 0x6e06), "escape returns to the map");
+
+    let mut missing = load(PATH);
+    advance(&mut missing, 60);
+    press(&mut missing, 13);
+    press(&mut missing, 22);
+    assert_eq!(byte(&missing, 0x44b7), 2, "the load entry is selected");
+    press(&mut missing, 13);
+    advance(&mut missing, 60);
+    assert!(
+        at(&missing, 0x21b0, 0x21c3),
+        "the missing document error opens"
+    );
+    capture(&missing, "war-load-error");
+    press(&mut missing, 13);
+    assert_eq!(
+        byte(&missing, 0x44b7),
+        1,
+        "the error returns to the first entry"
+    );
+
+    let mut help = load(PATH);
+    advance(&mut help, 60);
+    press(&mut help, 13);
+    for _ in 0..3 {
+        press(&mut help, 22);
+    }
+    assert_eq!(byte(&help, 0x44b7), 4, "the help entry is selected");
+    press(&mut help, 13);
+    advance(&mut help, 60);
+    assert_eq!(help.vm().pc(), 0x4168, "the help page opens");
+    capture(&help, "war-help");
+    press(&mut help, 27);
+    advance(&mut help, 60);
+    assert_eq!(byte(&help, 0x44b7), 1, "escape returns to the first entry");
+
+    let mut sizing = load(PATH);
+    advance(&mut sizing, 60);
+    press(&mut sizing, 13);
+    press(&mut sizing, 13);
+    press(&mut sizing, 21);
+    press(&mut sizing, 21);
+    press(&mut sizing, 13);
+    advance(&mut sizing, 60);
+    assert_eq!(word(&sizing, 0x44b7), 20, "the width starts at twenty");
+    assert_eq!(word(&sizing, 0x44b9), 15, "the height starts at fifteen");
+    press(&mut sizing, 20);
+    assert_eq!(word(&sizing, 0x44b9), 16, "up grows the height");
+    press(&mut sizing, 20);
+    assert_eq!(word(&sizing, 0x44b9), 17, "up grows the height again");
+    press(&mut sizing, 21);
+    assert_eq!(word(&sizing, 0x44b9), 16, "down shrinks the height");
+    press(&mut sizing, 21);
+    assert_eq!(word(&sizing, 0x44b9), 15, "down shrinks the height again");
+    press(&mut sizing, 21);
+    assert_eq!(word(&sizing, 0x44b9), 15, "down stops at fifteen");
+    press(&mut sizing, 22);
+    assert_eq!(word(&sizing, 0x44b7), 21, "right grows the width");
+    press(&mut sizing, 23);
+    assert_eq!(word(&sizing, 0x44b7), 20, "left shrinks the width");
+    press(&mut sizing, 23);
+    assert_eq!(word(&sizing, 0x44b7), 20, "left stops at twenty");
+    capture(&sizing, "war-size-adjust");
+
+    let mut editor = load(PATH);
+    advance(&mut editor, 60);
+    press(&mut editor, 13);
+    press(&mut editor, 22);
+    press(&mut editor, 22);
+    assert_eq!(byte(&editor, 0x44b7), 3, "the map entry is selected");
+    press(&mut editor, 13);
+    advance(&mut editor, 60);
+    assert_eq!(
+        word(&editor, 0x44b7),
+        20,
+        "the editor map starts twenty wide"
+    );
+    assert_eq!(
+        word(&editor, 0x44b9),
+        15,
+        "the editor map starts fifteen high"
+    );
+    press(&mut editor, 13);
+    advance(&mut editor, 60);
+    assert_eq!(editor.vm().pc(), 0x4168, "the editor help page opens");
+    press(&mut editor, 13);
+    advance(&mut editor, 60);
+    assert!(at(&editor, 0x56f1, 0x5704), "the editor canvas runs");
+    assert!(cursor(&editor, 1, 1), "the cursor starts in the first cell");
+    assert_eq!(
+        cell(&editor, 1, 1),
+        [0, 0, 0, 1],
+        "the first cell starts empty"
+    );
+    capture(&editor, "war-editor");
+    press(&mut editor, 13);
+    advance(&mut editor, 60);
+    assert!(at(&editor, 0x21b0, 0x21c3), "saving without a start warns");
+    capture(&editor, "war-editor-warning");
+    press(&mut editor, 13);
+    advance(&mut editor, 60);
+    assert!(
+        at(&editor, 0x56f1, 0x5704),
+        "the warning returns to the canvas"
+    );
+    assert_eq!(
+        cell(&editor, 1, 1),
+        [0, 0, 0, 1],
+        "the warning leaves the cell unchanged"
+    );
+    press(&mut editor, b't');
+    assert_eq!(cell(&editor, 1, 1), [0, 2, 0x64, 1], "t places a temple");
+    press(&mut editor, b'a');
+    assert_eq!(cell(&editor, 1, 1), [0, 7, 0x64, 1], "a places its terrain");
+    press(&mut editor, b'g');
+    assert_eq!(cell(&editor, 1, 1), [0, 3, 0xC8, 1], "g places its terrain");
+    press(&mut editor, b'e');
+    assert_eq!(cell(&editor, 1, 1), [0, 0, 0, 1], "e clears the cell");
+    press(&mut editor, b'k');
+    assert_eq!(cell(&editor, 1, 1), [0, 0x11, 0, 1], "k places its terrain");
+    press(&mut editor, b's');
+    assert_eq!(cell(&editor, 1, 1), [0, 0x10, 0x64, 1], "s marks the start");
+    assert_eq!(byte(&editor, 0x20df), 1, "the start column is stored");
+    assert_eq!(byte(&editor, 0x20e0), 1, "the start row is stored");
+    press(&mut editor, b'c');
+    assert_eq!(cell(&editor, 1, 1), [0, 1, 0x64, 1], "c marks the city");
+    assert_eq!(byte(&editor, 0x20e1), 1, "the city column is stored");
+    assert_eq!(byte(&editor, 0x20e2), 1, "the city row is stored");
+    capture(&editor, "war-editor-city");
+    press(&mut editor, 22);
+    press(&mut editor, 22);
+    press(&mut editor, 21);
+    assert!(cursor(&editor, 3, 2), "the editor cursor moves");
+    press(&mut editor, b'q');
+    advance(&mut editor, 60);
+    assert_eq!(
+        byte(&editor, 0x44b7),
+        1,
+        "q returns to the first menu entry"
+    );
+}

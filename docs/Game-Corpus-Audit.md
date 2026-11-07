@@ -50,9 +50,10 @@ do not satisfy this status.
 - Bomb Submarine checked on 2026-11-07: one dedicated release workflow walks the four-entry title menu with wrapping in both directions, clamps the level selector between one and nine and restarts it at one after Escape, starts the ninth level, moves the ship to both edges, scores 25 points with twenty z charges and 22 with twenty x charges, pauses and resumes the round with a frozen timer, expires the level timer back into the selector with the score cleared, scrolls the help text to its last page, and reaches both the story and exit credit endings with halt code 0.
 - Spirit Sword Shooting checked on 2026-11-07: one dedicated release workflow opens the splash, first-run message and logo into the three-entry title with clamped ends, leaves the F5 help page with Down, opens the empty leaderboard, starts level one with ten arrows and the zeroed HUD, fires a hit for thirteen points, drains the quiver into level two with the arrows restored and the total kept, pauses and resumes the round, enters a leaderboard name, checks the 48-byte record and reads it back in a fresh emulator, and walks the four nested exit questions to a halt with code 0.
 - Pirate Ship checked on 2026-11-07: one dedicated release workflow covers the packaged and unpacked entries, finishes the splash and logo, wraps the four-entry menu in both directions, scrolls the help text to its last page, opens all four credit pages, halts from the exit entry, wraps the difficulty selector, compares the easy, normal and hard starting fleets and sea layouts, moves the main ship with the arrows and letter keys, fires and lets the pirates take a turn, cancels and confirms the quit prompt, sinks three ships into the reef with life deductions, reaches game over, and returns to the difficulty selector.
-- 156 dedicated release workflows passed in this audit.
-- 225 of 324 entry points were loaded by those successful workflows.
-- 99 entry points still need dedicated workflow verification.
+- War Sword checked on 2026-11-07: one dedicated release workflow leaves the splash into the four-entry title, clamps the entry selection in both directions, toggles the random/download map and the three difficulties, types a name, adjusts and clamps the map width and height, starts the generated map with the temple under the cursor, moves and blocks the cursor in all four directions, opens the temple info and the field build menu, advances the turn counter, opens the system and memory-point panels, reports the missing save and returns to the first entry, shows the help page, and walks the editor canvas through its tile keys, start and city placement, the missing-start warning and the return to the menu.
+- 157 dedicated release workflows passed in this audit.
+- 226 of 324 entry points were loaded by those successful workflows.
+- 98 entry points still need dedicated workflow verification.
 - The historical [startup gallery](Game-Compatibility.md) is a separate check
   and must not be interpreted as this workflow audit.
 
@@ -284,7 +285,7 @@ an optional screenshot directory. Keep each test's logs and captures separate.
 | 208 | `LAVA1 火箭车/火箭车.lav` | Game / game package | [Workflow passed: `rocket_car_keeps_the_track_visible_and_responds_to_controls`](../crates/lavaxemu/tests/game_compatibility.rs#L1316) |
 | 209 | `LAVA1 灵剑射击/灵剑射击.lav` | Game / game package | [Workflow passed: `spirit_sword_menu_help_arrows_scoring_level_and_rank`](../crates/lavaxemu/tests/game_compatibility.rs#L16751) |
 | 210 | `LAVA1 炸潜艇/炸潜艇v1.1 2007.7.6.lav` | Game / game package | [Workflow passed: `bomb_submarine_menu_help_level_select_scoring_pause_and_exit`](../crates/lavaxemu/tests/game_compatibility.rs#L17019) |
-| 211 | `LAVA1 煞魔剑/mywar1.lav` | Game / game package | Pending |
+| 211 | `LAVA1 煞魔剑/mywar1.lav` | Game / game package | [Workflow passed: `war_sword_menu_options_random_map_turn_editor_help_and_load_errors`](../crates/lavaxemu/tests/game_compatibility.rs#L17272) |
 | 212 | `LAVA1 煞魔剑A/煞魔剑A.lav` | Game / game package | Pending |
 | 213 | `LAVA1 煞魔剑正式版/【煞魔剑】 正式版.lav` | Game / game package | Pending |
 | 214 | `LAVA1 爬虫大陆编年史/爬虫大陆.lav` | Game / game package | Pending |
