@@ -14607,3 +14607,189 @@ fn dream_mario_walks_jumps_and_ignores_unbound_keys() {
     assert_eq!(walk.vm().memory()[0x3882], 26);
     capture(&walk, "mario-walk");
 }
+
+#[test]
+#[ignore = "requires the local game corpus via LAVAX_GAME_ROOT"]
+fn rubber_house_menu_settings_and_level_one() {
+    let mut menu = load("LAVA1 橡皮屋/橡皮屋.lav");
+    advance(&mut menu, 1800);
+    assert_eq!(menu.vm().pc(), 0x377a, "the title menu waits for input");
+    capture(&menu, "rubber-menu");
+
+    let mut help = menu.clone();
+    press(&mut help, 22);
+    assert_ne!(
+        help.display().indexed_frame(),
+        menu.display().indexed_frame(),
+        "Right moves the menu selection"
+    );
+    press(&mut help, 22);
+    press(&mut help, 13);
+    assert_eq!(help.vm().pc(), 0x2991, "the help entry opens the rules");
+    capture(&help, "rubber-help");
+    for (page, expected) in [0x29d7, 0x2a5e, 0x2ae7, 0x2b76, 0x2c0b, 0x2c8f, 0x2d24]
+        .into_iter()
+        .enumerate()
+    {
+        press(&mut help, 27);
+        assert_eq!(
+            help.vm().pc(),
+            expected,
+            "Escape advances to help page {}",
+            page + 1
+        );
+    }
+    press(&mut help, 27);
+    assert_eq!(help.vm().pc(), 0x377a, "Escape on the last page returns");
+
+    let mut settings = menu.clone();
+    press(&mut settings, 22);
+    press(&mut settings, 13);
+    assert_eq!(settings.vm().pc(), 0x259a, "the settings entry opens");
+    capture(&settings, "rubber-settings");
+    press(&mut settings, 27);
+    assert_eq!(settings.vm().pc(), 0x377a);
+
+    let mut bind = menu.clone();
+    press(&mut bind, 22);
+    press(&mut bind, 13);
+    press(&mut bind, 13);
+    assert_eq!(bind.vm().pc(), 0x26da, "the key binding screen opens");
+    capture(&bind, "rubber-bind");
+    for key in [13, b'z', b'x', b'y'] {
+        press(&mut bind, key);
+    }
+    assert_eq!(
+        bind.vm().pc(),
+        0x1472,
+        "four keys fill the binding and ask for confirmation"
+    );
+    capture(&bind, "rubber-bind-confirm");
+    press(&mut bind, b'n');
+    assert_eq!(bind.vm().pc(), 0x259a, "N cancels the new bindings");
+
+    let mut locked = menu.clone();
+    for _ in 0..3 {
+        press(&mut locked, 22);
+    }
+    press(&mut locked, 13);
+    assert_eq!(locked.vm().pc(), 0x1472);
+    capture(&locked, "rubber-locked");
+    press(&mut locked, 13);
+    assert_eq!(locked.vm().pc(), 0x377a);
+
+    let mut exit = menu.clone();
+    for _ in 0..4 {
+        press(&mut exit, 22);
+    }
+    press(&mut exit, 13);
+    assert_eq!(exit.vm().pc(), 0x1472);
+    capture(&exit, "rubber-exit");
+    exit.input_mut().set_keys([13]);
+    let mut halted = false;
+    for _ in 0..60 {
+        let result = exit.run_frame().expect("game must execute without errors");
+        if matches!(result.status, FrameStatus::Halted(_)) {
+            halted = true;
+            break;
+        }
+    }
+    assert!(halted, "the exit item ends the program");
+    assert_eq!(exit.vm().pc(), 0x2d3f);
+
+    let mut emulator = menu.clone();
+    press(&mut emulator, 13);
+    assert_eq!(emulator.vm().pc(), 0x1472, "Start shows the level prompt");
+    capture(&emulator, "rubber-level-prompt");
+    let mut prompt = emulator.clone();
+    press(&mut prompt, 22);
+    assert_eq!(prompt.vm().pc(), 0x1472, "the prompt ignores Right");
+    press(&mut emulator, 13);
+    advance(&mut emulator, 300);
+    assert_eq!(emulator.vm().pc(), 0x24dd, "level one waits for input");
+    assert_eq!(emulator.vm().memory()[0x34db], 23, "level one has 23 beads");
+    assert_eq!(
+        emulator.vm().memory()[0x34e1],
+        8,
+        "the sprite starts at x 8"
+    );
+    assert_eq!(
+        emulator.vm().memory()[0x34e2],
+        8,
+        "the sprite starts at y 8"
+    );
+    assert_eq!(
+        emulator.vm().memory()[0x343f],
+        5,
+        "a bead sits at the first tile"
+    );
+    capture(&emulator, "rubber-level");
+
+    let idle = emulator.clone();
+    let mut still = emulator.clone();
+    advance(&mut still, 60);
+    assert_eq!(still.vm().memory()[0x34e1], 8);
+    assert_eq!(still.vm().memory()[0x34e2], 8);
+    assert_eq!(still.vm().memory()[0x34db], 23);
+    assert_eq!(
+        still.display().indexed_frame(),
+        emulator.display().indexed_frame(),
+        "the level does not animate while waiting"
+    );
+
+    let mut right = emulator.clone();
+    hold(&mut right, 22, 30);
+    assert_eq!(right.vm().memory()[0x34e1], 18, "Right walks right");
+    assert_eq!(
+        right.vm().memory()[0x34e2],
+        8,
+        "the sprite stays on its ledge"
+    );
+    assert_eq!(right.vm().memory()[0x34db], 22, "one bead is collected");
+    assert_eq!(right.vm().memory()[0x343f], 0, "the bead tile is cleared");
+    assert_ne!(
+        right.display().indexed_frame(),
+        idle.display().indexed_frame()
+    );
+    capture(&right, "rubber-right");
+
+    let mut far = emulator.clone();
+    hold(&mut far, 22, 60);
+    assert_eq!(far.vm().memory()[0x34e1], 28, "a longer walk reaches x 28");
+    assert_eq!(far.vm().memory()[0x34db], 21, "a second bead is collected");
+
+    let mut left = emulator.clone();
+    hold(&mut left, 23, 30);
+    assert_eq!(left.vm().memory()[0x34e1], 0, "Left stops at the wall");
+    assert_eq!(
+        left.vm().memory()[0x34e2],
+        20,
+        "the sprite drops off its ledge"
+    );
+    assert_eq!(left.vm().memory()[0x34db], 23, "the drop collects no bead");
+    capture(&left, "rubber-left");
+
+    for key in [20, 21] {
+        let mut vertical = emulator.clone();
+        hold(&mut vertical, key, 60);
+        assert_eq!(vertical.vm().memory()[0x34e1], 8, "vertical keys keep x");
+        assert_eq!(vertical.vm().memory()[0x34e2], 8, "vertical keys keep y");
+        assert_eq!(vertical.vm().memory()[0x34db], 23);
+        assert_eq!(
+            vertical.display().indexed_frame(),
+            idle.display().indexed_frame(),
+            "only the left and right keys move the sprite"
+        );
+    }
+
+    let mut pause = emulator.clone();
+    press(&mut pause, 27);
+    assert_eq!(pause.vm().pc(), 0x1472, "Escape asks whether to quit");
+    capture(&pause, "rubber-pause");
+    let mut resume = pause.clone();
+    press(&mut resume, b'n');
+    assert_eq!(resume.vm().pc(), 0x24dd, "N resumes the level");
+    let mut quit = pause.clone();
+    press(&mut quit, b'y');
+    assert_eq!(quit.vm().pc(), 0x377a, "Y returns to the title menu");
+}

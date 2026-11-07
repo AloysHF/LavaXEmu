@@ -36,11 +36,12 @@ do not satisfy this status.
 - Unnamed Village checked on 2026-11-07: the map starts directly, Right walks and scrolls, Up and Left turn the character at the fenced spawn, Down is blocked there, and after walking east the character can leave the edge in the other directions.
 - Dream Twenty-One checked on 2026-11-07: the splash starts a round, the arrow keys move the pile cursor, Enter places the next card into the selected pile and scores 50 points, two aces total 12, and Escape shows the game-over screen with the score and waits for a key before halting.
 - Dream Mario checked on 2026-11-07: the intro ignores an early Enter, the title's Start entry shows the map prompt, Enter begins map 1, D and A walk right and left, L jumps and lands, W and S leave the idle frame unchanged, and Down selects the help entry.
+- Rubber House checked on 2026-11-07: the title walks all five entries, opens the seven-page rules and the settings, fills and cancels the key binding, shows both locked entries, halts from the exit entry, starts level 1 through the prompt, and covers right walking with bead collection, the left drop, idle and vertical keys, plus both pause answers.
 - Rotary Slot Machine checked on 2026-11-07: one dedicated release workflow checks the splash and menu with bidirectional wrapping, both pages of the instructions and version screens, starting a round with 20 credits, betting and withdrawing on two columns, a deterministic spin and result, the quit dialog cancel/confirm paths, and the menu exit item.
 - Bottomless Pit checked on 2026-11-07: one dedicated release workflow cycles the three difficulty levels, starts a fall, checks the horizontal-only steering, waits for the floor counter, saves the replay record through the `Yes?` prompt, replays it without input, and aborts with Escape.
-- 143 dedicated release workflows passed in this audit.
-- 211 of 324 entry points were loaded by those successful workflows.
-- 113 entry points still need dedicated workflow verification.
+- 144 dedicated release workflows passed in this audit.
+- 212 of 324 entry points were loaded by those successful workflows.
+- 112 entry points still need dedicated workflow verification.
 - The historical [startup gallery](Game-Compatibility.md) is a separate check
   and must not be interpreted as this workflow audit.
 
@@ -257,7 +258,7 @@ an optional screenshot directory. Keep each test's logs and captures separate.
 | 193 | `LAVA1 梦中世界（更新6）/梦中世界.lav` | Game / game package | [Workflow passed: `dream_world_creates_an_account_loads_the_map_and_moves`](../crates/lavaxemu/tests/game_compatibility.rs#L1676) |
 | 194 | `LAVA1 梦幻21点/梦幻21点.lav` | Game / game package | [Workflow passed: `dream_twenty_one_places_cards_into_the_selected_pile`](../crates/lavaxemu/tests/game_compatibility.rs#L14326) |
 | 195 | `LAVA1 梦幻mario/梦幻mario.lav` | Game / game package | [Workflow passed: `dream_mario_walks_jumps_and_ignores_unbound_keys`](../crates/lavaxemu/tests/game_compatibility.rs#L14478) |
-| 196 | `LAVA1 橡皮屋/橡皮屋.lav` | Game / game package | Pending |
+| 196 | `LAVA1 橡皮屋/橡皮屋.lav` | Game / game package | [Workflow passed: `rubber_house_menu_settings_and_level_one`](../crates/lavaxemu/tests/game_compatibility.rs#L14613) |
 | 197 | `LAVA1 欢乐五子棋/欢乐五子棋.lav` | Game / game package | Pending |
 | 198 | `LAVA1 武侠/武侠.lav` | Game / game package | Pending |
 | 199 | `LAVA1 水管工/PC模拟器端/水管工.lav` | Game / game package | Pending |

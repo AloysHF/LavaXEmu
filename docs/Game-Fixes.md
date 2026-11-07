@@ -2762,3 +2762,29 @@ without an execution error alone does not establish playability.
   `帮助信息！` and stays on the title screen.
 - Later maps, enemies, items, the level progression and the map mode mentioned
   by the bundled readme remain unverified.
+
+## Rubber House (橡皮屋)
+
+- Content: `LAVA1 橡皮屋/橡皮屋.lav`.
+- The title menu waits at pc `0x377a` with the entries 进去瞧瞧, 设置一下,
+  指点迷津, 秘密基地 and 路过而已. Right and Down move forward, Left and Up move
+  back.
+- 进去瞧瞧 shows the `进入第1关` prompt at pc `0x1472`; the prompt ignores the
+  arrow keys and `Enter` loads the first level. 指点迷津 opens the rules at pc
+  `0x2991`, where `Escape` turns all seven pages and returns to the menu.
+  设置一下 opens the settings at pc `0x259a`, and `Enter` there opens the key
+  binding screen at pc `0x26da`: four key presses lead to the `确定修改？[Y/N]`
+  confirmation at pc `0x1472`, where `N` returns to the settings.
+- 秘密基地 shows `通关了再来吧。` and 路过而已 shows `感谢玩赏！` before halting
+  the program at pc `0x2d3f`.
+- Level one waits for input at pc `0x24dd`. The remaining bead count is at
+  `0x34db` (23), the sprite position at `0x34e1`/`0x34e2` (starting at 8/8),
+  and the first bead tile at `0x343f` (`5`).
+- `Right` walks along the ledge and collects beads: holding it for 30 frames
+  moves x to 18 and lowers the count to 22, and 60 frames reach x 28 with 21
+  beads left. `Left` stops at x 0, drops to y 20 and collects nothing. Up and
+  Down neither move the sprite nor change the idle frame.
+- `Escape` during a level asks `确定不玩了？Y/N` at pc `0x1472`; `N` resumes the
+  level and `Y` returns to the title menu.
+- The other built-in scenes, the level clear condition, saving and the wider
+  game flow remain unverified.
