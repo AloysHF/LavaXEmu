@@ -47,11 +47,12 @@ do not satisfy this status.
 - Wangwang Tycoon checked on 2026-11-07: one dedicated release workflow walks the four-entry title, opens and closes the manual, toggles both settings pages and the character modes, lists the four save slots and returns from the empty slot, starts the board through the scrolling transition, takes a turn into the purchase prompt and the next AI event, and exits from both the menu entry and Escape.
 - Meteor Butterfly Sword checked on 2026-11-07: one dedicated release workflow leaves the loading splash for the three-entry brush title, walks the entries with clamped horizontal selection, opens the about page and the credits, adjusts and restores the difficulty bar while recording the post-adjustment escape behavior, starts the arena from the control page, moves and attacks with the letter keys, and quits with code 0.
 - Haidian Floating Life checked on 2026-11-07: one dedicated release workflow enters a name, starts the life menu with its fixed values and key mapping, buys and sells a cheap good with exact cash changes, donates blood and takes treatment at the hospital, pays the bar bill, is refused an unaffordable computer and a small casino stake, takes and repays a bank loan, sleeps through a night with cash, debt, health and calendar changes, saves a 31-byte record, changes the statistics again, loads the record back, and halts from the system exit entry.
+- Bomb Submarine checked on 2026-11-07: one dedicated release workflow walks the four-entry title menu with wrapping in both directions, clamps the level selector between one and nine and restarts it at one after Escape, starts the ninth level, moves the ship to both edges, scores 25 points with twenty z charges and 22 with twenty x charges, pauses and resumes the round with a frozen timer, expires the level timer back into the selector with the score cleared, scrolls the help text to its last page, and reaches both the story and exit credit endings with halt code 0.
 - Spirit Sword Shooting checked on 2026-11-07: one dedicated release workflow opens the splash, first-run message and logo into the three-entry title with clamped ends, leaves the F5 help page with Down, opens the empty leaderboard, starts level one with ten arrows and the zeroed HUD, fires a hit for thirteen points, drains the quiver into level two with the arrows restored and the total kept, pauses and resumes the round, enters a leaderboard name, checks the 48-byte record and reads it back in a fresh emulator, and walks the four nested exit questions to a halt with code 0.
 - Pirate Ship checked on 2026-11-07: one dedicated release workflow covers the packaged and unpacked entries, finishes the splash and logo, wraps the four-entry menu in both directions, scrolls the help text to its last page, opens all four credit pages, halts from the exit entry, wraps the difficulty selector, compares the easy, normal and hard starting fleets and sea layouts, moves the main ship with the arrows and letter keys, fires and lets the pirates take a turn, cancels and confirms the quit prompt, sinks three ships into the reef with life deductions, reaches game over, and returns to the difficulty selector.
-- 155 dedicated release workflows passed in this audit.
-- 224 of 324 entry points were loaded by those successful workflows.
-- 100 entry points still need dedicated workflow verification.
+- 156 dedicated release workflows passed in this audit.
+- 225 of 324 entry points were loaded by those successful workflows.
+- 99 entry points still need dedicated workflow verification.
 - The historical [startup gallery](Game-Compatibility.md) is a separate check
   and must not be interpreted as this workflow audit.
 
@@ -282,7 +283,7 @@ an optional screenshot directory. Keep each test's logs and captures separate.
 | 207 | `LAVA1 海盗船/未打包/海盗船.lav` | Game / game package | [Workflow passed: `pirate_ship_menus_help_credits_difficulty_and_sailing`](../crates/lavaxemu/tests/game_compatibility.rs#L16440) |
 | 208 | `LAVA1 火箭车/火箭车.lav` | Game / game package | [Workflow passed: `rocket_car_keeps_the_track_visible_and_responds_to_controls`](../crates/lavaxemu/tests/game_compatibility.rs#L1316) |
 | 209 | `LAVA1 灵剑射击/灵剑射击.lav` | Game / game package | [Workflow passed: `spirit_sword_menu_help_arrows_scoring_level_and_rank`](../crates/lavaxemu/tests/game_compatibility.rs#L16751) |
-| 210 | `LAVA1 炸潜艇/炸潜艇v1.1 2007.7.6.lav` | Game / game package | Pending |
+| 210 | `LAVA1 炸潜艇/炸潜艇v1.1 2007.7.6.lav` | Game / game package | [Workflow passed: `bomb_submarine_menu_help_level_select_scoring_pause_and_exit`](../crates/lavaxemu/tests/game_compatibility.rs#L17019) |
 | 211 | `LAVA1 煞魔剑/mywar1.lav` | Game / game package | Pending |
 | 212 | `LAVA1 煞魔剑A/煞魔剑A.lav` | Game / game package | Pending |
 | 213 | `LAVA1 煞魔剑正式版/【煞魔剑】 正式版.lav` | Game / game package | Pending |

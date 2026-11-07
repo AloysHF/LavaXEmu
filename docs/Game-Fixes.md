@@ -3072,3 +3072,37 @@ without an execution error alone does not establish playability.
   `0x2593`. Answering `n` at any question returns to the menu and answering `y`
   at the last one halts the program with code 0.
 - Later levels, misses and the exact target motion range remain unverified.
+
+## Bomb Submarine (炸潜艇)
+
+- Content: `LAVA1 炸潜艇/炸潜艇v1.1 2007.7.6.lav`.
+- The title menu waits at pc `0x1718` with four entries (征战开始 / 看看帮助 /
+  游戏背景 / 离开潜艇) and an inverse-video selection. Down wraps
+  1→2→3→4→1 and Up wraps 1→4→3→2.
+- 征战开始 opens the level selector at pc `0x1146`. The chosen level is stored
+  at `0x2320` and the cursor at `0x232e`; Left and Right move it between one and
+  nine without wrapping. Escape returns to the title, and opening the selector
+  again restarts at level one. Enter starts the chosen level.
+- A running round waits at pc `0x14de`. The level is stored at `0x2000`, the
+  timer at `0x2002` starts at fifteen and drops roughly every 160 frames, the
+  ship position is the little-endian word at `0x2006` starting at 75, and the
+  score is the little-endian word at `0x2008`.
+- Right and Left move the ship two pixels per frame. The right edge clamps at
+  135 and the left edge clamps at -1; the ship does not wrap.
+- `z` and `x` drop depth charges. From the starting position twenty `z` presses
+  score 25 and twenty `x` presses score 22, both reproduced on every run.
+- `p` pauses the round at pc `0x5ef` and freezes the timer. Any key returns to
+  pc `0x14de` and the timer starts again after the pause.
+- When the timer reaches zero the round ends through pc `0xef7` and the level
+  selector reopens at pc `0x1146` with the timer spent, the round score cleared
+  and the same level still selected.
+- 看看帮助 opens pc `0x4f7`. Every Down scrolls the text by one page down to the
+  free-program disclaimer after ten steps, where further Downs stay; Escape
+  returns to the title menu.
+- 游戏背景 opens the story at pc `0xef6`; Down scrolls its pages. Escape or Up
+  ends the story into the credits at pc `0xef7`, which scroll automatically and
+  halt the program with code 0 at pc `0x176f`.
+- 离开潜艇 opens the credits directly at pc `0xef6`. They scroll automatically
+  and halt the program with code 0 at pc `0x1626`.
+- Enemy torpedoes and the heart icons, the score value of each enemy type, the
+  999-point flip, and the later levels remain unverified.

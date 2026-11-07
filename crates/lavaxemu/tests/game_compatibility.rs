@@ -17013,3 +17013,256 @@ fn spirit_sword_menu_help_arrows_scoring_level_and_rank() {
     }
     assert_eq!(exit_code, Some(0), "the last answer halts the program");
 }
+
+#[test]
+#[ignore = "requires the local game corpus via LAVAX_GAME_ROOT"]
+fn bomb_submarine_menu_help_level_select_scoring_pause_and_exit() {
+    const PATH: &str = "LAVA1 炸潜艇/炸潜艇v1.1 2007.7.6.lav";
+    let frame = |emulator: &Emulator| emulator.display().indexed_frame().to_vec();
+    let word = |emulator: &Emulator, address: usize| {
+        u16::from_le_bytes([
+            emulator.vm().memory()[address],
+            emulator.vm().memory()[address + 1],
+        ])
+    };
+    let ship = |emulator: &Emulator| {
+        i16::from_le_bytes([
+            emulator.vm().memory()[0x2006],
+            emulator.vm().memory()[0x2007],
+        ])
+    };
+    let start_level = |emulator: &mut Emulator| {
+        advance(emulator, 60);
+        assert_eq!(emulator.vm().pc(), 0x1718, "the title menu waits for a key");
+        press(emulator, 13);
+        assert_eq!(emulator.vm().pc(), 0x1146, "the level selector opens");
+        advance(emulator, 120);
+        press(emulator, 13);
+        advance(emulator, 30);
+        assert_eq!(emulator.vm().pc(), 0x14de, "the first level runs");
+    };
+
+    let mut menu = load(PATH);
+    advance(&mut menu, 60);
+    capture(&menu, "bomb-menu");
+    let first = frame(&menu);
+    press(&mut menu, 21);
+    let second = frame(&menu);
+    assert_ne!(second, first, "down highlights the help entry");
+    press(&mut menu, 21);
+    let third = frame(&menu);
+    assert_ne!(third, second, "down highlights the background entry");
+    press(&mut menu, 21);
+    let fourth = frame(&menu);
+    assert_ne!(fourth, third, "down highlights the exit entry");
+    press(&mut menu, 21);
+    assert_eq!(frame(&menu), first, "down wraps to the first entry");
+    press(&mut menu, 20);
+    assert_eq!(frame(&menu), fourth, "up wraps to the exit entry");
+    press(&mut menu, 20);
+    assert_eq!(frame(&menu), third, "up returns to the background entry");
+    press(&mut menu, 20);
+    assert_eq!(frame(&menu), second, "up returns to the help entry");
+
+    let mut help = load(PATH);
+    advance(&mut help, 60);
+    press(&mut help, 21);
+    press(&mut help, 13);
+    advance(&mut help, 60);
+    assert_eq!(help.vm().pc(), 0x4f7, "the help page opens");
+    capture(&help, "bomb-help");
+    let mut pages = vec![frame(&help)];
+    for _ in 0..10 {
+        press(&mut help, 21);
+        let page = frame(&help);
+        assert_ne!(*pages.last().unwrap(), page, "down scrolls the help text");
+        pages.push(page);
+    }
+    press(&mut help, 21);
+    assert_eq!(
+        frame(&help),
+        pages[10],
+        "the help text stops at its last page"
+    );
+    capture(&help, "bomb-help-end");
+    press(&mut help, 27);
+    advance(&mut help, 60);
+    assert_eq!(help.vm().pc(), 0x1718, "escape returns to the title menu");
+
+    let mut story = load(PATH);
+    advance(&mut story, 60);
+    press(&mut story, 21);
+    press(&mut story, 21);
+    press(&mut story, 13);
+    advance(&mut story, 60);
+    assert_eq!(story.vm().pc(), 0xef6, "the background story opens");
+    capture(&story, "bomb-story");
+    let opening = frame(&story);
+    press(&mut story, 21);
+    let after_one = frame(&story);
+    assert_ne!(after_one, opening, "down scrolls the story");
+    press(&mut story, 21);
+    assert_ne!(frame(&story), after_one, "down scrolls the story again");
+    press(&mut story, 27);
+    let mut story_exit = None;
+    for _ in 0..12000 {
+        if let FrameStatus::Halted(code) = story.run_frame().unwrap().status {
+            story_exit = Some(code);
+            break;
+        }
+    }
+    assert_eq!(
+        story_exit,
+        Some(0),
+        "escape leaves the story into the ending"
+    );
+    assert_eq!(
+        story.vm().pc(),
+        0x176f,
+        "the story ending halts at its own page"
+    );
+
+    let mut exit = load(PATH);
+    advance(&mut exit, 60);
+    press(&mut exit, 21);
+    press(&mut exit, 21);
+    press(&mut exit, 21);
+    press(&mut exit, 13);
+    advance(&mut exit, 60);
+    assert_eq!(
+        exit.vm().pc(),
+        0xef6,
+        "the exit entry opens its credits page"
+    );
+    capture(&exit, "bomb-credits");
+    let mut exit_code = None;
+    for _ in 0..6000 {
+        if let FrameStatus::Halted(code) = exit.run_frame().unwrap().status {
+            exit_code = Some(code);
+            break;
+        }
+    }
+    assert_eq!(exit_code, Some(0), "the exit credits halt the program");
+    assert_eq!(exit.vm().pc(), 0x1626, "the exit credits end on their page");
+
+    let mut levels = load(PATH);
+    advance(&mut levels, 60);
+    press(&mut levels, 13);
+    assert_eq!(levels.vm().pc(), 0x1146, "the level selector opens");
+    assert_eq!(word(&levels, 0x2320), 1, "the first level is selected");
+    press(&mut levels, 23);
+    assert_eq!(word(&levels, 0x2320), 1, "left stops at the first level");
+    for _ in 0..8 {
+        press(&mut levels, 22);
+    }
+    assert_eq!(word(&levels, 0x2320), 9, "right reaches the ninth level");
+    press(&mut levels, 22);
+    assert_eq!(word(&levels, 0x2320), 9, "right stops at the ninth level");
+    capture(&levels, "bomb-level-select");
+    press(&mut levels, 27);
+    advance(&mut levels, 60);
+    assert_eq!(levels.vm().pc(), 0x1718, "escape returns to the title menu");
+    press(&mut levels, 13);
+    assert_eq!(levels.vm().pc(), 0x1146, "the level selector opens again");
+    assert_eq!(
+        word(&levels, 0x2320),
+        1,
+        "the selector restarts at the first level"
+    );
+    for _ in 0..8 {
+        press(&mut levels, 22);
+    }
+    assert_eq!(
+        word(&levels, 0x2320),
+        9,
+        "the ninth level is selected again"
+    );
+    press(&mut levels, 13);
+    advance(&mut levels, 90);
+    assert_eq!(levels.vm().pc(), 0x14de, "the ninth level runs");
+    assert_eq!(word(&levels, 0x2000), 9, "the level counter shows nine");
+    assert_eq!(word(&levels, 0x2002), 15, "the timer starts at fifteen");
+    assert_eq!(ship(&levels), 75, "the ship starts in the middle");
+    capture(&levels, "bomb-level-nine");
+
+    let mut game = load(PATH);
+    start_level(&mut game);
+    assert_eq!(word(&game, 0x2000), 1, "the first level starts");
+    assert_eq!(word(&game, 0x2002), 15, "the timer starts at fifteen");
+    assert_eq!(ship(&game), 75, "the ship starts in the middle");
+    assert_eq!(word(&game, 0x2008), 0, "the score starts at zero");
+    capture(&game, "bomb-level-one");
+    hold(&mut game, 22, 15);
+    assert_eq!(
+        ship(&game),
+        105,
+        "right moves the ship two pixels per frame"
+    );
+    hold(&mut game, 22, 15);
+    assert_eq!(ship(&game), 135, "right moves the ship to the right edge");
+    hold(&mut game, 22, 15);
+    assert_eq!(ship(&game), 135, "the ship stops at the right edge");
+    hold(&mut game, 23, 70);
+    assert_eq!(ship(&game), -1, "left moves the ship to the left edge");
+    hold(&mut game, 23, 15);
+    assert_eq!(ship(&game), -1, "the ship stops at the left edge");
+
+    let mut shots = load(PATH);
+    advance(&mut shots, 60);
+    press(&mut shots, 13);
+    advance(&mut shots, 120);
+    press(&mut shots, 13);
+    advance(&mut shots, 30);
+    for _ in 0..20 {
+        press(&mut shots, b'z');
+    }
+    assert_eq!(word(&shots, 0x2008), 25, "twenty z charges score 25");
+    capture(&shots, "bomb-hits");
+    let timer = word(&shots, 0x2002);
+    press(&mut shots, 112);
+    assert_eq!(shots.vm().pc(), 0x5ef, "p pauses the round");
+    capture(&shots, "bomb-paused");
+    advance(&mut shots, 240);
+    assert_eq!(shots.vm().pc(), 0x5ef, "the pause holds");
+    assert_eq!(word(&shots, 0x2002), timer, "the pause freezes the timer");
+    press(&mut shots, 32);
+    assert_eq!(shots.vm().pc(), 0x14de, "any key resumes the round");
+    let mut resumed = 0;
+    while word(&shots, 0x2002) >= timer && resumed < 1200 {
+        advance(&mut shots, 120);
+        resumed += 120;
+    }
+    assert!(
+        word(&shots, 0x2002) < timer,
+        "the timer runs again after the pause"
+    );
+
+    let mut x_shots = load(PATH);
+    advance(&mut x_shots, 60);
+    press(&mut x_shots, 13);
+    advance(&mut x_shots, 120);
+    press(&mut x_shots, 13);
+    advance(&mut x_shots, 30);
+    for _ in 0..20 {
+        press(&mut x_shots, b'x');
+    }
+    assert_eq!(word(&x_shots, 0x2008), 22, "twenty x charges score 22");
+
+    let mut timed = load(PATH);
+    start_level(&mut timed);
+    let mut frames = 0;
+    while timed.vm().pc() != 0x1146 {
+        timed.run_frame().unwrap();
+        frames += 1;
+        assert!(frames < 6000, "the level timer must expire");
+    }
+    assert_eq!(
+        timed.vm().pc(),
+        0x1146,
+        "the timer returns to the level selector"
+    );
+    assert_eq!(word(&timed, 0x2002), 0, "the timer is spent");
+    assert_eq!(word(&timed, 0x2008), 0, "the round score is cleared");
+    assert_eq!(word(&timed, 0x2320), 1, "the selector keeps the level");
+    capture(&timed, "bomb-time-up");
+}
