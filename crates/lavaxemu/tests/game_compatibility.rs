@@ -15554,3 +15554,134 @@ fn pipe_works_wqx_menu_screens_gameplay_and_exit() {
     quit.input_mut().release_all();
     assert_eq!(exit_code, Some(0), "结束游戏 exits the program");
 }
+
+fn changed_region(before: &[u8], after: &[u8], width: usize) -> (usize, usize, usize) {
+    let mut count = 0;
+    let mut top = usize::MAX;
+    let mut bottom = 0;
+    for (index, (left, right)) in before.iter().zip(after).enumerate() {
+        if left != right {
+            count += 1;
+            let row = index / width;
+            top = top.min(row);
+            bottom = bottom.max(row);
+        }
+    }
+    (count, top, bottom)
+}
+
+#[test]
+#[ignore = "requires the local LavaX game corpus"]
+fn jianghu_pirate_title_intro_field_and_episode_branches() {
+    let frame = |emulator: &Emulator| emulator.display().indexed_frame().to_vec();
+    let mut menu = load("LAVA1 江湖--海贼王传说/world.lav");
+    advance(&mut menu, 400);
+    assert_eq!(menu.vm().pc(), 0x39e, "the title waits for a key");
+    let width = usize::from(menu.display().width());
+    let title = frame(&menu);
+    capture(&menu, "jianghu-pirate-title");
+
+    let mut navigation = menu.clone();
+    press(&mut navigation, 21);
+    let second = frame(&navigation);
+    assert_ne!(second, title, "Down selects 渔龙再现");
+    press(&mut navigation, 21);
+    let third = frame(&navigation);
+    assert_ne!(third, second, "Down selects 豹隐山林");
+    press(&mut navigation, 21);
+    assert_eq!(frame(&navigation), title, "Down wraps to 初涉江湖");
+    press(&mut navigation, 20);
+    assert_eq!(frame(&navigation), third, "Up wraps to 豹隐山林");
+    press(&mut navigation, 23);
+    assert_eq!(frame(&navigation), second, "Left returns to 渔龙再现");
+    press(&mut navigation, 22);
+    assert_eq!(frame(&navigation), third, "Right returns to 豹隐山林");
+
+    let mut loading = menu.clone();
+    press(&mut loading, 21);
+    press(&mut loading, 13);
+    advance(&mut loading, 120);
+    assert_eq!(
+        loading.vm().pc(),
+        0x39e,
+        "the failed load returns to the title"
+    );
+    let failure = frame(&loading);
+    assert_ne!(
+        failure, second,
+        "the missing save is reported over the menu"
+    );
+    capture(&loading, "jianghu-pirate-save-failure");
+    press(&mut loading, 13);
+    assert_eq!(frame(&loading), second, "a key dismisses the report");
+    press(&mut loading, 13);
+    assert_eq!(
+        frame(&loading),
+        failure,
+        "choosing 渔龙再现 retries the load"
+    );
+
+    let mut quit = menu.clone();
+    press(&mut quit, 21);
+    press(&mut quit, 21);
+    for _ in 0..3 {
+        quit.input_mut().set_keys([13]);
+        quit.run_frame().unwrap();
+    }
+    quit.input_mut().set_keys([]);
+    let mut exit_code = None;
+    for _ in 0..200 {
+        let result = quit.run_frame().unwrap();
+        if let FrameStatus::Halted(code) = result.status {
+            exit_code = Some(code);
+            break;
+        }
+    }
+    assert_eq!(exit_code, Some(0), "豹隐山林 fades out and exits");
+
+    let mut game = menu.clone();
+    press(&mut game, 13);
+    assert_eq!(game.vm().pc(), 0x39e, "the intro dialog waits for a key");
+    let first_page = frame(&game);
+    assert_ne!(first_page, title, "初涉江湖 opens the intro scene");
+    capture(&game, "jianghu-pirate-dialog");
+    press(&mut game, 13);
+    assert_ne!(frame(&game), first_page, "Enter advances the dialog");
+    let mut presses = 2;
+    while game.vm().pc() == 0x39e {
+        assert!(presses < 12, "the intro must reach the field");
+        press(&mut game, 13);
+        presses += 1;
+    }
+    assert_eq!(game.vm().pc(), 0x8b7e, "the intro reaches the field");
+    let field = frame(&game);
+    capture(&game, "jianghu-pirate-field");
+
+    let mut idle = game.clone();
+    advance(&mut idle, 60);
+    assert_eq!(frame(&idle), field, "the field waits for input");
+
+    let mut moved = game.clone();
+    moved.input_mut().set_keys([22]);
+    advance(&mut moved, 20);
+    moved.input_mut().set_keys([]);
+    advance(&mut moved, 10);
+    let right = frame(&moved);
+    let (count, top, bottom) = changed_region(&field, &right, width);
+    assert!(count > 0 && count < 400, "Right moves the player sprite");
+    assert!(
+        top >= 30 && bottom <= 50,
+        "Right keeps the player on the same rows"
+    );
+    capture(&moved, "jianghu-pirate-right");
+
+    let mut up = game.clone();
+    up.input_mut().set_keys([20]);
+    advance(&mut up, 20);
+    up.input_mut().set_keys([]);
+    advance(&mut up, 10);
+    let (count, top, _) = changed_region(&field, &frame(&up), width);
+    assert!(count > 0 && count < 400, "Up moves the player sprite");
+    assert!(top < 30, "Up moves the player to an upper row");
+    capture(&up, "jianghu-pirate-up");
+}

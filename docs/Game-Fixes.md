@@ -2863,3 +2863,24 @@ without an execution error alone does not establish playability.
   to `0x4797`). Its difficulty marker is drawn one pixel lower than in the PC
   build, and 结束游戏 leaves the title menu on screen before halting with code
   0 instead of drawing the studio splash.
+
+## Jianghu: Pirate Legend (江湖--海贼王传说)
+
+- Content: `LAVA1 江湖--海贼王传说/world.lav` with the companion data file
+  `world_SC.dat`.
+- The title waits at pc `0x39e` with 初涉江湖, 渔龙再现 and 豹隐山林. Down and
+  Right select the next entry and Up and Left select the previous entry; both
+  directions wrap, and the selected entry is drawn as an inverted box over the
+  title artwork.
+- 初涉江湖 starts the intro without a save. The typed conversation between
+  雷恩 and 米雪 advances one page per key (雷恩：咦，这是什么地方？, 米雪：好像是
+  魔王的领地耶。 and later pages), and the seventh key press reaches the field
+  at pc `0x8b7e`, a walled room with the player sprite. The field redraws
+  nothing while idle; Right and Left move the sprite along its rows and Up
+  moves it to a higher row.
+- 渔龙再现 tries to read a save game. Without one the title stays at pc `0x39e`
+  with a 存档读取失败 overlay over the menu; any key dismisses the overlay back
+  to the title with 渔龙再现 still selected, and Enter retries the failed load.
+- 豹隐山林 fades the title out and halts the program with code 0.
+- Saving, the remaining intro pages, character creation, combat and the story
+  after the field remain unverified.
