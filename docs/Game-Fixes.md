@@ -2929,3 +2929,28 @@ without an execution error alone does not establish playability.
   halts it with code 0 at pc `0x22ef`.
 - Saving, buying or declining property, bankruptcy, victory and the full board
   progression remain unverified.
+
+## Meteor Butterfly Sword (流星蝴蝶剑)
+
+- Content: `LAVA1 流星蝴蝶剑/流星蝴蝶剑.lav` with the picture data file
+  `MTpic.dat`.
+- The loading splash waits at pc `0x51de` with a butterfly artwork and the text
+  正在读取数据... Any key opens the title at pc `0x4fce`. The title has three
+  vertical entries rendered in a brush font; Left and Right select the previous
+  and next entry and stop at both ends, while Up and Down leave the selection
+  unchanged.
+- The first entry opens the control page at pc `0x4ddb` (W/A/S/D 方向, f 暴气,
+  j 攻击, k 重击(20%), l 大绝(40%), 游戏中按q退出). Any key starts the arena at
+  pc `0x480b`. In the arena a/s/d/w change the scene, j animates an attack, and
+  q opens the credits and halts the program with code 0.
+- The second entry opens the difficulty selector at pc `0x4f03` with the text
+  请按左右键调节您的难度 and the 容易 / 困难 labels. Left and Right adjust the
+  bar. Escape returns to the title before any adjustment; after an adjustment
+  the selector accepts only Left and Right, and Escape or Enter no longer leave
+  it in this build.
+- The third entry opens an about page at pc `0x4e72` with the 末浪LeeStorm
+  credits, and Enter returns to the title. Escape on the title opens a second
+  credits page at pc `0x2db2` with the e-mail and QQ contact, and Enter there
+  halts the program with code 0.
+- Combat depth, enemies, the effect of the difficulty level, the energy-gated
+  attacks and saving remain unverified.

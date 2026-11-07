@@ -15951,3 +15951,155 @@ fn wangwang_tycoon_title_settings_slots_and_board_turns() {
     }
     assert_eq!(escape_code, Some(0), "Escape exits from the title");
 }
+
+#[test]
+#[ignore = "requires the local LavaX game corpus"]
+fn meteor_butterfly_sword_title_pages_difficulty_and_arena() {
+    let frame = |emulator: &Emulator| emulator.display().indexed_frame().to_vec();
+    let mut splash = load("LAVA1 流星蝴蝶剑/流星蝴蝶剑.lav");
+    advance(&mut splash, 2000);
+    assert_eq!(splash.vm().pc(), 0x51de, "the loading splash waits");
+    capture(&splash, "meteor-splash");
+
+    let mut menu = splash.clone();
+    press(&mut menu, 13);
+    assert_eq!(menu.vm().pc(), 0x4fce, "the title waits for a key");
+    let width = usize::from(menu.display().width());
+    let title = frame(&menu);
+    capture(&menu, "meteor-title");
+
+    let mut navigation = menu.clone();
+    press(&mut navigation, 22);
+    let second = frame(&navigation);
+    assert_ne!(second, title, "Right selects the second entry");
+    press(&mut navigation, 22);
+    let third = frame(&navigation);
+    assert_ne!(third, second, "Right selects the third entry");
+    press(&mut navigation, 22);
+    assert_eq!(frame(&navigation), third, "Right stops at the third entry");
+    press(&mut navigation, 23);
+    assert_eq!(
+        frame(&navigation),
+        second,
+        "Left returns to the second entry"
+    );
+    press(&mut navigation, 23);
+    assert_eq!(frame(&navigation), title, "Left returns to the first entry");
+    press(&mut navigation, 23);
+    assert_eq!(frame(&navigation), title, "Left stops at the first entry");
+
+    let mut about = menu.clone();
+    press(&mut about, 22);
+    press(&mut about, 22);
+    press(&mut about, 13);
+    let about_page = frame(&about);
+    assert_ne!(about_page, third, "the third entry opens the about page");
+    capture(&about, "meteor-about");
+    press(&mut about, 13);
+    assert_eq!(frame(&about), third, "Enter returns to the title");
+
+    let mut credits = menu.clone();
+    press(&mut credits, 27);
+    assert_eq!(credits.vm().pc(), 0x2db2, "Escape opens the credits");
+    assert_ne!(frame(&credits), title, "the credits replace the title");
+    capture(&credits, "meteor-credits");
+    credits.input_mut().set_keys([13]);
+    let mut credits_code = None;
+    for _ in 0..120 {
+        let result = credits.run_frame().unwrap();
+        if let FrameStatus::Halted(code) = result.status {
+            credits_code = Some(code);
+            break;
+        }
+    }
+    assert_eq!(credits_code, Some(0), "Enter on the credits halts");
+
+    let mut selector = menu.clone();
+    press(&mut selector, 22);
+    press(&mut selector, 13);
+    assert_eq!(selector.vm().pc(), 0x4f03, "the difficulty selector waits");
+    let default_bar = frame(&selector);
+    capture(&selector, "meteor-difficulty");
+    press(&mut selector, 22);
+    let harder = frame(&selector);
+    assert_ne!(harder, default_bar, "Right raises the difficulty");
+    press(&mut selector, 23);
+    assert_eq!(
+        frame(&selector),
+        default_bar,
+        "Left restores the difficulty"
+    );
+    press(&mut selector, 22);
+    let adjusted = frame(&selector);
+    press(&mut selector, 27);
+    assert_eq!(
+        selector.vm().pc(),
+        0x4f03,
+        "Escape is ignored after an adjustment"
+    );
+    assert_eq!(frame(&selector), adjusted, "the adjusted selector stays");
+
+    let mut escape = menu.clone();
+    press(&mut escape, 22);
+    press(&mut escape, 13);
+    press(&mut escape, 27);
+    assert_eq!(escape.vm().pc(), 0x4fce, "Escape leaves the selector");
+    assert_eq!(
+        frame(&escape),
+        second,
+        "the title keeps the second entry selected"
+    );
+
+    let mut game = menu.clone();
+    press(&mut game, 13);
+    assert_eq!(game.vm().pc(), 0x4ddb, "the first entry opens the controls");
+    let controls = frame(&game);
+    capture(&game, "meteor-controls");
+    press(&mut game, 32);
+    assert_eq!(game.vm().pc(), 0x480b, "any key starts the arena");
+    assert_ne!(
+        frame(&game),
+        controls,
+        "the arena replaces the controls page"
+    );
+    capture(&game, "meteor-arena");
+
+    let mut base = game.clone();
+    advance(&mut base, 60);
+    let mut idle = base.clone();
+    advance(&mut idle, 120);
+    let idle_frame = frame(&idle);
+
+    for (key, name) in [(100, "D"), (119, "W"), (97, "A"), (115, "S")] {
+        let mut moved = base.clone();
+        moved.input_mut().set_keys([key]);
+        advance(&mut moved, 120);
+        moved.input_mut().set_keys([]);
+        let (count, _, _) = changed_region(&idle_frame, &frame(&moved), width);
+        assert!(count > 100, "{name} changes the arena");
+    }
+    let mut moved = base.clone();
+    moved.input_mut().set_keys([100]);
+    advance(&mut moved, 120);
+    moved.input_mut().set_keys([]);
+    capture(&moved, "meteor-move");
+
+    let mut attack = base.clone();
+    attack.input_mut().set_keys([106]);
+    advance(&mut attack, 120);
+    attack.input_mut().set_keys([]);
+    let (count, _, _) = changed_region(&idle_frame, &frame(&attack), width);
+    assert!(count > 50, "the attack key animates the fighter");
+
+    let mut quit = base.clone();
+    quit.input_mut().set_keys([113]);
+    let mut quit_code = None;
+    for _ in 0..120 {
+        let result = quit.run_frame().unwrap();
+        if let FrameStatus::Halted(code) = result.status {
+            quit_code = Some(code);
+            break;
+        }
+    }
+    assert_eq!(quit_code, Some(0), "q quits the arena");
+}

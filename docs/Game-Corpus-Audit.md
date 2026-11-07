@@ -45,9 +45,10 @@ do not satisfy this status.
 - Jianghu: Pirate Legend checked on 2026-11-07: one dedicated release workflow wraps the three-entry title in both directions, advances the typed intro into a walkable field with horizontal and upward movement, reports the missing save from 渔龙再现 and retries it, and fades out from 豹隐山林 with an exit code of 0.
 - Jianghu: Chaos checked on 2026-11-07: one dedicated release workflow wraps the three-entry title in both directions, advances the typed intro into a walkable field with horizontal and upward movement, reports the missing save from 再续前缘 over the two-slot load menu and returns to the selected entry, and fades out from 退隐江湖 with an exit code of 0.
 - Wangwang Tycoon checked on 2026-11-07: one dedicated release workflow walks the four-entry title, opens and closes the manual, toggles both settings pages and the character modes, lists the four save slots and returns from the empty slot, starts the board through the scrolling transition, takes a turn into the purchase prompt and the next AI event, and exits from both the menu entry and Escape.
-- 151 dedicated release workflows passed in this audit.
-- 219 of 324 entry points were loaded by those successful workflows.
-- 105 entry points still need dedicated workflow verification.
+- Meteor Butterfly Sword checked on 2026-11-07: one dedicated release workflow leaves the loading splash for the three-entry brush title, walks the entries with clamped horizontal selection, opens the about page and the credits, adjusts and restores the difficulty bar while recording the post-adjustment escape behavior, starts the arena from the control page, moves and attacks with the letter keys, and quits with code 0.
+- 152 dedicated release workflows passed in this audit.
+- 220 of 324 entry points were loaded by those successful workflows.
+- 104 entry points still need dedicated workflow verification.
 - The historical [startup gallery](Game-Compatibility.md) is a separate check
   and must not be interpreted as this workflow audit.
 
@@ -272,7 +273,7 @@ an optional screenshot directory. Keep each test's logs and captures separate.
 | 201 | `LAVA1 江湖--海贼王传说/world.lav` | Game / game package | [Workflow passed: `jianghu_pirate_title_intro_field_and_episode_branches`](../crates/lavaxemu/tests/game_compatibility.rs#L15575) |
 | 202 | `LAVA1 江湖-混沌初开/world.lav` | Game / game package | [Workflow passed: `jianghu_chaos_title_intro_field_and_save_branches`](../crates/lavaxemu/tests/game_compatibility.rs#L15691) |
 | 203 | `LAVA1 汪汪大富翁/wangwang.lav` | Game / game package | [Workflow passed: `wangwang_tycoon_title_settings_slots_and_board_turns`](../crates/lavaxemu/tests/game_compatibility.rs#L15798) |
-| 204 | `LAVA1 流星蝴蝶剑/流星蝴蝶剑.lav` | Game / game package | Pending |
+| 204 | `LAVA1 流星蝴蝶剑/流星蝴蝶剑.lav` | Game / game package | [Workflow passed: `meteor_butterfly_sword_title_pages_difficulty_and_arena`](../crates/lavaxemu/tests/game_compatibility.rs#L15957) |
 | 205 | `LAVA1 海淀浮生记/海淀浮生记.lav` | Game / game package | Pending |
 | 206 | `LAVA1 海盗船/打包/海盗船.pac` | Game / game package | Pending |
 | 207 | `LAVA1 海盗船/未打包/海盗船.lav` | Game / game package | Pending |
