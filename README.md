@@ -103,6 +103,7 @@ The binary is produced at `target/release/lavaxemu.dll`
 `lavaxemu_libretro.<ext>` before placing it in RetroArch's `cores/`
 directory.
 
+For Android cross-compilation, see [Android Libretro Core](docs/Android-Libretro-Core.md).
 For iOS, see [iOS Libretro Core](docs/iOS-Libretro-Core.md).
 
 ### EmulatorJS Core (for the browser)
