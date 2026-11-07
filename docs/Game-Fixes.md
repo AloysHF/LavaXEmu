@@ -2419,3 +2419,16 @@ without an execution error alone does not establish playability.
   verifies Escape returns to the main menu.
 - The settings screen, secondary fire with X, pause, later levels, and the
   victory screen remain unverified.
+
+## Boxing (拳击)
+
+- Content: `LAVA1 拳击/boxing.lav`.
+- Startup-only evidence had not covered a match. No emulator runtime defect was
+  reproduced.
+- A dedicated release workflow advances through the title and key-guide screens,
+  then plays a fight with a fixed key cycle. It checks the enemy's counter-move
+  and both fighters' stamina after each of thirteen exchanges, verifies that a
+  knockout ends the match and returns to the title, starts a rematch with
+  restored stamina, and checks Escape leaves the fight.
+- Opponent variety, audio, scoring, and paused or repeated-tap input patterns
+  remain unverified.

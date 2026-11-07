@@ -12462,3 +12462,103 @@ fn battleship_advances_menus_and_battle_and_returns_after_game_over() {
         capture(&emulator, &format!("{name}-back-to-menu"));
     }
 }
+
+#[test]
+#[ignore = "requires the local game corpus via LAVAX_GAME_ROOT"]
+fn boxing_resolves_punches_and_finishes_a_match() {
+    fn byte(emulator: &Emulator, address: usize) -> u8 {
+        emulator.vm().memory()[address]
+    }
+    fn wait_for_input(emulator: &mut Emulator) -> usize {
+        for _ in 0..2400 {
+            let result = emulator
+                .run_frame()
+                .expect("game must execute without errors");
+            match result.status {
+                FrameStatus::WaitingForInput => return emulator.vm().pc(),
+                FrameStatus::Halted(_) => panic!("game exited while waiting for input"),
+                _ => {}
+            }
+        }
+        panic!("the game did not wait for input");
+    }
+    fn tap(emulator: &mut Emulator, key: u8) {
+        emulator.input_mut().set_keys([key]);
+        advance(emulator, 1);
+        emulator.input_mut().release_all();
+    }
+    let mut emulator = load("LAVA1 拳击/boxing.lav");
+    assert_eq!(wait_for_input(&mut emulator), 0x40f1, "title screen");
+    capture(&emulator, "boxing-title");
+    tap(&mut emulator, 13);
+    assert_eq!(wait_for_input(&mut emulator), 0x40c0, "key guide");
+    capture(&emulator, "boxing-keys");
+    tap(&mut emulator, 13);
+    assert_eq!(wait_for_input(&mut emulator), 0x3bef, "fight loop");
+    assert_eq!(byte(&emulator, 0x2008), 52, "player stamina");
+    assert_eq!(byte(&emulator, 0x200b), 52, "enemy stamina");
+    assert_eq!(byte(&emulator, 0x2007), 21, "first enemy move");
+    capture(&emulator, "boxing-fight");
+    let moves = [21u8, 112, 23, 105, 105, 21, 112, 112, 112, 22, 23, 105, 105];
+    let stamina = [
+        (52u8, 52u8),
+        (50, 47),
+        (50, 47),
+        (48, 42),
+        (48, 42),
+        (48, 42),
+        (46, 37),
+        (46, 32),
+        (40, 17),
+        (40, 17),
+        (40, 17),
+        (34, 2),
+        (34, 0),
+    ];
+    let keys = [23u8, 105, 21, 112, 22];
+    for round in 0..12 {
+        tap(&mut emulator, keys[round % keys.len()]);
+        assert_eq!(
+            wait_for_input(&mut emulator),
+            0x3bef,
+            "round {round} must stay in the fight"
+        );
+        assert_eq!(
+            byte(&emulator, 0x2007),
+            moves[round],
+            "round {round} enemy move"
+        );
+        assert_eq!(
+            (byte(&emulator, 0x2008), byte(&emulator, 0x200b)),
+            stamina[round],
+            "round {round} stamina"
+        );
+        if round == 8 {
+            capture(&emulator, "boxing-exchange");
+        }
+    }
+    tap(&mut emulator, keys[12 % keys.len()]);
+    advance(&mut emulator, 40);
+    capture(&emulator, "boxing-knockout");
+    assert_eq!(
+        wait_for_input(&mut emulator),
+        0x40f1,
+        "a knockout must return to the title"
+    );
+    assert_eq!(byte(&emulator, 0x200b), 0, "enemy stamina after knockout");
+    capture(&emulator, "boxing-after-knockout");
+    tap(&mut emulator, 13);
+    assert_eq!(wait_for_input(&mut emulator), 0x40c0);
+    tap(&mut emulator, 13);
+    assert_eq!(wait_for_input(&mut emulator), 0x3bef, "rematch");
+    assert_eq!(byte(&emulator, 0x2008), 52, "rematch player stamina");
+    assert_eq!(byte(&emulator, 0x200b), 52, "rematch enemy stamina");
+    capture(&emulator, "boxing-rematch");
+    tap(&mut emulator, 27);
+    assert_eq!(
+        wait_for_input(&mut emulator),
+        0x40f1,
+        "escape must leave the fight"
+    );
+    capture(&emulator, "boxing-escape");
+}
