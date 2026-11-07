@@ -21,9 +21,10 @@ do not satisfy this status.
 - Spot the Difference checked on 2026-11-07: one dedicated release workflow covers the unpacked and packaged entries, finds all three level-1 differences, and advances to level 2.
 - Battleship checked on 2026-11-07: one dedicated release workflow covers the unpacked and packaged entries, finishes the intro chain, checks both directions of menu navigation and briefing cancel, fires and scores in battle, moves the ship both ways, and returns to the menu after game over.
 - Boxing checked on 2026-11-07: one dedicated release workflow plays thirteen punch exchanges with a fixed key cycle, verifies the enemy counter-moves and both stamina values, reaches a knockout that returns to the title, and starts a rematch.
-- 125 dedicated release workflows passed in this audit.
-- 190 of 324 entry points were loaded by those successful workflows.
-- 134 entry points still need dedicated workflow verification.
+- Matchsticks checked on 2026-11-07: one dedicated release workflow rejects an over-limit take, plays a full deterministic game, checks the computer's remainder strategy through the last match, and verifies restart, quit and escape behavior.
+- 126 dedicated release workflows passed in this audit.
+- 191 of 324 entry points were loaded by those successful workflows.
+- 133 entry points still need dedicated workflow verification.
 - The historical [startup gallery](Game-Compatibility.md) is a separate check
   and must not be interpreted as this workflow audit.
 
@@ -208,7 +209,7 @@ an optional screenshot directory. Keep each test's logs and captures separate.
 | 161 | `LAVA1 护卫战舰/护卫战舰.pac` | Game / game package | [Workflow passed: `battleship_advances_menus_and_battle_and_returns_after_game_over`](../crates/lavaxemu/tests/game_compatibility.rs#L12321) |
 | 162 | `LAVA1 护卫战舰/非PAC/护卫战舰.lav` | Game / game package | [Workflow passed: `battleship_advances_menus_and_battle_and_returns_after_game_over`](../crates/lavaxemu/tests/game_compatibility.rs#L12321) |
 | 163 | `LAVA1 拳击/boxing.lav` | Game / game package | [Workflow passed: `boxing_resolves_punches_and_finishes_a_match`](../crates/lavaxemu/tests/game_compatibility.rs#L12468) |
-| 164 | `LAVA1 拿火柴/拿火柴.lav` | Game / game package | Pending |
+| 164 | `LAVA1 拿火柴/拿火柴.lav` | Game / game package | [Workflow passed: `matchstick_game_takes_turns_and_restarts_or_quits`](../crates/lavaxemu/tests/game_compatibility.rs#L12568) |
 | 165 | `LAVA1 接水管/接水管.lav` | Game / game package | Pending |
 | 166 | `LAVA1 推箱达人/推箱达人.pac` | Game / game package | Pending |
 | 167 | `LAVA1 推箱达人/未打包的/推箱达人.lav` | Game / game package | Pending |

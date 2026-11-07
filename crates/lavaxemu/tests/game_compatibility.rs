@@ -12562,3 +12562,136 @@ fn boxing_resolves_punches_and_finishes_a_match() {
     );
     capture(&emulator, "boxing-escape");
 }
+
+#[test]
+#[ignore = "requires the local game corpus via LAVAX_GAME_ROOT"]
+fn matchstick_game_takes_turns_and_restarts_or_quits() {
+    fn word(emulator: &Emulator, address: usize) -> u16 {
+        u16::from_le_bytes(
+            emulator.vm().memory()[address..address + 2]
+                .try_into()
+                .unwrap(),
+        )
+    }
+    fn wait_for_input(emulator: &mut Emulator) -> usize {
+        for _ in 0..2400 {
+            match emulator.run_frame().unwrap().status {
+                FrameStatus::WaitingForInput => return emulator.vm().pc(),
+                FrameStatus::Halted(_) => panic!("program halted while waiting for input"),
+                _ => {}
+            }
+        }
+        panic!("no input prompt within 2400 frames");
+    }
+    fn tap(emulator: &mut Emulator, key: u8) {
+        emulator.input_mut().release_all();
+        emulator.input_mut().set_keys([key]);
+        emulator.run_frame().unwrap();
+        emulator.input_mut().release_all();
+    }
+    fn take_one(emulator: &mut Emulator) {
+        tap(emulator, b'1');
+        tap(emulator, 13);
+    }
+
+    let mut emulator = load("LAVA1 拿火柴/拿火柴.lav");
+    assert_eq!(wait_for_input(&mut emulator), 0xee4, "rules screen");
+    capture(&emulator, "matchstick-rules");
+
+    tap(&mut emulator, 13);
+    assert_eq!(wait_for_input(&mut emulator), 0xd31, "number prompt");
+    assert_eq!(word(&emulator, 0x2c8b), 186, "initial matches");
+    assert_eq!(word(&emulator, 0x2c8d), 10, "maximum take");
+    capture(&emulator, "matchstick-prompt");
+
+    tap(&mut emulator, b'1');
+    tap(&mut emulator, b'1');
+    tap(&mut emulator, 13);
+    assert_eq!(wait_for_input(&mut emulator), 0xff4, "input error screen");
+    assert_eq!(word(&emulator, 0x2c8b), 186, "rejected take keeps matches");
+    capture(&emulator, "matchstick-invalid");
+    tap(&mut emulator, 13);
+    assert_eq!(wait_for_input(&mut emulator), 0xd31);
+
+    take_one(&mut emulator);
+    assert_eq!(wait_for_input(&mut emulator), 0xd31);
+    assert_eq!(word(&emulator, 0x2c8b), 176, "after first exchange");
+    assert_eq!(word(&emulator, 0x2c8f), 9, "computer takes the remainder");
+
+    for expected in [
+        165, 154, 143, 132, 121, 110, 99, 88, 77, 66, 55, 44, 33, 22, 11,
+    ] {
+        take_one(&mut emulator);
+        assert_eq!(wait_for_input(&mut emulator), 0xd31);
+        assert_eq!(word(&emulator, 0x2c8b), expected);
+        assert_eq!(word(&emulator, 0x2c8f), 10);
+    }
+
+    take_one(&mut emulator);
+    assert_eq!(
+        wait_for_input(&mut emulator),
+        0x1142,
+        "computer takes the last match"
+    );
+    assert_eq!(word(&emulator, 0x2c8b), 0);
+    capture(&emulator, "matchstick-loss");
+
+    tap(&mut emulator, b'y');
+    assert_eq!(wait_for_input(&mut emulator), 0xd31, "rematch prompt");
+    assert_eq!(word(&emulator, 0x2c8b), 156);
+    assert_eq!(word(&emulator, 0x2c8d), 17);
+    capture(&emulator, "matchstick-rematch");
+
+    for _ in 0..10 {
+        take_one(&mut emulator);
+        let pc = wait_for_input(&mut emulator);
+        if word(&emulator, 0x2c8b) == 0 {
+            assert_eq!(pc, 0x1142);
+            break;
+        }
+        assert_eq!(pc, 0xd31);
+    }
+    assert_eq!(word(&emulator, 0x2c8b), 0, "second game reaches zero");
+    capture(&emulator, "matchstick-loss-again");
+
+    tap(&mut emulator, b'n');
+    assert_eq!(
+        wait_for_input(&mut emulator),
+        0xd31,
+        "after a rematch, N is ignored and another game starts"
+    );
+    assert_eq!(word(&emulator, 0x2c8b), 155);
+    assert_eq!(word(&emulator, 0x2c8d), 15);
+    capture(&emulator, "matchstick-answer-n-restarts");
+
+    tap(&mut emulator, 27);
+    for _ in 0..600 {
+        if !emulator.vm().is_running() {
+            break;
+        }
+        emulator.run_frame().unwrap();
+    }
+    assert!(!emulator.vm().is_running(), "escape must exit the game");
+
+    let mut quitting = load("LAVA1 拿火柴/拿火柴.lav");
+    assert_eq!(wait_for_input(&mut quitting), 0xee4);
+    tap(&mut quitting, 13);
+    assert_eq!(wait_for_input(&mut quitting), 0xd31);
+    for _ in 0..16 {
+        take_one(&mut quitting);
+        assert_eq!(wait_for_input(&mut quitting), 0xd31);
+    }
+    take_one(&mut quitting);
+    assert_eq!(wait_for_input(&mut quitting), 0x1142);
+    tap(&mut quitting, b'n');
+    for _ in 0..600 {
+        if !quitting.vm().is_running() {
+            break;
+        }
+        quitting.run_frame().unwrap();
+    }
+    assert!(
+        !quitting.vm().is_running(),
+        "n must quit after the first game"
+    );
+}

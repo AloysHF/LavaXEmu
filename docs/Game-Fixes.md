@@ -2432,3 +2432,21 @@ without an execution error alone does not establish playability.
   restored stamina, and checks Escape leaves the fight.
 - Opponent variety, audio, scoring, and paused or repeated-tap input patterns
   remain unverified.
+
+## Matchsticks (拿火柴)
+
+- Content: `LAVA1 拿火柴/拿火柴.lav`.
+- Startup-only evidence had not covered a game. No emulator runtime defect was
+  reproduced.
+- A dedicated release workflow dismisses the rules screen, checks the
+  deterministic opening state (`n=186`, `m=10`), rejects an input larger than
+  `m`, and plays seventeen turns taking one match each. It verifies that the
+  computer always removes `n % (m + 1)` matches (leaving 176, 165, ... 11), that
+  the computer takes the last match, and that `Y` at the result screen starts a
+  new game with `n=156`, `m=17`.
+- On a rematch, `N` at the result screen is ignored and another game starts
+  (`n=155`, `m=15`): the guest loop skips storing the new answer after the
+  first game. On a fresh load, `N` at the first result screen quits as intended.
+  Escape also exits from the number prompt.
+- A player-victory route, keypad edge cases, and the drawing delay remain
+  unverified.
