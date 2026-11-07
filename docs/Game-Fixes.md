@@ -2629,3 +2629,26 @@ without an execution error alone does not establish playability.
   program.
 - The double-up/double-down ten-credit shortcuts, the 500-point bonus picture,
   both easter eggs, and other spin outcomes remain unverified.
+
+## Bottomless Pit (无底洞)
+
+- Content: `LAVA1 无底洞/无底洞.lav`.
+- Startup-only evidence had not covered difficulty selection, a fall or the
+  record flow. No emulator runtime defect was reproduced.
+- The title and the result screen share the same key wait at pc `0x762`. `L`
+  cycles the difficulty (`0x2143`) through 0, 1 and 2 and back to 0. `Enter`
+  starts a run, which waits at pc `0xeee`/`0xbac` while the character falls.
+- The falling character is steered only with Left and Right: the horizontal
+  position (`0x323a`) moves by two pixels per press. Up and Down leave it
+  unchanged.
+- Without steering the fall ends at pc `0x762` with a smiling face and the
+  floor counter (`0x2145`) at 1. `Escape` aborts a run to the same screen with
+  a frowning face.
+- On the result screen `S` opens the `Yes?` prompt at pc `0x7ec`. `Y` confirms
+  and writes `/lavadata/hole.sav` (4080 bytes, first byte 1); any other key
+  cancels.
+- `R` with a saved record replays the fall without input and reaches the same
+  result screen with the floor counter back at 1.
+- The effect of each difficulty level on level generation, the exact meaning
+  of the panel `M` value, the other record slots inside the save file, and the
+  score display remain unverified.

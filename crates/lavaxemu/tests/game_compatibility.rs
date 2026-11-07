@@ -13834,3 +13834,96 @@ fn slot_machine_places_bets_spins_and_exits() {
     assert!(halted, "the exit item leaves the program");
     assert!(!emulator.vm().is_running());
 }
+
+#[test]
+#[ignore = "requires the local game corpus via LAVAX_GAME_ROOT"]
+fn bottomless_pit_selects_difficulty_descends_saves_and_replays() {
+    fn finish(emulator: &mut Emulator) {
+        for _ in 0..400 {
+            if emulator.vm().pc() == 0x762 {
+                return;
+            }
+            advance(emulator, 1);
+        }
+        panic!("the fall must finish at the result screen");
+    }
+    fn running(emulator: &Emulator) -> bool {
+        matches!(emulator.vm().pc(), 0xeee | 0xbac)
+    }
+    let mut emulator = load("LAVA1 无底洞/无底洞.lav");
+    advance(&mut emulator, 300);
+    assert_eq!(emulator.vm().pc(), 0x762, "the title waits for a key");
+    capture(&emulator, "pit-title");
+
+    for expected in [1, 2, 0] {
+        press(&mut emulator, b'l');
+        assert_eq!(
+            emulator.vm().memory()[0x2143],
+            expected,
+            "L cycles the difficulty"
+        );
+    }
+    capture(&emulator, "pit-difficulty");
+
+    press(&mut emulator, 13);
+    assert!(running(&emulator), "enter starts a run");
+    let start_x = emulator.vm().memory()[0x323a];
+    press(&mut emulator, 20);
+    assert_eq!(
+        emulator.vm().memory()[0x323a],
+        start_x,
+        "up does not move the falling player"
+    );
+    press(&mut emulator, 22);
+    assert_eq!(
+        emulator.vm().memory()[0x323a],
+        start_x + 2,
+        "right moves the player"
+    );
+    press(&mut emulator, 23);
+    assert_eq!(
+        emulator.vm().memory()[0x323a],
+        start_x,
+        "left moves the player back"
+    );
+    capture(&emulator, "pit-run");
+
+    finish(&mut emulator);
+    assert_eq!(
+        emulator.vm().memory()[0x2145],
+        1,
+        "the fall counts one floor"
+    );
+    capture(&emulator, "pit-result");
+
+    press(&mut emulator, b's');
+    assert_eq!(emulator.vm().pc(), 0x7ec, "S asks to save the record");
+    capture(&emulator, "pit-save-prompt");
+    press(&mut emulator, b'y');
+    assert_eq!(emulator.vm().pc(), 0x762);
+    let records = emulator.files_mut().take_dirty_files();
+    let (_, record) = records
+        .iter()
+        .find(|(path, _)| path == "/lavadata/hole.sav")
+        .expect("the record is saved");
+    assert_eq!(record.len(), 4080, "the record holds the full replay");
+    assert_eq!(record[0], 1, "the record is marked as used");
+    capture(&emulator, "pit-saved");
+
+    press(&mut emulator, b'r');
+    assert_ne!(emulator.vm().pc(), 0x762, "R replays the record");
+    capture(&emulator, "pit-replay");
+    finish(&mut emulator);
+    assert_eq!(
+        emulator.vm().memory()[0x2145],
+        1,
+        "the replay repeats the fall without input"
+    );
+    capture(&emulator, "pit-replay-result");
+
+    press(&mut emulator, 13);
+    assert!(running(&emulator), "enter starts another run");
+    press(&mut emulator, 27);
+    assert_eq!(emulator.vm().pc(), 0x762, "escape leaves the run");
+    capture(&emulator, "pit-escape");
+}
