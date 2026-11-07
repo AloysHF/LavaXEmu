@@ -52,6 +52,8 @@ The Other Realm map-test build reaches its outdoor map and responds to down,
 left and right movement.
 Love preserves both native save slots, including when slot two is saved first.
 The workflow checks movement, distinct save points, and cold restoration.
+Strategy 1 packaged and loose releases reach the battlefield, show unit
+selection, and accept directional and Page Down orders.
 Ninja preserves the complete default name and both native save slots, including
 when slot two is written first. Its workflow covers the opening story, forest
 combat, level-up rewards and restoring two distinct points.

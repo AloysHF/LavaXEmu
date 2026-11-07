@@ -2333,3 +2333,15 @@ without an execution error alone does not establish playability.
   and right movement against an idle clone at the same frame. Only the map-test
   release is covered; story progress, encounters, saving, and other areas remain
   unverified.
+
+## Strategy 1 (战略1号)
+
+- The packaged and loose releases both reach the live battlefield through the
+  title and map selection screens. The earlier startup evidence did not exercise
+  unit controls, and no emulator runtime defect was reproduced.
+- A dedicated release workflow checks the rendered battlefield, visible unit
+  selection through A, all four direction keys, and Page Down orders. Selection,
+  order-state changes, and battlefield updates are compared with idle clones at
+  the same frame.
+- Construction menus, sustained resource collection, combat outcomes, saving,
+  and later campaign states remain unverified.

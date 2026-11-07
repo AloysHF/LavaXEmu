@@ -11660,3 +11660,74 @@ fn my_world_other_realm_reaches_the_map_and_moves() {
         capture(&moved, &format!("my-world-other-realm-{direction}"));
     }
 }
+
+#[test]
+#[ignore = "requires the local game corpus via LAVAX_GAME_ROOT"]
+fn strategy_one_versions_show_the_battlefield_and_accept_orders() {
+    fn status_panel(e: &Emulator) -> Vec<u8> {
+        let width = usize::from(e.display().width());
+        e.display()
+            .indexed_frame()
+            .chunks_exact(width)
+            .flat_map(|row| row[width * 3 / 5..].iter().copied())
+            .collect()
+    }
+    fn start_game(e: &mut Emulator) {
+        e.input_mut().release_all();
+        for frame in 0..24 {
+            e.input_mut().set_keys((frame == 0).then_some(13));
+            advance(e, 1);
+        }
+        advance(e, 1200);
+    }
+    for (path, label) in [
+        (
+            fixture_path_with_size("战略1号.pac", Some(26_786)),
+            "packaged",
+        ),
+        (fixture_path_with_size("战略1号.lav", Some(19_888)), "loose"),
+    ] {
+        let mut e = load(&path);
+        advance(&mut e, 1200);
+        start_game(&mut e);
+        start_game(&mut e);
+        assert_eq!(e.vm().pc(), 0x30cf);
+        capture(&e, &format!("strategy-one-{label}-battlefield"));
+        let mut idle_selection = e.clone();
+        advance(&mut idle_selection, 60);
+        let selected = input_branch(&e, b'a');
+        assert_ne!(
+            status_panel(&idle_selection),
+            status_panel(&selected),
+            "A must select the available combat units"
+        );
+        capture(&selected, &format!("strategy-one-{label}-selected"));
+        let mut selected_idle = selected.clone();
+        advance(&mut selected_idle, 360);
+        let commanded = input_branch(&selected, 14);
+        let mut commanded = commanded;
+        advance(&mut commanded, 300);
+        assert_ne!(
+            &selected_idle.vm().memory()[0x2020..0x2050],
+            &commanded.vm().memory()[0x2020..0x2050],
+            "Page Down must apply an order to the selected units"
+        );
+        assert_ne!(
+            selected_idle.display().indexed_frame(),
+            commanded.display().indexed_frame(),
+            "ordered units must produce a visible battlefield update"
+        );
+        capture(&commanded, &format!("strategy-one-{label}-commanded"));
+        let mut direction_idle = selected.clone();
+        advance(&mut direction_idle, 60);
+        for (index, key) in [20, 21, 22, 23].into_iter().enumerate() {
+            let moved = input_branch(&selected, key);
+            assert_ne!(
+                direction_idle.display().indexed_frame(),
+                moved.display().indexed_frame(),
+                "direction keys must move the battlefield pointer"
+            );
+            capture(&moved, &format!("strategy-one-{label}-direction-{index}"));
+        }
+    }
+}
