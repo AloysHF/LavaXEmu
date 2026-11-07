@@ -2856,3 +2856,10 @@ without an execution error alone does not establish playability.
   splash and halts the program with code 0.
 - Pipe placement, rotation, scoring, the effect of the selected difficulty on a
   round, level completion and high-score saving remain unverified.
+- The 文曲星 build at `LAVA1 水管工/文曲星端/水管工.lav` runs the same
+  screens with every checked address shifted by eight bytes (menu `0x4797`,
+  manual `0x4443`, high scores `0x2d1f`, difficulty `0x4380`-`0x4430`, about
+  pages `0x4533` / `0x462a`, studio splash `0x27fc` / `0x281f`, and Escape back
+  to `0x4797`). Its difficulty marker is drawn one pixel lower than in the PC
+  build, and 结束游戏 leaves the title menu on screen before halting with code
+  0 instead of drawing the studio splash.

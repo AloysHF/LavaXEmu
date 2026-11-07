@@ -15305,3 +15305,252 @@ fn pipe_works_menu_screens_gameplay_and_exit() {
     }
     assert_eq!(exit_code, Some(0), "结束游戏 exits the program");
 }
+
+fn pipe_works_pixels(emulator: &Emulator, x0: usize, y0: usize, x1: usize, y1: usize) -> Vec<u8> {
+    let display = emulator.display();
+    let frame = display.indexed_frame();
+    let width = display.width() as usize;
+    let mut pixels = Vec::with_capacity((x1 - x0) * (y1 - y0));
+    for row in y0..y1 {
+        pixels.extend_from_slice(&frame[row * width + x0..row * width + x1]);
+    }
+    pixels
+}
+
+fn pipe_works_selected(emulator: &mut Emulator) -> usize {
+    let cells = [
+        (47u32, 25u32),
+        (100, 25),
+        (47, 41),
+        (100, 41),
+        (47, 57),
+        (100, 57),
+    ];
+    let mut darkest = [0usize; 6];
+    for _ in 0..14 {
+        {
+            let display = emulator.display();
+            let frame = display.indexed_frame();
+            let width = display.width() as u32;
+            for (index, (x, y)) in cells.iter().enumerate() {
+                let mut black = 0;
+                for row in *y..y + 11 {
+                    for column in *x..x + 47 {
+                        let pixel = frame[(row * width + column) as usize];
+                        if display.palette()[pixel as usize] == [0, 0, 0] {
+                            black += 1;
+                        }
+                    }
+                }
+                darkest[index] = darkest[index].max(black);
+            }
+        }
+        let _ = emulator.run_frame().unwrap();
+    }
+    let mut best = 0;
+    for index in 1..6 {
+        if darkest[index] > darkest[best] {
+            best = index;
+        }
+    }
+    best
+}
+
+#[test]
+#[ignore = "requires the local LavaX game corpus"]
+fn pipe_works_wqx_menu_screens_gameplay_and_exit() {
+    let frame = |emulator: &Emulator| emulator.display().indexed_frame().to_vec();
+
+    let mut menu = load("LAVA1 水管工/文曲星端/水管工.lav");
+    advance(&mut menu, 90);
+    assert_eq!(menu.vm().pc(), 0x4797, "the title waits in the menu loop");
+    let title = frame(&menu);
+    capture(&menu, "pipe-wqx-title");
+    press(&mut menu, 27);
+    assert_eq!(menu.vm().pc(), 0x4797, "Escape keeps the title open");
+
+    let mut navigation = menu.clone();
+    assert_eq!(pipe_works_selected(&mut navigation), 0, "开始游戏 is first");
+    press(&mut navigation, 21);
+    assert_eq!(
+        pipe_works_selected(&mut navigation),
+        2,
+        "Down moves to 游戏手册"
+    );
+    press(&mut navigation, 21);
+    assert_eq!(
+        pipe_works_selected(&mut navigation),
+        4,
+        "Down moves to 榜上有名"
+    );
+    press(&mut navigation, 21);
+    assert_eq!(
+        pipe_works_selected(&mut navigation),
+        4,
+        "Down stops on 榜上有名"
+    );
+    press(&mut navigation, 22);
+    assert_eq!(
+        pipe_works_selected(&mut navigation),
+        5,
+        "Right moves to 结束游戏"
+    );
+    press(&mut navigation, 20);
+    assert_eq!(
+        pipe_works_selected(&mut navigation),
+        3,
+        "Up moves to 关于游戏"
+    );
+    press(&mut navigation, 23);
+    assert_eq!(
+        pipe_works_selected(&mut navigation),
+        2,
+        "Left moves to 游戏手册"
+    );
+    press(&mut navigation, 22);
+    assert_eq!(
+        pipe_works_selected(&mut navigation),
+        3,
+        "Right moves to 关于游戏"
+    );
+    press(&mut navigation, 21);
+    assert_eq!(
+        pipe_works_selected(&mut navigation),
+        5,
+        "Down moves to 结束游戏"
+    );
+    press(&mut navigation, 22);
+    assert_eq!(
+        pipe_works_selected(&mut navigation),
+        4,
+        "Right wraps to 榜上有名"
+    );
+    press(&mut navigation, 20);
+    assert_eq!(
+        pipe_works_selected(&mut navigation),
+        2,
+        "Up moves to 游戏手册"
+    );
+
+    let mut manual = menu.clone();
+    press(&mut manual, 21);
+    press(&mut manual, 13);
+    assert_eq!(manual.vm().pc(), 0x4443, "游戏手册 opens the manual");
+    assert_ne!(frame(&manual), title, "the manual replaces the title");
+    capture(&manual, "pipe-wqx-manual");
+    press(&mut manual, 21);
+    assert_eq!(manual.vm().pc(), 0x4797, "Down leaves the manual");
+
+    let mut hall = menu.clone();
+    press(&mut hall, 21);
+    press(&mut hall, 21);
+    press(&mut hall, 13);
+    assert_eq!(hall.vm().pc(), 0x2d1f, "榜上有名 opens the high score list");
+    assert_ne!(
+        frame(&hall),
+        title,
+        "the high score list replaces the title"
+    );
+    capture(&hall, "pipe-wqx-hall");
+    press(&mut hall, 13);
+    assert_eq!(
+        hall.vm().pc(),
+        0x4797,
+        "Enter returns from the high score list"
+    );
+
+    let mut settings = menu.clone();
+    press(&mut settings, 22);
+    press(&mut settings, 13);
+    assert!(
+        (0x4380..=0x4430).contains(&settings.vm().pc()),
+        "游戏设定 opens the difficulty selector"
+    );
+    let easy = frame(&settings);
+    capture(&settings, "pipe-wqx-settings");
+    press(&mut settings, 21);
+    let medium = frame(&settings);
+    assert_ne!(medium, easy, "Down moves the difficulty marker");
+    press(&mut settings, 21);
+    assert_ne!(frame(&settings), medium, "Down moves the marker to 困难");
+    press(&mut settings, 13);
+    assert_eq!(settings.vm().pc(), 0x4797, "Enter confirms the difficulty");
+
+    let mut about = menu.clone();
+    press(&mut about, 22);
+    press(&mut about, 21);
+    press(&mut about, 13);
+    assert_eq!(about.vm().pc(), 0x4533, "关于游戏 opens the about page");
+    let first_page = frame(&about);
+    capture(&about, "pipe-wqx-about");
+    press(&mut about, 21);
+    assert_eq!(about.vm().pc(), 0x462a, "Down shows the second about page");
+    assert_ne!(
+        frame(&about),
+        first_page,
+        "the second page changes the text"
+    );
+    press(&mut about, 21);
+    assert_eq!(about.vm().pc(), 0x4797, "Down leaves the about screen");
+
+    let mut game = menu.clone();
+    press(&mut game, 13);
+    assert!(
+        matches!(game.vm().pc(), 0x27fc | 0x281f),
+        "开始游戏 shows the studio splash"
+    );
+    let splash = frame(&game);
+    capture(&game, "pipe-wqx-splash");
+    advance(&mut game, 240);
+    assert!(game.vm().is_running(), "the board keeps running");
+    assert_ne!(game.vm().pc(), 0x4797, "the splash gives way to the board");
+    assert!(
+        !matches!(game.vm().pc(), 0x27fc | 0x281f),
+        "the splash has finished"
+    );
+    assert_ne!(frame(&game), splash, "the pipe board replaces the splash");
+    capture(&game, "pipe-wqx-game");
+
+    let timer = pipe_works_pixels(&game, 139, 48, 157, 74);
+    advance(&mut game, 40);
+    assert_ne!(
+        pipe_works_pixels(&game, 139, 48, 157, 74),
+        timer,
+        "the plumber timer keeps animating"
+    );
+    let cursor = pipe_works_pixels(&game, 56, 0, 132, 28);
+    advance(&mut game, 40);
+    assert_eq!(
+        pipe_works_pixels(&game, 56, 0, 132, 28),
+        cursor,
+        "the board cursor stays put without input"
+    );
+    press(&mut game, 22);
+    let after_right = pipe_works_pixels(&game, 56, 0, 132, 28);
+    assert_ne!(after_right, cursor, "Right moves the cursor");
+    capture(&game, "pipe-wqx-game-cursor");
+    press(&mut game, 21);
+    assert_ne!(
+        pipe_works_pixels(&game, 56, 0, 132, 28),
+        after_right,
+        "Down moves the cursor again"
+    );
+    press(&mut game, 27);
+    assert_eq!(game.vm().pc(), 0x4797, "Escape returns to the title");
+
+    let mut quit = menu.clone();
+    press(&mut quit, 22);
+    press(&mut quit, 21);
+    press(&mut quit, 21);
+    quit.input_mut().set_keys([13]);
+    let mut exit_code = None;
+    for _ in 0..400 {
+        let result = quit.run_frame().unwrap();
+        if let FrameStatus::Halted(code) = result.status {
+            exit_code = Some(code);
+            break;
+        }
+    }
+    quit.input_mut().release_all();
+    assert_eq!(exit_code, Some(0), "结束游戏 exits the program");
+}
