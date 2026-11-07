@@ -18442,3 +18442,138 @@ fn crawler_chronicle_intro_pages_logo_and_halt() {
         "the preview writes nothing"
     );
 }
+
+#[test]
+#[ignore = "requires LAVAX_GAME_ROOT with the game corpus"]
+fn bomb_man_splash_menus_solo_failure_and_duel_win() {
+    const PATH: &str = "LAVA1 版炸弹人/BomB.lav";
+
+    let mut emulator = load(PATH);
+    advance(&mut emulator, 1020);
+    assert_eq!(
+        emulator.vm().pc(),
+        0x1a97,
+        "the intro splash waits for a key"
+    );
+    capture(&emulator, "bomb-man-splash");
+
+    press(&mut emulator, 13);
+    assert_eq!(emulator.vm().pc(), 0x1d96, "enter opens the title menu");
+    capture(&emulator, "bomb-man-title");
+
+    let byte = |emulator: &Emulator, address: usize| emulator.vm().memory()[address];
+
+    press(&mut emulator, 13);
+    assert_eq!(emulator.vm().pc(), 0x16cf, "the mode screen opens");
+    assert_eq!(byte(&emulator, 0x211f), 0, "two players are selected first");
+    press(&mut emulator, 22);
+    assert_eq!(emulator.vm().pc(), 0x16cf, "the mode screen keeps running");
+    assert_eq!(byte(&emulator, 0x211f), 1, "right selects single player");
+    capture(&emulator, "bomb-man-mode");
+
+    press(&mut emulator, 13);
+    assert_eq!(emulator.vm().pc(), 0x17a7, "the map screen opens");
+    assert_eq!(byte(&emulator, 0x2130), b'1', "the first map is selected");
+    press(&mut emulator, 23);
+    assert_eq!(byte(&emulator, 0x2130), b'4', "left wraps to the last map");
+    press(&mut emulator, 22);
+    assert_eq!(
+        byte(&emulator, 0x2130),
+        b'1',
+        "right wraps back to the first map"
+    );
+    capture(&emulator, "bomb-man-map");
+
+    press(&mut emulator, 13);
+    assert_eq!(emulator.vm().pc(), 0x2bdf, "the solo goal screen shows");
+    capture(&emulator, "bomb-man-goal");
+    advance(&mut emulator, 120);
+    assert_eq!(emulator.vm().pc(), 0x2be3, "the goal screen keeps running");
+
+    press(&mut emulator, 13);
+    assert_eq!(emulator.vm().pc(), 0x1b38, "the board loading logo shows");
+    advance(&mut emulator, 120);
+    assert_eq!(emulator.vm().pc(), 0x2f4b, "the solo board runs");
+    capture(&emulator, "bomb-man-solo-board");
+
+    press(&mut emulator, 13);
+    assert_eq!(byte(&emulator, 0x20c5), 0x14, "enter places a bomb");
+    capture(&emulator, "bomb-man-solo-bomb");
+
+    advance(&mut emulator, 180);
+    assert_eq!(emulator.vm().pc(), 0x2f4b, "the bomb is still ticking");
+    advance(&mut emulator, 60);
+    assert_eq!(emulator.vm().pc(), 0x325d, "the bomb explodes");
+    assert_eq!(byte(&emulator, 0x20c5), 0x01, "the bomb cell is burnt");
+    assert_eq!(
+        byte(&emulator, 0x20c4),
+        0x5b,
+        "the fire spreads beside the bomb"
+    );
+    capture(&emulator, "bomb-man-boom");
+    advance(&mut emulator, 60);
+    assert_eq!(emulator.vm().pc(), 0x3274, "the failure message shows");
+    capture(&emulator, "bomb-man-solo-failure");
+
+    advance(&mut emulator, 30);
+    assert_eq!(emulator.vm().pc(), 0x32a0, "the credits show");
+    capture(&emulator, "bomb-man-credits");
+    let mut halted = None;
+    for _ in 0..120 {
+        if let FrameStatus::Halted(code) = emulator.run_frame().unwrap().status {
+            halted = Some(code);
+            break;
+        }
+    }
+    assert_eq!(halted, Some(0), "the credits end the program");
+    assert_eq!(emulator.vm().pc(), 0x32a6, "the exit path runs");
+
+    let mut emulator = load(PATH);
+    advance(&mut emulator, 1020);
+    press(&mut emulator, 13);
+    press(&mut emulator, 13);
+    assert_eq!(byte(&emulator, 0x211f), 0, "two players stay selected");
+    press(&mut emulator, 13);
+    press(&mut emulator, 13);
+    assert_eq!(
+        emulator.vm().pc(),
+        0x1b38,
+        "the duel board loading logo shows"
+    );
+    advance(&mut emulator, 120);
+    assert_eq!(emulator.vm().pc(), 0x22e3, "the duel board runs");
+    capture(&emulator, "bomb-man-duel-board");
+
+    press(&mut emulator, 13);
+    assert_eq!(byte(&emulator, 0x20a6), 0x14, "player one places a bomb");
+    advance(&mut emulator, 240);
+    assert_eq!(emulator.vm().pc(), 0x22e3, "the duel bomb is still ticking");
+    advance(&mut emulator, 60);
+    assert_eq!(emulator.vm().pc(), 0x281b, "the duel bomb explodes");
+    assert_eq!(byte(&emulator, 0x20a6), 0x01, "the duel bomb cell is burnt");
+    assert_eq!(
+        byte(&emulator, 0x20a5),
+        0x5b,
+        "the fire spreads beside the bomb"
+    );
+    advance(&mut emulator, 60);
+    assert_eq!(emulator.vm().pc(), 0x287c, "the winner message shows");
+    capture(&emulator, "bomb-man-duel-win");
+    advance(&mut emulator, 60);
+    assert_eq!(emulator.vm().pc(), 0x28a8, "the duel credits show");
+    capture(&emulator, "bomb-man-duel-credits");
+    let mut halted = None;
+    for _ in 0..3000 {
+        if let FrameStatus::Halted(code) = emulator.run_frame().unwrap().status {
+            halted = Some(code);
+            break;
+        }
+    }
+    assert_eq!(halted, Some(0), "the credits end the duel");
+    assert_eq!(emulator.vm().pc(), 0x28ae, "the duel exit path runs");
+
+    assert!(
+        emulator.files_mut().take_dirty_files().is_empty(),
+        "the game writes nothing"
+    );
+}

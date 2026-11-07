@@ -3273,3 +3273,27 @@ without an execution error alone does not establish playability.
 - The package contains only the prologue and the logo, with no menu, save or
   gameplay entry; whether the logo is part of a larger preview is not
   cross-checked against other entries.
+
+## Bomb Man (LAVA1 版炸弹人)
+
+- Content: `LAVA1 版炸弹人/BomB.lav` with `bombr.dat`.
+- The program opens with a timed countdown splash (`2`, `1`, `BOOM!`) and the
+  `Last Wave` logo; it ignores input until about frame 1000. Enter then opens
+  the title menu at pc `0x1d96`, and Enter again opens the mode screen at pc
+  `0x16cf`.
+- The selection byte at `0x211f` starts at 0 (two players); any direction key
+  toggles it to 1 (single player). Enter keeps the selection and opens the map
+  screen at pc `0x17a7`, where the map code at `0x2130` starts at `'1'` and the
+  four maps wrap (`'1'` left to `'4'`, `'4'` right to `'1'`).
+- In single-player mode Enter opens the goal screen
+  (`过关条件：至少同时炸到3个按钮`) at pc `0x2bdf`, then the loading logo at
+  pc `0x1b38` and the board at pc `0x2f4b`. Enter places a bomb (`0x14`) on
+  the player cell `0x20c5`; the explosion burns the cell (`0x01`) and writes
+  fire at `0x20bc` (`0x5e`) and `0x20c4` (`0x5b`), then shows
+  `闯关失败...` at pc `0x3274` and the credits at pc `0x32a0` before halting
+  with code 0 at pc `0x32a6`.
+- Two-player mode goes from the map screen straight to the loading logo and
+  the duel board at pc `0x22e3`. Enter places player one's bomb on `0x20a6`;
+  the explosion burns the cell and shows `玩家 1 获胜!!` at pc `0x287c`, the
+  credits at pc `0x28a8`, and halts with code 0 at pc `0x28ae`.
+- The game writes no files.
