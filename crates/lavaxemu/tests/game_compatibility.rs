@@ -11731,3 +11731,92 @@ fn strategy_one_versions_show_the_battlefield_and_accept_orders() {
         }
     }
 }
+
+#[test]
+#[ignore = "requires the local game corpus via LAVAX_GAME_ROOT"]
+fn poker_battle_bets_replaces_a_card_and_settles_a_hand() {
+    fn press(e: &mut Emulator, key: u8) {
+        e.input_mut().release_all();
+        for frame in 0..60 {
+            e.input_mut().set_keys((frame == 0).then_some(key));
+            advance(e, 1);
+        }
+    }
+    fn region(e: &Emulator, x0: usize, x1: usize, y0: usize, y1: usize) -> Vec<u8> {
+        let width = usize::from(e.display().width());
+        e.display()
+            .indexed_frame()
+            .chunks_exact(width)
+            .skip(y0)
+            .take(y1 - y0)
+            .flat_map(|row| row[x0..x1].iter().copied())
+            .collect()
+    }
+
+    let path = fixture_path_with_size("扑克大战.lav", Some(10_765));
+    let mut game = load(&path);
+    advance(&mut game, 1200);
+    assert_eq!(game.vm().pc(), 0x28ce);
+    assert!(
+        game.display()
+            .indexed_frame()
+            .iter()
+            .any(|&pixel| pixel != game.display().indexed_frame()[0])
+    );
+    capture(&game, "poker-battle-title");
+
+    press(&mut game, 13);
+    assert_eq!(game.vm().pc(), 0x294c);
+    capture(&game, "poker-battle-instructions");
+    press(&mut game, 13);
+    assert_eq!(game.vm().pc(), 0x1690);
+    capture(&game, "poker-battle-betting");
+
+    let mut idle_bet = game.clone();
+    advance(&mut idle_bet, 60);
+    let mut raised_bet = game.clone();
+    press(&mut raised_bet, 20);
+    assert_eq!(raised_bet.vm().pc(), 0x1690);
+    assert_ne!(
+        region(&idle_bet, 0, 160, 0, 16),
+        region(&raised_bet, 0, 160, 0, 16),
+        "Up must update the displayed betting terms"
+    );
+    capture(&raised_bet, "poker-battle-raised-bet");
+
+    press(&mut raised_bet, 13);
+    assert_eq!(raised_bet.vm().pc(), 0x1aec);
+    capture(&raised_bet, "poker-battle-hand");
+    let mut idle_hand = raised_bet.clone();
+    advance(&mut idle_hand, 60);
+    for (index, key) in b"bnmgh".iter().copied().enumerate() {
+        let mut selected = raised_bet.clone();
+        press(&mut selected, key);
+        assert_eq!(selected.vm().pc(), 0x1aec);
+        assert_ne!(
+            region(&idle_hand, 38, 116, 16, 68),
+            region(&selected, 38, 116, 16, 68),
+            "number key {} must select its corresponding card",
+            index + 1
+        );
+        capture(
+            &selected,
+            &format!("poker-battle-card-{}-selected", index + 1),
+        );
+    }
+
+    let mut selected = raised_bet.clone();
+    press(&mut selected, b'b');
+    assert_ne!(
+        region(&idle_hand, 38, 116, 16, 68),
+        region(&selected, 38, 116, 16, 68),
+        "number key 1 must mark the first card for replacement"
+    );
+    capture(&selected, "poker-battle-card-marked");
+    press(&mut selected, 13);
+    assert_eq!(selected.vm().pc(), 0x29d4);
+    capture(&selected, "poker-battle-round-result");
+    press(&mut selected, 13);
+    assert_eq!(selected.vm().pc(), 0x1690);
+    capture(&selected, "poker-battle-next-bet");
+}

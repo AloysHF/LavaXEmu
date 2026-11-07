@@ -54,6 +54,8 @@ Love preserves both native save slots, including when slot two is saved first.
 The workflow checks movement, distinct save points, and cold restoration.
 Strategy 1 packaged and loose releases reach the battlefield, show unit
 selection, and accept directional and Page Down orders.
+Poker Battle reaches the betting, card replacement and result screens; Up
+adjusts the bet and number keys 1–5 select cards.
 Ninja preserves the complete default name and both native save slots, including
 when slot two is written first. Its workflow covers the opening story, forest
 combat, level-up rewards and restoring two distinct points.

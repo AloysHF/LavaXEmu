@@ -2345,3 +2345,14 @@ without an execution error alone does not establish playability.
   the same frame.
 - Construction menus, sustained resource collection, combat outcomes, saving,
   and later campaign states remain unverified.
+
+## Poker Battle (扑克大战)
+
+- The title had startup-only evidence, so normal betting and card replacement
+  had not been checked. No emulator runtime defect was reproduced.
+- A dedicated release workflow enters the instructions and betting screen,
+  checks that Up changes the displayed terms, uses number keys 1–5 to select
+  cards, replaces one card, settles the hand with Enter, and reaches the next
+  betting round.
+- Reaching the stated long-term money target, additional rounds, and other
+  result paths remain unverified.
