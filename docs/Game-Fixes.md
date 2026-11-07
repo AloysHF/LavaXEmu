@@ -2402,3 +2402,20 @@ without an execution error alone does not establish playability.
   timer.
 - Levels 3 and 4, the timer-based game over, and the completion screen remain
   unverified.
+
+## Battleship (护卫战舰)
+
+- Content: `LAVA1 护卫战舰/护卫战舰.pac` and
+  `LAVA1 护卫战舰/非PAC/护卫战舰.lav`.
+- Startup-only evidence had not covered the menus or a battle. No emulator
+  runtime defect was reproduced; the packaged and unpacked entries execute the
+  identical program.
+- A dedicated release workflow advances past the five intro screens, checks the
+  main-menu cursor moves down and back up, opens the level-1 briefing and
+  cancels it with Escape, then starts the battle. It checks the default ship
+  position, fires with Z (ammo decreases and a shell spawns at the ship), waits
+  for the hit to register a score, moves the ship left and right, waits for the
+  loss of all ships, checks the game-over screen preserves the score, and
+  verifies Escape returns to the main menu.
+- The settings screen, secondary fire with X, pause, later levels, and the
+  victory screen remain unverified.

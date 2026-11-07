@@ -19,9 +19,10 @@ do not satisfy this status.
 - Inverted TextOut checked on 2026-11-01: all 77 dedicated release workflows passed after honoring the source-inversion flag.
 - Virtual storage capacity checked on 2026-11-05: all 95 existing dedicated release workflows passed after the DiskCheck repair.
 - Spot the Difference checked on 2026-11-07: one dedicated release workflow covers the unpacked and packaged entries, finds all three level-1 differences, and advances to level 2.
-- 123 dedicated release workflows passed in this audit.
-- 187 of 324 entry points were loaded by those successful workflows.
-- 137 entry points still need dedicated workflow verification.
+- Battleship checked on 2026-11-07: one dedicated release workflow covers the unpacked and packaged entries, finishes the intro chain, checks both directions of menu navigation and briefing cancel, fires and scores in battle, moves the ship both ways, and returns to the menu after game over.
+- 124 dedicated release workflows passed in this audit.
+- 189 of 324 entry points were loaded by those successful workflows.
+- 135 entry points still need dedicated workflow verification.
 - The historical [startup gallery](Game-Compatibility.md) is a separate check
   and must not be interpreted as this workflow audit.
 
@@ -203,8 +204,8 @@ an optional screenshot directory. Keep each test's logs and captures separate.
 | 158 | `LAVA1 扳手腕/扳手腕.lav` | Game / game package | [Workflow passed: `wrist_wrestling_selects_a_fighter_and_responds_to_gameplay_input`](../crates/lavaxemu/tests/game_compatibility.rs#L12020) |
 | 159 | `LAVA1 找茬/大家来找茬.lav` | Game / game package | [Workflow passed: `spot_the_difference_finds_all_three_differences_and_advances`](../crates/lavaxemu/tests/game_compatibility.rs#L12140) |
 | 160 | `LAVA1 找茬/找茬.pac` | Game / game package | [Workflow passed: `spot_the_difference_finds_all_three_differences_and_advances`](../crates/lavaxemu/tests/game_compatibility.rs#L12140) |
-| 161 | `LAVA1 护卫战舰/护卫战舰.pac` | Game / game package | Pending |
-| 162 | `LAVA1 护卫战舰/非PAC/护卫战舰.lav` | Game / game package | Pending |
+| 161 | `LAVA1 护卫战舰/护卫战舰.pac` | Game / game package | [Workflow passed: `battleship_advances_menus_and_battle_and_returns_after_game_over`](../crates/lavaxemu/tests/game_compatibility.rs#L12321) |
+| 162 | `LAVA1 护卫战舰/非PAC/护卫战舰.lav` | Game / game package | [Workflow passed: `battleship_advances_menus_and_battle_and_returns_after_game_over`](../crates/lavaxemu/tests/game_compatibility.rs#L12321) |
 | 163 | `LAVA1 拳击/boxing.lav` | Game / game package | Pending |
 | 164 | `LAVA1 拿火柴/拿火柴.lav` | Game / game package | Pending |
 | 165 | `LAVA1 接水管/接水管.lav` | Game / game package | Pending |

@@ -12315,3 +12315,150 @@ fn spot_the_difference_finds_all_three_differences_and_advances() {
         capture(&emulator, &format!("{name}-level2"));
     }
 }
+
+#[test]
+#[ignore = "requires the local game corpus via LAVAX_GAME_ROOT"]
+fn battleship_advances_menus_and_battle_and_returns_after_game_over() {
+    fn word(emulator: &Emulator, address: usize) -> u16 {
+        u16::from_le_bytes(
+            emulator.vm().memory()[address..address + 2]
+                .try_into()
+                .unwrap(),
+        )
+    }
+    fn score(emulator: &Emulator) -> u32 {
+        u32::from_le_bytes(emulator.vm().memory()[0x3380..0x3384].try_into().unwrap())
+    }
+    fn wait_for_input(emulator: &mut Emulator) -> usize {
+        for _ in 0..2400 {
+            let result = emulator
+                .run_frame()
+                .expect("game must execute without errors");
+            match result.status {
+                FrameStatus::WaitingForInput => return emulator.vm().pc(),
+                FrameStatus::Halted(_) => panic!("game exited while waiting for input"),
+                _ => {}
+            }
+        }
+        panic!("the game did not wait for input");
+    }
+    for (path, name) in [
+        ("LAVA1 护卫战舰/护卫战舰.pac", "battleship-pac"),
+        ("LAVA1 护卫战舰/非PAC/护卫战舰.lav", "battleship-lav"),
+    ] {
+        let mut emulator = load(path);
+        assert_eq!(wait_for_input(&mut emulator), 0x16b, "{path} intro screen");
+        capture(&emulator, &format!("{name}-intro"));
+        for _ in 0..4 {
+            press(&mut emulator, 13);
+            assert_eq!(wait_for_input(&mut emulator), 0x1ec, "{path} splash chain");
+        }
+        press(&mut emulator, 13);
+        assert_eq!(wait_for_input(&mut emulator), 0xb26, "{path} main menu");
+        let menu = emulator.display().indexed_frame().to_vec();
+        capture(&emulator, &format!("{name}-menu"));
+        press(&mut emulator, 21);
+        assert_ne!(
+            emulator.display().indexed_frame(),
+            menu.as_slice(),
+            "{path} down must move the menu cursor"
+        );
+        press(&mut emulator, 20);
+        assert_eq!(
+            emulator.display().indexed_frame(),
+            menu.as_slice(),
+            "{path} up must restore the menu cursor"
+        );
+        press(&mut emulator, 13);
+        assert_eq!(
+            wait_for_input(&mut emulator),
+            0x1aa9,
+            "{path} must open the level briefing"
+        );
+        capture(&emulator, &format!("{name}-briefing"));
+        press(&mut emulator, 27);
+        assert_eq!(
+            wait_for_input(&mut emulator),
+            0xb26,
+            "{path} escape must cancel the briefing"
+        );
+        press(&mut emulator, 13);
+        assert_eq!(wait_for_input(&mut emulator), 0x1aa9);
+        press(&mut emulator, 13);
+        let mut started = false;
+        for _ in 0..600 {
+            advance(&mut emulator, 1);
+            if emulator.vm().pc() == 0x2b14
+                && word(&emulator, 0x2fd0) == 0
+                && word(&emulator, 0x2fca) > 0
+            {
+                started = true;
+                break;
+            }
+        }
+        assert!(started, "{path} must enter the battle loop");
+        assert_eq!(word(&emulator, 0x2fd2), 65, "{path} initial ship position");
+        capture(&emulator, &format!("{name}-battle"));
+        emulator.input_mut().set_keys(*b"z");
+        advance(&mut emulator, 1);
+        emulator.input_mut().release_all();
+        advance(&mut emulator, 2);
+        assert_eq!(word(&emulator, 0x2fbc), 2, "{path} fire must consume ammo");
+        assert_eq!(word(&emulator, 0x2fdc), 1, "{path} fire must spawn a shell");
+        assert_eq!(
+            word(&emulator, 0x2ff0),
+            65,
+            "{path} shell must launch from the ship"
+        );
+        capture(&emulator, &format!("{name}-shot"));
+        advance(&mut emulator, 20);
+        assert_eq!(score(&emulator), 50, "{path} the shot must destroy a ship");
+        assert_eq!(word(&emulator, 0x2fdc), 0, "{path} the shell must be spent");
+        emulator.input_mut().set_keys([22]);
+        advance(&mut emulator, 3);
+        emulator.input_mut().release_all();
+        advance(&mut emulator, 1);
+        assert_eq!(
+            word(&emulator, 0x2fd2),
+            86,
+            "{path} right must move the ship"
+        );
+        capture(&emulator, &format!("{name}-right"));
+        emulator.input_mut().set_keys([23]);
+        advance(&mut emulator, 2);
+        emulator.input_mut().release_all();
+        advance(&mut emulator, 1);
+        assert_eq!(
+            word(&emulator, 0x2fd2),
+            72,
+            "{path} left must move the ship"
+        );
+        capture(&emulator, &format!("{name}-left"));
+        let mut game_over = false;
+        for _ in 0..600 {
+            let result = emulator
+                .run_frame()
+                .expect("game must execute without errors");
+            if result.status == FrameStatus::WaitingForInput {
+                game_over = true;
+                break;
+            }
+            assert!(
+                !matches!(result.status, FrameStatus::Halted(_)),
+                "{path} game exited before the game-over screen"
+            );
+        }
+        assert!(game_over, "{path} must reach the game-over screen");
+        assert_eq!(emulator.vm().pc(), 0x197f, "{path} game-over wait");
+        assert_eq!(word(&emulator, 0x2fb8), 0, "{path} all ships must be lost");
+        assert_eq!(score(&emulator), 50, "{path} the score must be preserved");
+        capture(&emulator, &format!("{name}-game-over"));
+        press(&mut emulator, 27);
+        assert_eq!(
+            wait_for_input(&mut emulator),
+            0xb26,
+            "{path} escape must return to the main menu"
+        );
+        capture(&emulator, &format!("{name}-back-to-menu"));
+    }
+}
