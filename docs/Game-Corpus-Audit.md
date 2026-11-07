@@ -68,9 +68,10 @@ do not satisfy this status.
 - SpaceWar checked on 2026-11-08: one dedicated release workflow leaves the splash for the three-speed menu with wrapping in both directions and an Escape halt, starts the first stage with five lives at the fixed ship position, clamps the ship at all four screen edges, fires a bullet that climbs and expires, scores one, two and three kills with the matching hud digits, reaches game over on the last life, and returns through the acknowledgement and splash to the reset speed menu without writing files.
 - All Out checked on 2026-11-08: one dedicated release workflow checks the level intro and quit prompts, cursor clamping in all four directions, cross flips at a corner and the centre, the five-move solve that lights all 25 cells, the move counter, and the immediate load of the second board with reset counters, without writing files.
 - Sprite Island 5 checked on 2026-11-08: one dedicated release workflow covers the packaged and unpacked entries, walks both splash screens into the six-entry menu, opens the three-row settings screen with its defaults, wraps the enemy and row choices, clamps the speed and stores enemy/speed/difficulty in the config file, reloads that file at startup, loads the first level with its tile grid, gets the player caught for one life, moves three tiles right, pauses and resumes, saves the first slot with its twenty-nine-byte record, escapes to the menu, loads the slot back with the saved position and lives, reports an empty slot, pages the five-page manual, opens the about credits, and halts with code 0 from the quit credits.
-- 174 dedicated release workflows passed in this audit.
-- 248 of 324 entry points were loaded by those successful workflows.
-- 76 entry points still need dedicated workflow verification.
+- Absolute Fall checked on 2026-11-08: one dedicated release workflow leaves the splash for the four-entry menu, clamps the selection against both ends, scrolls the help with a clamped top and returns, halts with code 1 from the farewell, starts the first level with its cursor, five lives, four stones and the wall/stone layout, wraps the cursor at all four edges, ignores Enter on an empty cell, picks up and merges both matching pairs to win and load the second level with the saved furthest level, restarts with F1, opens and scrolls the in-game help with F5, wraps and clamps the level select with F3, starts either unlocked level, saves the progress on Escape, resumes the saved level from Continue, and creates a zeroed save when Continue has no file, without touching the level or graphics resources.
+- 175 dedicated release workflows passed in this audit.
+- 249 of 324 entry points were loaded by those successful workflows.
+- 75 entry points still need dedicated workflow verification.
 - The historical [startup gallery](Game-Compatibility.md) is a separate check
   and must not be interpreted as this workflow audit.
 
@@ -335,7 +336,7 @@ an optional screenshot directory. Keep each test's logs and captures separate.
 | 241 | `LAVA1 类似十全十美/allout.lav` | Game / game package | [Workflow passed: `allout_solves_the_first_board_and_advances_to_the_next`](../crates/lavaxemu/tests/game_compatibility.rs#L22067) |
 | 242 | `LAVA1 精灵岛5-勇者之旅/精灵岛5.lav` | Game / game package | [Workflow passed: `sprite_island_five_runs_the_menu_settings_saves_and_first_level`](../crates/lavaxemu/tests/game_compatibility.rs#L22249) |
 | 243 | `LAVA1 精灵岛5-勇者之旅/精灵岛5.pac` | Game / game package | [Workflow passed: `sprite_island_five_runs_the_menu_settings_saves_and_first_level`](../crates/lavaxemu/tests/game_compatibility.rs#L22249) |
-| 244 | `LAVA1 绝对下落/分步安装/绝对下落.lav` | Game / game package | Pending |
+| 244 | `LAVA1 绝对下落/分步安装/绝对下落.lav` | Game / game package | [Workflow passed: `absolute_fall_scrolls_help_saves_and_solves_the_first_level`](../crates/lavaxemu/tests/game_compatibility.rs#L22531) |
 | 245 | `LAVA1 美少女梦工厂2黑白版/PM2.lav` | Game / game package | [Workflow passed: `princess_maker_2_shows_stats_executes_a_plan_and_reloads_its_save`](../crates/lavaxemu/tests/game_compatibility.rs#L1616) |
 | 246 | `LAVA1 翼剑天殇/翼剑天殇.pac` | Game / game package | Pending |
 | 247 | `LAVA1 翼剑天殇/非pac/Wing.lav` | Game / game package | Pending |

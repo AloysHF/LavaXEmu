@@ -3773,3 +3773,48 @@ without an execution error alone does not establish playability.
   with code 0 at `0x2f6f` (`0x2f8a`). Both builds write identical slot
   bytes for the audit script. No additional emulator changes were
   required.
+
+## Absolute Fall (LAVA1 绝对下落)
+
+- Content: `LAVA1 绝对下落/分步安装/绝对下落.lav`. The unpacked build opens
+  `/LavaData/xl_map.dat` and `/LavaData/xl_pic.dat`, which the flat
+  fallback resolves to the sibling files of 1950 and 9600 bytes; the
+  bundled `xzfdmap.bas` is not opened. No emulator changes were required.
+- The splash at `0x1ea4` gives way automatically to the four-entry menu at
+  `0x1d31`. The selection word is `0x5566`: Up and Left decrement it with
+  a floor of zero, Down and Right increment it with a ceiling of three.
+- Help opens at `0x768`; its scroll offset is the lword local at `bp+7`.
+  Up decrements it with a floor of zero, Down increments it, and Escape
+  returns to the menu with the selection unchanged.
+- Quit shows the farewell at `0x914`; any key pushes 1 to `sys13` and the
+  program halts at `0x918` with code 1.
+- Start and Continue both go through `/LavaData/xl_user.dat`, two bytes
+  holding the current level and the furthest level. Continue without
+  that file creates a zeroed pair and starts the first level; reaching a
+  new level writes the pair with the new furthest level.
+- The play loop waits at `0x149d`. The board is 176 bytes at `0x2048`
+  with `index = x * 11 + y`; the cursor is at `0x2002/0x2003` and wraps
+  over columns `1..=15` and rows `1..=10`. The held stone is copied to
+  `0x2004/0x2005`, the remaining stone count is `0x200a`, the level and
+  its furthest value are `0x2008/0x2009`, and the lives start at five in
+  `0x2014`.
+- Level one stores walls at rows four and seven from column three through
+  thirteen plus full columns three and thirteen between them, two 3-stones
+  at `(5, 6)` and `(7, 6)`, and two 4-stones at `(9, 6)` and `(11, 6)`.
+  The map file is read as 150-byte records, one per level.
+- Enter on a stone enters the pick-up state at `0x167f`; an arrow then
+  moves the held stone one cell and resolves a match immediately, emptying
+  both cells and decrementing the stone count. Enter on an empty cell does
+  nothing. The first level is solved by five Down and four Right steps
+  into the 3-pair, Right, three more Right steps into the 4-pair and
+  Right, which shows the win screen at `0x145d`. Any key then loads the
+  second level and saves `[1, 1]`.
+- F1 restarts the level, F5 opens the same help page in game and Escape
+  resumes, and F3 opens the level select at `0xf80`. The selected level is
+  shown as one plus the index in `0x2011`; Up wraps to the furthest level,
+  Down clamps at it, Enter starts the chosen level, and Escape cancels
+  back to the level.
+- Escape in play saves `[level, furthest]` and returns to the menu with
+  the selection reset.
+- Not covered: the layouts and solutions of the later levels, the
+  life-decrement path, and the unused remainder of the level records.

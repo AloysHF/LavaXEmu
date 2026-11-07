@@ -22525,3 +22525,376 @@ fn sprite_island_five_runs_the_menu_settings_saves_and_first_level() {
         );
     }
 }
+
+#[test]
+#[ignore = "requires the local game corpus via LAVAX_GAME_ROOT"]
+fn absolute_fall_scrolls_help_saves_and_solves_the_first_level() {
+    let path = "LAVA1 绝对下落/分步安装/绝对下落.lav";
+    let tap = |emulator: &mut Emulator, key: u8| {
+        emulator.input_mut().set_keys([key]);
+        let mut status = emulator.run_frame().unwrap().status;
+        emulator.input_mut().set_keys([]);
+        let mut frames = 1;
+        while !matches!(
+            status,
+            FrameStatus::WaitingForInput | FrameStatus::Halted(_)
+        ) {
+            status = emulator.run_frame().unwrap().status;
+            frames += 1;
+            assert!(frames < 600, "the game must return to a key wait");
+        }
+    };
+    let cell =
+        |emulator: &Emulator, x: usize, y: usize| emulator.vm().memory()[0x2048 + x * 11 + y];
+    let help_offset = |emulator: &Emulator| {
+        let bp = emulator.vm().local_bp() as usize;
+        emulator.vm().memory()[bp + 7]
+    };
+
+    let mut menu = load(path);
+    advance(&mut menu, 30);
+    assert_eq!(menu.vm().pc(), 0x1ea4, "the splash shows first");
+    advance(&mut menu, 270);
+    assert_eq!(menu.vm().pc(), 0x1d31, "the menu waits after the splash");
+    {
+        let files = menu.files().files();
+        let size = |name: &str| {
+            files
+                .iter()
+                .find(|info| info.path == name)
+                .map(|info| info.size)
+        };
+        assert_eq!(
+            size("/xl_map.dat"),
+            Some(1950),
+            "the level map is available"
+        );
+        assert_eq!(
+            size("/xl_pic.dat"),
+            Some(9600),
+            "the graphics are available"
+        );
+    }
+    assert!(
+        menu.files_mut().take_dirty_files().is_empty(),
+        "booting does not write files"
+    );
+
+    press(&mut menu, 20);
+    press(&mut menu, 23);
+    assert_eq!(
+        menu.vm().memory()[0x5566],
+        0,
+        "up and left stop at the first item"
+    );
+    press(&mut menu, 21);
+    assert_eq!(menu.vm().memory()[0x5566], 1, "down selects continue");
+    press(&mut menu, 22);
+    assert_eq!(menu.vm().memory()[0x5566], 2, "right selects help");
+    press(&mut menu, 21);
+    press(&mut menu, 21);
+    assert_eq!(menu.vm().memory()[0x5566], 3, "down stops at quit");
+    press(&mut menu, 23);
+    assert_eq!(menu.vm().memory()[0x5566], 2, "left backs up");
+
+    press(&mut menu, 13);
+    assert_eq!(menu.vm().pc(), 0x768, "enter opens the help");
+    press(&mut menu, 20);
+    press(&mut menu, 20);
+    assert_eq!(help_offset(&menu), 0, "up stops at the first line");
+    press(&mut menu, 21);
+    press(&mut menu, 21);
+    assert_eq!(help_offset(&menu), 2, "down scrolls the text");
+    press(&mut menu, 27);
+    assert_eq!(menu.vm().pc(), 0x1d31, "escape returns to the menu");
+    assert_eq!(
+        menu.vm().memory()[0x5566],
+        2,
+        "the menu keeps its selection"
+    );
+
+    press(&mut menu, 21);
+    assert_eq!(menu.vm().memory()[0x5566], 3, "quit is selected");
+    press(&mut menu, 13);
+    assert_eq!(menu.vm().pc(), 0x914, "quitting shows the farewell");
+    menu.input_mut().set_keys([13]);
+    let mut halted = None;
+    for _ in 0..10 {
+        if let FrameStatus::Halted(code) = menu.run_frame().unwrap().status {
+            halted = Some(code);
+            break;
+        }
+    }
+    menu.input_mut().set_keys([]);
+    assert_eq!(halted, Some(1), "the farewell exits the program");
+    assert_eq!(menu.vm().pc(), 0x918, "the program stops cleanly");
+
+    let mut game = load(path);
+    advance(&mut game, 300);
+    assert_eq!(game.vm().pc(), 0x1d31, "the menu is ready");
+    tap(&mut game, 13);
+    assert_eq!(game.vm().pc(), 0x149d, "enter starts the first level");
+    assert_eq!(
+        &game.vm().memory()[0x2002..0x2004],
+        &[1, 1],
+        "the cursor starts at the corner"
+    );
+    assert_eq!(game.vm().memory()[0x2008], 0, "the first level is loaded");
+    assert_eq!(game.vm().memory()[0x2009], 0, "no later level is known");
+    assert_eq!(game.vm().memory()[0x200a], 4, "four stones remain");
+    assert_eq!(game.vm().memory()[0x2014], 5, "the player has five lives");
+    assert_eq!(cell(&game, 5, 6), 3, "the first three stone loads");
+    assert_eq!(cell(&game, 7, 6), 3, "the matching three stone loads");
+    assert_eq!(cell(&game, 9, 6), 4, "the first four stone loads");
+    assert_eq!(cell(&game, 11, 6), 4, "the matching four stone loads");
+    assert_eq!(cell(&game, 3, 4), 2, "the top wall loads");
+    assert_eq!(cell(&game, 13, 7), 2, "the bottom wall loads");
+    assert_eq!(cell(&game, 1, 1), 1, "the start cell is empty");
+
+    tap(&mut game, 23);
+    assert_eq!(
+        game.vm().memory()[0x2002],
+        15,
+        "left wraps to the last column"
+    );
+    tap(&mut game, 20);
+    assert_eq!(game.vm().memory()[0x2003], 10, "up wraps to the last row");
+    tap(&mut game, 22);
+    assert_eq!(
+        game.vm().memory()[0x2002],
+        1,
+        "right wraps to the first column"
+    );
+    tap(&mut game, 21);
+    assert_eq!(game.vm().memory()[0x2003], 1, "down wraps to the first row");
+    tap(&mut game, 13);
+    assert_eq!(
+        game.vm().pc(),
+        0x149d,
+        "enter on an empty cell does nothing"
+    );
+    assert_eq!(
+        game.vm().memory()[0x200a],
+        4,
+        "the stone count is unchanged"
+    );
+
+    for _ in 0..5 {
+        tap(&mut game, 21);
+    }
+    for _ in 0..4 {
+        tap(&mut game, 22);
+    }
+    assert_eq!(
+        &game.vm().memory()[0x2002..0x2004],
+        &[5, 6],
+        "the cursor reaches the first pair"
+    );
+    tap(&mut game, 13);
+    assert_eq!(game.vm().pc(), 0x167f, "enter picks up a stone");
+    assert_eq!(
+        &game.vm().memory()[0x2004..0x2006],
+        &[5, 6],
+        "the stone is held"
+    );
+    tap(&mut game, 22);
+    assert_eq!(game.vm().pc(), 0x149d, "moving the stone resolves the pair");
+    assert_eq!(game.vm().memory()[0x200a], 2, "the three pair vanishes");
+    assert_eq!(
+        &game.vm().memory()[0x2002..0x2004],
+        &[6, 6],
+        "the cursor follows the stone"
+    );
+    assert_eq!(cell(&game, 5, 6), 1, "the source cell empties");
+    assert_eq!(cell(&game, 6, 6), 1, "the target cell empties");
+    assert_eq!(cell(&game, 7, 6), 1, "the matched stone empties");
+
+    for _ in 0..3 {
+        tap(&mut game, 22);
+    }
+    assert_eq!(
+        &game.vm().memory()[0x2002..0x2004],
+        &[9, 6],
+        "the cursor reaches the second pair"
+    );
+    tap(&mut game, 13);
+    assert_eq!(game.vm().pc(), 0x167f, "enter picks up the second stone");
+    assert_eq!(
+        &game.vm().memory()[0x2004..0x2006],
+        &[9, 6],
+        "the stone is held"
+    );
+    tap(&mut game, 22);
+    assert_eq!(game.vm().pc(), 0x145d, "the second pair wins the level");
+    assert_eq!(game.vm().memory()[0x200a], 0, "no stones remain");
+    assert_eq!(cell(&game, 9, 6), 1, "the last matched stones empty");
+    assert_eq!(cell(&game, 11, 6), 1, "the last matched stones empty");
+    assert!(
+        game.files_mut().take_dirty_files().is_empty(),
+        "winning alone does not write files"
+    );
+
+    tap(&mut game, 13);
+    assert_eq!(game.vm().pc(), 0x149d, "a key loads the second level");
+    assert_eq!(
+        &game.vm().memory()[0x2008..0x200a],
+        &[1, 1],
+        "the second level is reached"
+    );
+    assert_eq!(
+        game.vm().memory()[0x200a],
+        7,
+        "the second level stones load"
+    );
+    assert_eq!(
+        &game.vm().memory()[0x2002..0x2004],
+        &[1, 1],
+        "the cursor resets"
+    );
+    let saved = game.files_mut().take_dirty_files();
+    assert_eq!(saved.len(), 1, "only the progress file changes");
+    assert_eq!(
+        saved[0].0, "/lavadata/xl_user.dat",
+        "the progress file is named"
+    );
+    assert_eq!(saved[0].1, [1, 1], "the save records the furthest level");
+
+    tap(&mut game, 21);
+    assert_eq!(game.vm().memory()[0x2003], 2, "the cursor moves");
+    tap(&mut game, 28);
+    assert_eq!(game.vm().pc(), 0x149d, "F1 restarts the level");
+    assert_eq!(
+        &game.vm().memory()[0x2002..0x2004],
+        &[1, 1],
+        "F1 resets the cursor"
+    );
+    assert_eq!(game.vm().memory()[0x200a], 7, "F1 restores the stones");
+
+    tap(&mut game, 21);
+    assert_eq!(game.vm().memory()[0x2003], 2, "the cursor moves again");
+    tap(&mut game, 25);
+    assert_eq!(game.vm().pc(), 0x768, "F5 opens the help in game");
+    assert_eq!(game.vm().memory()[0x2003], 2, "the level is paused");
+    press(&mut game, 21);
+    assert_eq!(help_offset(&game), 1, "the in-game help scrolls");
+    press(&mut game, 27);
+    assert_eq!(game.vm().pc(), 0x149d, "escape resumes the level");
+    assert_eq!(
+        &game.vm().memory()[0x2002..0x2004],
+        &[1, 2],
+        "the cursor is kept"
+    );
+    assert_eq!(game.vm().memory()[0x200a], 7, "the stones are kept");
+
+    tap(&mut game, 30);
+    assert_eq!(game.vm().pc(), 0xf80, "F3 opens the level select");
+    assert_eq!(
+        game.vm().memory()[0x2011],
+        2,
+        "the current level is selected"
+    );
+    press(&mut game, 20);
+    assert_eq!(game.vm().memory()[0x2011], 1, "up moves to the first level");
+    press(&mut game, 20);
+    assert_eq!(
+        game.vm().memory()[0x2011],
+        2,
+        "up wraps to the furthest level"
+    );
+    press(&mut game, 21);
+    assert_eq!(
+        game.vm().memory()[0x2011],
+        2,
+        "down stops at the furthest level"
+    );
+    press(&mut game, 20);
+    assert_eq!(
+        game.vm().memory()[0x2011],
+        1,
+        "up returns to the first level"
+    );
+    tap(&mut game, 13);
+    assert_eq!(game.vm().pc(), 0x149d, "enter starts the chosen level");
+    assert_eq!(game.vm().memory()[0x2008], 0, "the first level reloads");
+    assert_eq!(game.vm().memory()[0x200a], 4, "its stones reload");
+
+    tap(&mut game, 30);
+    assert_eq!(game.vm().pc(), 0xf80, "F3 reopens the level select");
+    assert_eq!(
+        game.vm().memory()[0x2011],
+        1,
+        "the current level is selected"
+    );
+    press(&mut game, 21);
+    assert_eq!(
+        game.vm().memory()[0x2011],
+        2,
+        "down moves to the furthest level"
+    );
+    tap(&mut game, 13);
+    assert_eq!(game.vm().pc(), 0x149d, "enter returns to the second level");
+    assert_eq!(game.vm().memory()[0x2008], 1, "the second level reloads");
+    assert_eq!(game.vm().memory()[0x200a], 7, "its stones reload");
+
+    press(&mut game, 27);
+    assert_eq!(
+        game.vm().pc(),
+        0x1d31,
+        "escape leaves the level for the menu"
+    );
+    assert_eq!(game.vm().memory()[0x5566], 0, "the menu starts over");
+    let saved = game.files_mut().take_dirty_files();
+    assert_eq!(saved.len(), 1, "leaving writes the progress file");
+    assert_eq!(saved[0].1, [1, 1], "the furthest level stays saved");
+
+    let mut resumed = load(path);
+    assert!(
+        resumed
+            .files_mut()
+            .import_file("/LavaData/xl_user.dat", vec![1, 1]),
+        "the save seed is imported"
+    );
+    advance(&mut resumed, 300);
+    assert_eq!(resumed.vm().pc(), 0x1d31, "the menu waits");
+    press(&mut resumed, 21);
+    assert_eq!(resumed.vm().memory()[0x5566], 1, "continue is selected");
+    tap(&mut resumed, 13);
+    assert_eq!(resumed.vm().pc(), 0x149d, "continue loads the saved level");
+    assert_eq!(
+        &resumed.vm().memory()[0x2008..0x200a],
+        &[1, 1],
+        "the save is read"
+    );
+    assert_eq!(
+        resumed.vm().memory()[0x200a],
+        7,
+        "the saved level stones load"
+    );
+    assert_eq!(
+        &resumed.vm().memory()[0x2002..0x2004],
+        &[1, 1],
+        "the cursor resets"
+    );
+
+    let mut missing = load(path);
+    advance(&mut missing, 300);
+    press(&mut missing, 21);
+    tap(&mut missing, 13);
+    assert_eq!(
+        missing.vm().pc(),
+        0x149d,
+        "continue without a save starts over"
+    );
+    assert_eq!(missing.vm().memory()[0x2008], 0, "the first level loads");
+    let created = missing.files_mut().take_dirty_files();
+    assert_eq!(created.len(), 1, "a missing save is created");
+    assert_eq!(
+        created[0].0, "/lavadata/xl_user.dat",
+        "the progress file is named"
+    );
+    assert_eq!(
+        created[0].1,
+        [0, 0],
+        "the new save starts at the first level"
+    );
+}
