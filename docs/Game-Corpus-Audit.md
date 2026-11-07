@@ -57,9 +57,10 @@ do not satisfy this status.
 - Bomb Man checked on 2026-11-08: one dedicated release workflow waits out the countdown and title animation, walks the title, mode and map screens, checks the two-player/single-player toggle and the four-map wrap, plays a solo bomb to the failure and credits screens, and plays a duel bomb to player one's win and credits with halt code 0 without writing files.
 - Cat-Dog War 2 checked on 2026-11-08: one dedicated release workflow walks the help and key-guide pages, checks the three difficulty settings and their CPU power values, opens the single-player arena, item and combat menus with wrapping item selection, charges a strike until the opponent's HP drops, leaves through the exit and credits screens with halt code 0, then opens the two-player arena, both players' menus and item selection, and returns to the title without writing files.
 - Biorhythm checked on 2026-11-08: one dedicated release workflow opens the birth-date form with its 2000/01/01 default, walks the three help pages with clamped ends and returns with Escape, rejects a year before 1900, a month above 12 and a day above 31 while accepting 1990/12/17, opens the query form with the same defaults, refuses a query on the birth date, reports 25/64/68 and 83/92/93 percent for the 1990/12/18 and 1990/12/24 queries with the next birthday and elapsed day counts, opens the about page, and halts with code 0 from the birth, refusal and result screens without writing files.
-- 163 dedicated release workflows passed in this audit.
-- 232 of 324 entry points were loaded by those successful workflows.
-- 92 entry points still need dedicated workflow verification.
+- CrazyMap Editor checked on 2026-11-08: one dedicated release workflow clamps the menu selection in both directions, opens and pages the seven help screens, creates a named level with the fixed header, shows the level list with the trailing digit erased by the game's own opaque font background, paints and clears the 11x11 map through the letter keys, wraps the cursor at both edges, saves and reloads the painted cells, declines a discard prompt without writing, rewrites the level pack when leaving a populated list, exits the program from an empty list, and opens the built-in map without writing files.
+- 164 dedicated release workflows passed in this audit.
+- 233 of 324 entry points were loaded by those successful workflows.
+- 91 entry points still need dedicated workflow verification.
 - The historical [startup gallery](Game-Compatibility.md) is a separate check
   and must not be interpreted as this workflow audit.
 
@@ -302,7 +303,7 @@ an optional screenshot directory. Keep each test's logs and captures separate.
 | 219 | `LAVA1 疯狂F2/F2.lav` | Game / game package | [Workflow passed: `crazy_f2_counts_presses_and_finishes_the_timed_round`](../crates/lavaxemu/tests/game_compatibility.rs#L499) |
 | 220 | `LAVA1 疯狂弹球/疯狂弹球.pac` | Game / game package | [Workflow passed: `crazy_ball_packaged_and_loose_versions_load_the_stage_and_move_the_paddle`](../crates/lavaxemu/tests/game_compatibility.rs#L1096) |
 | 221 | `LAVA1 疯狂弹球/非pac/crazyball.lav` | Game / game package | [Workflow passed: `crazy_ball_packaged_and_loose_versions_load_the_stage_and_move_the_paddle`](../crates/lavaxemu/tests/game_compatibility.rs#L1096) |
-| 222 | `LAVA1 疯狂弹球/非pac/mapedit.lav` | Map editor | Pending |
+| 222 | `LAVA1 疯狂弹球/非pac/mapedit.lav` | Map editor | [Workflow passed: `crazy_map_editor_menus_maps_and_saves`](../crates/lavaxemu/tests/game_compatibility.rs#L19009) |
 | 223 | `LAVA1 疯狂跳棋/打包的文件/fktq.pac` | Game / game package | Pending |
 | 224 | `LAVA1 疯狂跳棋/疯狂跳棋.lav` | Game / game package | Pending |
 | 225 | `LAVA1 疾龙云飞/打包的文件/bobo_cloud.pac` | Game / game package | [Workflow passed: `cloud_versions_configure_keys_jump_and_persist_the_configuration`](../crates/lavaxemu/tests/game_compatibility.rs#L2022) |

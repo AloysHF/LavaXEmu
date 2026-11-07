@@ -19003,3 +19003,393 @@ fn biorhythm_dates_help_results_and_exit() {
     assert_eq!(halted, Some(0), "escape on the birth form ends the program");
     assert_eq!(emulator.vm().pc(), 0x1edd, "the exit path runs");
 }
+
+#[test]
+#[ignore = "requires LAVAX_GAME_ROOT with the game corpus"]
+fn crazy_map_editor_menus_maps_and_saves() {
+    const PATH: &str = "LAVA1 疯狂弹球/非pac/mapedit.lav";
+    const HEADER: [u8; 20] = [
+        0x00, b'M', b'A', b'I', b'N', 0x00, 0xcd, 0xbc, 0x00, 0xbc, 0xd3, 0xd4, 0xd8, 0xb5, 0xd8,
+        0xcd, 0xbc, 0x00, 0xca, 0xb9,
+    ];
+
+    let byte = |emulator: &Emulator, address: usize| emulator.vm().memory()[address];
+    let word = |emulator: &Emulator, address: usize| {
+        u16::from_le_bytes(
+            emulator.vm().memory()[address..address + 2]
+                .try_into()
+                .unwrap(),
+        )
+    };
+
+    let mut emulator = load(PATH);
+    advance(&mut emulator, 300);
+    assert_eq!(emulator.vm().pc(), 0x1e6, "the main menu waits for a key");
+    assert_eq!(word(&emulator, 0x2194), 1, "create map starts selected");
+    capture(&emulator, "crazy-map-editor-menu");
+
+    press(&mut emulator, 20);
+    assert_eq!(word(&emulator, 0x2194), 0, "up selects exit editing");
+    capture(&emulator, "crazy-map-editor-menu-exit");
+    press(&mut emulator, 20);
+    assert_eq!(word(&emulator, 0x2194), 3, "the selection wraps to help");
+    press(&mut emulator, 21);
+    assert_eq!(
+        word(&emulator, 0x2194),
+        0,
+        "down wraps back to exit editing"
+    );
+    press(&mut emulator, 21);
+    press(&mut emulator, 21);
+    assert_eq!(word(&emulator, 0x2194), 2, "down selects load map");
+    capture(&emulator, "crazy-map-editor-menu-load");
+    press(&mut emulator, 21);
+    assert_eq!(word(&emulator, 0x2194), 3, "down selects help");
+    capture(&emulator, "crazy-map-editor-menu-help");
+
+    press(&mut emulator, 13);
+    assert_eq!(emulator.vm().pc(), 0xfb1, "the first help page opens");
+    capture(&emulator, "crazy-map-editor-help-1");
+    for (page, name) in [
+        (0x1016, "crazy-map-editor-help-2"),
+        (0x107c, "crazy-map-editor-help-3"),
+        (0x10ea, "crazy-map-editor-help-4"),
+        (0x1169, "crazy-map-editor-help-5"),
+        (0x11ef, "crazy-map-editor-help-6"),
+        (0x1244, "crazy-map-editor-help-7"),
+    ] {
+        press(&mut emulator, 32);
+        assert_eq!(emulator.vm().pc(), page, "the help pages advance in order");
+        capture(&emulator, name);
+    }
+    press(&mut emulator, 32);
+    assert_eq!(
+        emulator.vm().pc(),
+        0x1e6,
+        "the last help page returns to the menu"
+    );
+    assert_eq!(word(&emulator, 0x2194), 1, "the menu selection resets");
+
+    press(&mut emulator, 13);
+    assert_eq!(
+        emulator.vm().pc(),
+        0x34b,
+        "the map name form waits for a key"
+    );
+    capture(&emulator, "crazy-map-editor-create");
+    assert_eq!(byte(&emulator, 0x2188), 0, "the name starts empty");
+    for key in *b"bcd" {
+        press(&mut emulator, key);
+    }
+    assert_eq!(
+        &emulator.vm().memory()[0x211f..0x2122],
+        b"bcd",
+        "the typed name is stored"
+    );
+    assert_eq!(byte(&emulator, 0x2188), 3, "the name length is tracked");
+    press(&mut emulator, 13);
+    assert_eq!(emulator.vm().pc(), 0xebe, "the level list waits for a key");
+    let created = emulator.files_mut().take_dirty_files();
+    assert_eq!(created.len(), 1, "creating a map writes one file");
+    assert_eq!(
+        created[0].0, "/cbmap/bcd.dat",
+        "the map file uses the typed name"
+    );
+    assert_eq!(
+        created[0].1.as_slice(),
+        HEADER.as_slice(),
+        "the created map holds only the header"
+    );
+    assert_eq!(byte(&emulator, 0x211c), 1, "the first stage is selected");
+    assert_eq!(byte(&emulator, 0x211e), 0, "the new map has no entries");
+    assert_eq!(
+        &emulator.vm().memory()[0x2120..0x212c],
+        b"       1   \0",
+        "the stage number is formatted into the level list buffer"
+    );
+    assert_eq!(
+        &emulator.vm().memory()[0x214c..0x215b],
+        b"/CBMap/bcd.dat\0",
+        "the map path is built"
+    );
+    capture(&emulator, "crazy-map-editor-level-list");
+    press(&mut emulator, 22);
+    assert_eq!(
+        &emulator.vm().memory()[0x2120..0x212c],
+        b"       1   \0",
+        "right cannot leave the only stage"
+    );
+
+    press(&mut emulator, 121);
+    assert_eq!(
+        emulator.vm().pc(),
+        0x1721,
+        "confirming a stage opens the editor"
+    );
+    assert!(
+        emulator.vm().memory()[0x2089..0x2102]
+            .iter()
+            .all(|&value| value == 0),
+        "a created map starts empty"
+    );
+    assert_eq!(
+        word(&emulator, 0x216a),
+        0,
+        "the cursor starts at the first column"
+    );
+    assert_eq!(
+        word(&emulator, 0x216c),
+        0,
+        "the cursor starts at the first row"
+    );
+    capture(&emulator, "crazy-map-editor-empty");
+
+    press(&mut emulator, b'b');
+    assert_eq!(byte(&emulator, 0x2089), 1, "b paints a class one brick");
+    press(&mut emulator, 21);
+    press(&mut emulator, b'n');
+    assert_eq!(byte(&emulator, 0x208a), 2, "n paints a class two brick");
+    press(&mut emulator, 21);
+    press(&mut emulator, b'm');
+    assert_eq!(byte(&emulator, 0x208b), 3, "m paints an iron plate");
+    assert_eq!(word(&emulator, 0x216c), 2, "the cursor follows the edits");
+    assert_eq!(
+        word(&emulator, 0x2178),
+        2,
+        "the mirrored row follows the edits"
+    );
+    assert_eq!(
+        word(&emulator, 0x216a),
+        0,
+        "the column stays at the first cell"
+    );
+    capture(&emulator, "crazy-map-editor-painted");
+
+    press(&mut emulator, b'c');
+    assert_eq!(byte(&emulator, 0x208b), 0, "c clears the current cell");
+    press(&mut emulator, b'd');
+    assert!(
+        emulator.vm().memory()[0x2089..0x2102]
+            .iter()
+            .all(|&value| value == 0),
+        "d clears the whole map"
+    );
+    press(&mut emulator, b'l');
+    assert!(
+        emulator.vm().memory()[0x2089..0x2102]
+            .iter()
+            .all(|&value| value == 0xff),
+        "l fills the whole map"
+    );
+    press(&mut emulator, b'd');
+    assert_eq!(
+        word(&emulator, 0x216a),
+        0,
+        "clearing the map resets the cursor column"
+    );
+    assert_eq!(
+        word(&emulator, 0x216c),
+        0,
+        "clearing the map resets the cursor row"
+    );
+    for (key, tile) in [
+        (b'b', 1),
+        (b'n', 2),
+        (b'm', 3),
+        (b't', 4),
+        (b'u', 7),
+        (b'y', 8),
+        (b'g', 9),
+        (b'j', 10),
+    ] {
+        press(&mut emulator, key);
+        assert_eq!(
+            byte(&emulator, 0x2089),
+            tile,
+            "each tile key paints its tile"
+        );
+        press(&mut emulator, b'd');
+    }
+    for _ in 0..11 {
+        press(&mut emulator, 21);
+    }
+    assert_eq!(word(&emulator, 0x216c), 0, "the cursor wraps vertically");
+    for _ in 0..11 {
+        press(&mut emulator, 22);
+    }
+    assert_eq!(word(&emulator, 0x216a), 0, "the cursor wraps horizontally");
+
+    press(&mut emulator, b'b');
+    press(&mut emulator, 21);
+    press(&mut emulator, b'n');
+    press(&mut emulator, 21);
+    press(&mut emulator, b'm');
+    press(&mut emulator, 13);
+    assert_eq!(emulator.vm().pc(), 0xe32, "the save notice takes over");
+    capture(&emulator, "crazy-map-editor-saved");
+    advance(&mut emulator, 60);
+    press(&mut emulator, 32);
+    assert_eq!(
+        emulator.vm().pc(),
+        0x1721,
+        "dismissing the notice returns to the editor"
+    );
+    let saved = emulator.files_mut().take_dirty_files();
+    assert_eq!(saved.len(), 1, "saving writes one file");
+    assert_eq!(saved[0].0, "/cbmap/bcd.dat", "the save keeps the map path");
+    assert_eq!(
+        saved[0].1.len(),
+        141,
+        "the save holds the header and every cell"
+    );
+    assert_eq!(
+        &saved[0].1[..20],
+        &HEADER[..],
+        "the saved header is preserved"
+    );
+    assert_eq!(
+        &saved[0].1[20..23],
+        &[1_u8, 2, 3],
+        "the painted cells are saved"
+    );
+    assert!(
+        saved[0].1[23..].iter().all(|&value| value == 0),
+        "the remaining cells are empty"
+    );
+
+    press(&mut emulator, b'b');
+    press(&mut emulator, 27);
+    assert_eq!(
+        emulator.vm().pc(),
+        0x19ef,
+        "leaving an edited map asks to save"
+    );
+    capture(&emulator, "crazy-map-editor-save-prompt");
+    press(&mut emulator, b'n');
+    assert_eq!(
+        emulator.vm().pc(),
+        0xebe,
+        "discarding returns to the level list"
+    );
+    assert!(
+        emulator.files_mut().take_dirty_files().is_empty(),
+        "discarding writes nothing"
+    );
+    press(&mut emulator, 121);
+    assert_eq!(emulator.vm().pc(), 0x1721, "the stage reopens");
+    assert_eq!(
+        &emulator.vm().memory()[0x2089..0x208c],
+        &[1_u8, 2, 3],
+        "the saved map is reloaded"
+    );
+    assert_eq!(
+        word(&emulator, 0x216a),
+        0,
+        "reopening resets the cursor column"
+    );
+    assert_eq!(
+        word(&emulator, 0x216c),
+        0,
+        "reopening resets the cursor row"
+    );
+    capture(&emulator, "crazy-map-editor-reloaded");
+
+    press(&mut emulator, b'h');
+    assert_eq!(
+        emulator.vm().pc(),
+        0xfb1,
+        "editor help opens the first page"
+    );
+    for _ in 0..7 {
+        press(&mut emulator, 32);
+    }
+    assert_eq!(
+        emulator.vm().pc(),
+        0x1721,
+        "editor help returns to the editor"
+    );
+    press(&mut emulator, 27);
+    assert_eq!(
+        emulator.vm().pc(),
+        0xebe,
+        "an unchanged map leaves without prompting"
+    );
+    press(&mut emulator, 27);
+    assert_eq!(
+        emulator.vm().pc(),
+        0x1e6,
+        "a populated level list returns to the menu"
+    );
+    let rewritten = emulator.files_mut().take_dirty_files();
+    assert_eq!(
+        rewritten.len(),
+        1,
+        "leaving the level list writes the level pack"
+    );
+    assert_eq!(
+        rewritten[0].0, "/cbmap/bcd.dat",
+        "the level pack keeps the path"
+    );
+    assert_eq!(
+        rewritten[0].1.len(),
+        262,
+        "the level pack holds the saved map"
+    );
+    assert_eq!(
+        &rewritten[0].1[20..23],
+        &[1_u8, 2, 3],
+        "the saved map is written back"
+    );
+
+    let mut emulator = load(PATH);
+    advance(&mut emulator, 300);
+    press(&mut emulator, 20);
+    assert_eq!(word(&emulator, 0x2194), 0, "exit editing is selected");
+    let mut halted = None;
+    for _ in 0..60 {
+        emulator.input_mut().set_keys([13]);
+        if let FrameStatus::Halted(code) = emulator.run_frame().unwrap().status {
+            halted = Some(code);
+            break;
+        }
+    }
+    emulator.input_mut().set_keys([]);
+    assert_eq!(halted, Some(0), "exit editing ends the program");
+    assert_eq!(emulator.vm().pc(), 0x1327, "the menu exit path runs");
+
+    let mut emulator = load(PATH);
+    advance(&mut emulator, 300);
+    press(&mut emulator, 21);
+    assert_eq!(word(&emulator, 0x2194), 2, "load map is selected");
+    press(&mut emulator, 13);
+    assert_eq!(
+        emulator.vm().pc(),
+        0xebe,
+        "the level list shows the built-in map"
+    );
+    assert_eq!(byte(&emulator, 0x211c), 1, "the first stage is selected");
+    assert_eq!(byte(&emulator, 0x211e), 15, "the built-in map has an entry");
+    assert_eq!(
+        &emulator.vm().memory()[0x214c..0x2160],
+        b"/CBMap/beta2map.dat\0",
+        "the built-in map path is used"
+    );
+    press(&mut emulator, 121);
+    assert_eq!(emulator.vm().pc(), 0x1721, "the built-in map opens");
+    let cells = &emulator.vm().memory()[0x2089..0x2102];
+    assert_eq!(cells[12], 1, "the built-in map has a raised border corner");
+    assert!(
+        cells[34..43].iter().all(|&value| value == 1),
+        "the built-in map has a raised border edge"
+    );
+    assert_eq!(
+        &cells[45..54],
+        &[1_u8, 2, 1, 2, 1, 2, 1, 2, 1],
+        "the built-in map has an alternating inner wall"
+    );
+    assert!(
+        emulator.files_mut().take_dirty_files().is_empty(),
+        "loading the built-in map writes nothing"
+    );
+    capture(&emulator, "crazy-map-editor-built-in-map");
+}

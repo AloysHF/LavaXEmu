@@ -3350,3 +3350,44 @@ without an execution error alone does not establish playability.
   loop at pc `0x1eb8`, and Escape halts with code 0 at pc `0x1edd`. Escape on
   the birth or query form also halts there.
 - The game writes no files.
+
+## CrazyMap Editor (LAVA1 疯狂弹球)
+
+- Content: `LAVA1 疯狂弹球/非pac/mapedit.lav` as a single file.
+- The main menu waits at pc `0x1e6` with the selection word `0x2194` starting
+  at 1 (create map). Up and Down wrap through exit editing (0), create map (1),
+  load map (2) and help (3) in both directions.
+- Help has seven pages at pc `0xfb1`, `0x1016`, `0x107c`, `0x10ea`, `0x1169`,
+  `0x11ef` and `0x1244`; any key advances, and the last page returns to the
+  menu with the selection reset to 1. The `h` key in the editor opens the same
+  pages and returns to pc `0x1721`.
+- Create map opens the name form at pc `0x34b`; typed characters are stored at
+  `0x211f` with the length at `0x2188`. Enter writes `/cbmap/bcd.dat` with a
+  fixed 20-byte header (GBK text `\0MAIN\0图\0加载地图\0使`) and opens the
+  level list at pc `0xebe`. The list builds `/CBMap/bcd.dat` at `0x214c`,
+  formats the stage number into `0x2120` as `       1   `, then draws
+  `<   第   关   >` over the same origin, so the number is erased by the
+  opaque 6x12 glyph backgrounds (the reference font also paints the
+  background).
+- The editor waits at pc `0x1721`. The 11x11 map occupies `0x2089..0x2102`
+  with the index `row * 11 + column`; the cursor column is `0x216a` and the
+  row `0x216c` (mirrored at `0x2174`/`0x2178`), both wrapping over 0..10.
+  The keys `b`, `n`, `m`, `t`, `u`, `y`, `g` and `j` paint tile values 1, 2,
+  3, 4, 7, 8, 9 and 10, `c` clears the current cell, `d` clears the whole map
+  (and resets the cursor to the first cell), and `l` fills the map with
+  `0xFF`.
+- Enter saves 141 bytes (the header plus 121 cells) to `/cbmap/bcd.dat` and
+  shows the `Complete / Stage Saved` notice; any key returns to the editor.
+  Escape on a modified map opens the save prompt at pc `0x19ef`; `N` discards
+  the edit and returns to the level list without writing, `Y` saves. Confirming
+  the stage again reloads the saved cells and resets the cursor.
+- Escape at the level list with a saved stage rewrites the level pack (262
+  bytes for one stage) and returns to the menu; without stages it waits at
+  pc `0x1640` and any key halts with code 0. The menu exit editing entry also
+  halts with code 0, at pc `0x1327`.
+- Choosing load map without files uses the built-in `/CBMap/beta2map.dat`,
+  reports a count of 15 and opens its default 11x11 layout (border and
+  alternating inner walls). Loading alone writes no file.
+- The stage-number sprintf buffer overlaps the static header buffer, so the
+  level-pack rewrite carries a damaged header; the bytes match what the guest
+  asks for and are not adjusted by the emulator.
