@@ -12988,3 +12988,163 @@ fn sokoban_slides_boxes_pairs_glyphs_and_advances_levels() {
         assert!(!emulator.vm().is_running(), "escape leaves the game");
     }
 }
+
+#[test]
+#[ignore = "requires the local game corpus via LAVAX_GAME_ROOT"]
+fn porter_pushes_crates_uses_a_bomb_and_restores_board_state() {
+    fn cell(emulator: &Emulator, x: usize, y: usize) -> u8 {
+        emulator.vm().memory()[0x2050 + x * 12 + y]
+    }
+    fn player(emulator: &Emulator) -> (u8, u8) {
+        let memory = emulator.vm().memory();
+        (memory[0x20f6] - 6, memory[0x20f7] - 2)
+    }
+    fn tap(emulator: &mut Emulator, key: u8) {
+        emulator.input_mut().set_keys([key]);
+        advance(emulator, 3);
+        emulator.input_mut().release_all();
+        advance(emulator, 45);
+    }
+    let mut emulator = load("LAVA1 搬运工/搬运工.lav");
+    advance(&mut emulator, 300);
+    tap(&mut emulator, 13);
+    assert_eq!(
+        emulator.vm().pc(),
+        0x2f1,
+        "Enter opens the level confirmation"
+    );
+    tap(&mut emulator, 121);
+    advance(&mut emulator, 60);
+    assert_eq!(emulator.vm().pc(), 0x985, "Y starts the first level");
+    assert_eq!(player(&emulator), (7, 1));
+    assert_eq!(cell(&emulator, 1, 3), 4, "the goal column has three pads");
+    assert_eq!(cell(&emulator, 1, 4), 4);
+    assert_eq!(cell(&emulator, 1, 5), 4);
+    assert_eq!(cell(&emulator, 5, 2), 5);
+    assert_eq!(cell(&emulator, 6, 2), 5);
+    assert_eq!(cell(&emulator, 6, 3), 5);
+    assert_eq!(
+        cell(&emulator, 6, 4),
+        2,
+        "indestructible walls guard the corridor"
+    );
+    assert_eq!(cell(&emulator, 4, 7), 7, "a bomb lies in the lower pocket");
+    assert_eq!(emulator.vm().memory()[0x20fe], 0);
+    assert_eq!(emulator.vm().memory()[0x20ff], 0);
+    capture(&emulator, "porter-level1");
+
+    tap(&mut emulator, 22);
+    assert_eq!(
+        player(&emulator),
+        (7, 1),
+        "the outer wall blocks the corridor"
+    );
+    tap(&mut emulator, 23);
+    tap(&mut emulator, 23);
+    assert_eq!(player(&emulator), (5, 1));
+    tap(&mut emulator, 21);
+    assert_eq!(player(&emulator), (5, 2), "the crate yields one tile");
+    assert_eq!(cell(&emulator, 5, 2), 0);
+    assert_eq!(cell(&emulator, 5, 3), 5);
+    capture(&emulator, "porter-pushed");
+
+    tap(&mut emulator, 104);
+    assert_eq!(player(&emulator), (5, 1), "H undoes the last push");
+    assert_eq!(cell(&emulator, 5, 2), 5);
+    assert_eq!(cell(&emulator, 5, 3), 0);
+    tap(&mut emulator, 21);
+    tap(&mut emulator, 114);
+    assert_eq!(player(&emulator), (7, 1), "R restarts the level");
+    assert_eq!(cell(&emulator, 5, 2), 5);
+    assert_eq!(cell(&emulator, 5, 3), 0);
+    assert_eq!(cell(&emulator, 6, 2), 5);
+    assert_eq!(cell(&emulator, 6, 3), 5);
+    capture(&emulator, "porter-restarted");
+
+    for key in [
+        23, 23, 21, 21, 21, 21, 21, 23, 21, 20, 22, 20, 20, 20, 20, 20, 22, 22, 21, 21, 23, 20, 23,
+        21, 21,
+    ] {
+        tap(&mut emulator, key);
+    }
+    assert_eq!(
+        player(&emulator),
+        (5, 4),
+        "the crate reaches the wall pocket"
+    );
+    assert_eq!(cell(&emulator, 5, 5), 5);
+    assert_eq!(
+        cell(&emulator, 4, 7),
+        0,
+        "walking over the pickup collects it"
+    );
+    assert_eq!(
+        emulator.vm().memory()[0x20fe],
+        1,
+        "the level grants one bomb"
+    );
+    assert_eq!(emulator.vm().memory()[0x20ff], 1);
+
+    tap(&mut emulator, 98);
+    assert_eq!(emulator.vm().pc(), 0xa93, "B enters bomb aiming");
+    tap(&mut emulator, 22);
+    tap(&mut emulator, 21);
+    assert_eq!(
+        (
+            emulator.vm().memory()[0x20f8],
+            emulator.vm().memory()[0x20f9]
+        ),
+        (12, 7),
+        "arrows move the aim cursor across cells"
+    );
+    capture(&emulator, "porter-aim");
+    tap(&mut emulator, 13);
+    assert_eq!(
+        emulator.vm().pc(),
+        0x985,
+        "Enter fires and returns to the board"
+    );
+    assert_eq!(cell(&emulator, 6, 5), 0, "the bomb clears the inner wall");
+    assert_eq!(emulator.vm().memory()[0x20ff], 0, "the bomb is spent");
+    assert_eq!(emulator.vm().memory()[0x2101], 1);
+
+    for key in [
+        21, 22, 21, 21, 23, 20, 22, 20, 23, 23, 23, 23, 21, 23, 20, 20,
+    ] {
+        tap(&mut emulator, key);
+    }
+    assert_eq!(player(&emulator), (1, 4));
+    assert_eq!(cell(&emulator, 1, 3), 6, "a crate lands on the goal pad");
+    assert_eq!(cell(&emulator, 1, 4), 4);
+    assert_eq!(cell(&emulator, 1, 5), 4);
+    assert_eq!(
+        cell(&emulator, 6, 1),
+        5,
+        "the middle crate waits above its slot"
+    );
+    assert_eq!(cell(&emulator, 6, 2), 0);
+    assert_eq!(cell(&emulator, 6, 3), 0);
+    assert_eq!(
+        cell(&emulator, 4, 7),
+        5,
+        "the last crate rests in the pocket"
+    );
+    capture(&emulator, "porter-filled");
+
+    emulator.input_mut().set_keys([111]);
+    for _ in 0..3 {
+        emulator.run_frame().expect("the exit prompt must execute");
+    }
+    emulator.input_mut().release_all();
+    let mut halted = false;
+    for _ in 0..400 {
+        let result = emulator.run_frame().expect("the exit fade must execute");
+        if matches!(result.status, FrameStatus::Halted(_)) {
+            halted = true;
+            break;
+        }
+    }
+    assert!(halted, "O fades out and leaves the game");
+    assert!(!emulator.vm().is_running());
+    capture(&emulator, "porter-exit");
+}

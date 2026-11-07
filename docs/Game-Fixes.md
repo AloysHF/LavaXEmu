@@ -2492,3 +2492,25 @@ without an execution error alone does not establish playability.
   original layout. Escape halts the program.
 - Levels 5-21, the remaining glyph types, and the exit path after the last level
   remain unverified.
+
+## Porter (搬运工)
+
+- Content: `LAVA1 搬运工/搬运工.lav` with its companion `搬运工.dat`.
+- Startup-only evidence had not covered a level. No emulator runtime defect was
+  reproduced.
+- A dedicated release workflow confirms `Enter` on the title screen opens the
+  level confirmation and `Y` starts level 1. The board lives at `0x2050` with a
+  9x9 map indexed by `x * 12 + y`: three goal pads sit at column 1, rows 3-5,
+  three crates at (5,2), (6,2) and (6,3), indestructible walls at (6,4) and
+  (6,5), a bomb pickup at (4,7), and the player starts at (7,1).
+- The workflow moves in all four directions, checks that the outer wall blocks
+  the top corridor, pushes a crate one tile, undoes the push with `H`, and
+  restarts the level with `R`.
+- A deterministic route collects the bomb pickup (both counters rise from 0 to
+  1), `B` enters the aiming loop at pc `0xa93`, the arrow keys move the aim
+  cursor across cells, and `Enter` destroys the wall at (6,5) and spends the
+  bomb. The route then pushes a crate into the goal column, where the pad value
+  changes from 4 to 6.
+- `O` fades the board out and halts the program.
+- Level completion, auto-save, scoring, the remaining levels, and WASD input
+  remain unverified.
