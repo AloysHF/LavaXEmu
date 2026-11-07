@@ -44,6 +44,47 @@ crates/
 4. The bytecode interpreter executes the program entry point.
 5. Each 60 Hz frame invokes the guest program's update and render logic.
 
+`Program` also applies narrowly scoped repairs to identified legacy releases
+in the loaded image. Length and CRC checks protect unrelated programs. The
+monochrome Tetris v1.3 repair initializes its name-entry buffer from the current
+name before the guest reads reused local storage. The Battle on Namek repair
+initializes round counters when starting a game and fixes the unreachable
+five-stage ending predicate. The Volley Shooting v1.5 repair pads missing record
+slots in the guest file and rewinds before updating the shooting record. The
+Power Ski repair directs its ending pictures to the front buffer before the
+guest waits for confirmation. The Pokemon PK repair separates move metadata
+from party setup, reads P2's own roster values, counts P1 defeats correctly and
+clears defeated members' HP. The Tunshi v0.29 repair stops enemy targeting when
+the player's party is defeated, redraws the field after closing menus and
+returns to the title after defeat or Escape from exploration.
+The Sword, Foreign Land prologue, Love and Ninja repairs reserve both 2,000-byte
+native save slots before seeking,
+preserving existing bytes when the second slot is saved first.
+The Ninja repair also copies all six GBK bytes of its empty-name fallback,
+preventing the final double-byte character from being truncated.
+The Four-player Mahjong repair checks the wall before each normal draw and
+rejects a kong without a replacement tile, preventing the remaining count from wrapping.
+The Zelda Minigames chest timer repair expires elapsed deadlines when an input
+wait resumes after the remaining time has become negative.
+The Space Battleship repair adds an 80 ms delay to each battle-loop return
+for one exact release, including movement, firing and pause resume paths.
+The Power Driller repairs share a 40 ms wait across all gameplay drawing
+returns, replacing shorter waits in the first two levels of two identified
+device releases. The paced release and general VM timing remain unchanged.
+The Cosmos repair initializes ten record bytes and returns from its exit menu
+through the existing score-save epilogue, protected by length and CRC checks.
+The Pet Picture Converter repair subtracts the 18-byte album header before
+reading and writing the imported picture payload for one identified release.
+The Empire v4.1 repair aligns stored and current timer timestamps, reads the
+resource timestamp value instead of its address literal, and retains construction
+costs in the resource snapshot. It is restricted to two length/CRC fingerprints.
+The Sky and Land Helper repair returns from monster browsing to the menu redraw
+path, preventing its Escape key from also triggering exit, for one fingerprint.
+The Ghost House repair matches the first selected save slot to its first native
+file, correcting reversed load-menu selection for one length/CRC fingerprint.
+These repairs do not modify the content file or
+change the VM's general stack, local variables or file-seek bounds.
+
 ## Bytecode Execution
 
 The LavaX VM uses a stack-based bytecode architecture with 117 opcodes:
@@ -56,6 +97,13 @@ The LavaX VM uses a stack-based bytecode architecture with 117 opcodes:
 
 The interpreter processes one instruction per step and maintains deterministic
 execution timing.
+
+Opcode `0x1a` returns the guest text buffer at `0x1400`. Text output and
+LCD updates share those cells with direct guest writes; NUL cells render as
+blank glyphs. TextOut mode 9 honors the source-inversion flag (`0x08`) for
+both font sizes, preserving light text on dark menu backgrounds.
+Save-state version 5 keeps that shared memory, while loading
+versions 2 through 4 migrates their separate console cells into guest RAM.
 
 ## Display
 
@@ -87,6 +135,9 @@ The VFS provides sandboxed file access for guest programs:
 - Loads resources from the program's directory at startup
 - Provides file read/write operations through system APIs
 - Tracks modified files for selective write-back
+- Uses unbounded in-memory guest storage. Extended `DiskCheck` reports a
+  positive capacity capped at 32,767 for signed 16-bit callers; it does not query
+  host disk capacity. `DiskReclaim` is a no-op because flash compaction is unnecessary.
 - `--read-only` mode prevents any disk writes
 
 ## System API

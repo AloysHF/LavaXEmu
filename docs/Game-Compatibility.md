@@ -1,5 +1,8 @@
 # Game Compatibility
 
+This historical gallery records an earlier LAV-only startup run. For the current
+324-entry workflow coverage and outstanding work, see [Corpus Workflow Audit](Game-Corpus-Audit.md).
+
 LAV programs in the local validation corpus were run by the standalone
 emulator with default capture timing (300 frames). Every screenshot below
 is the indexed-color framebuffer produced by guest execution. If a program
@@ -17,7 +20,7 @@ and basic system API services.
 Validated behavior includes program initialization, startup screens, display
 rendering, keyboard input, and continued frame execution.
 
-## Summary
+## Historical Startup Summary
 
 | Status | Count |
 | --- | ---: |
@@ -25,7 +28,7 @@ rendering, keyboard input, and continued frame execution.
 | ❌ Fail | 1 |
 | **Total** | **267** |
 
-## Application List
+## Historical Startup Gallery
 
 | # | Application | Screenshot | Status |
 | ---: | --- | --- | --- |

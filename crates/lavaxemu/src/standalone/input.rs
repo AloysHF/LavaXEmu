@@ -39,10 +39,13 @@ const SPECIAL_KEYS: &[(Key, u8)] = &[
     (Key::PageDown, 14),
     (Key::Enter, 13),
     (Key::Escape, 27),
-    (Key::Space, b'b'),
+    (Key::Space, b' '),
+    (Key::Key0, b'0'),
+    (Key::Period, b'.'),
     (Key::Tab, 19),
     (Key::Backspace, 14),
     (Key::LeftShift, 26),
+    (Key::RightShift, 26),
     (Key::F1, 0x1c),
     (Key::F2, 0x1d),
     (Key::F3, 0x1e),
@@ -63,14 +66,18 @@ const NUMBER_KEYS: &[(Key, u8)] = &[
     (Key::Key9, b'u'),
 ];
 
-pub fn update_input(window: &Window, input: &mut InputState, width: usize, height: usize) {
+pub fn keyboard_keys(mut is_down: impl FnMut(Key) -> bool) -> Vec<u8> {
     let mut keys = Vec::new();
     for &(physical, guest) in LETTERS.iter().chain(NUMBER_KEYS).chain(SPECIAL_KEYS) {
-        if window.is_key_down(physical) {
+        if is_down(physical) {
             keys.push(guest);
         }
     }
-    input.set_keys(keys);
+    keys
+}
+
+pub fn update_input(window: &Window, input: &mut InputState, width: usize, height: usize) {
+    input.set_keys(keyboard_keys(|key| window.is_key_down(key)));
 
     if let Some((x, y)) = window.get_mouse_pos(MouseMode::Clamp) {
         let (window_width, window_height) = window.get_size();

@@ -9,7 +9,7 @@
   },
   "short_name": "LavaX",
   "manufacturer": "Various",
-  "supported_extensions": ["lav"],
+  "supported_extensions": ["lav", "pac"],
   "save_state_format": 1,
   "firmware": [],
   "input": {
@@ -20,7 +20,7 @@
     "pixel_format": "rgb565"
   },
   "notes": {
-    "en": "Runs LavaX .lav programs with companion files from the same folder, joypad and pointer input, and save states.",
-    "zh": "运行 LavaX .lav 程序，支持同目录附属文件、手柄与触摸输入以及即时存档。"
+    "en": "Runs LavaX .lav programs and .pac packages with companion resources, joypad, keyboard and pointer input, and save states.",
+    "zh": "运行 LavaX .lav 程序和 .pac 包，支持附属资源、手柄、键盘与触摸输入以及即时存档。"
   }
 }

@@ -1,7 +1,7 @@
 # Software Information
 display_name = "LavaX (LavaXEmu)"
 authors = "LavaXEmu contributors"
-supported_extensions = "lav"
+supported_extensions = "lav|pac"
 corename = "lavaxemu"
 categories = "Emulator"
 license = "GPL-2.0-or-later"

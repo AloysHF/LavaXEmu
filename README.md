@@ -14,7 +14,7 @@
 </p>
 
 LavaXEmu is a cross-platform LavaX virtual machine written in Rust. It loads
-`.lav` game programs and executes them through a pure-Rust bytecode
+`.lav` game programs and `.pac` packages and executes them through a pure-Rust bytecode
 interpreter, providing:
 
 - Standalone desktop emulator with window display
@@ -49,6 +49,138 @@ being progressively improved.
   [online player](https://AloysHF.github.io/LavaXEmu/play.html) that runs `.lav`
   programs without uploading them
 
+Compatibility evidence is tracked in the [workflow audit](docs/Game-Corpus-Audit.md).
+The Other Realm map-test build reaches its outdoor map and responds to down,
+left and right movement.
+Love preserves both native save slots, including when slot two is saved first.
+The workflow checks movement, distinct save points, and cold restoration.
+Strategy 1 packaged and loose releases reach the battlefield, show unit
+selection, and accept directional and Page Down orders.
+Poker Battle reaches the betting, card replacement and result screens; Up
+adjusts the bet and number keys 1–5 select cards.
+Ninja preserves the complete default name and both native save slots, including
+when slot two is written first. Its workflow covers the opening story, forest
+combat, level-up rewards and restoring two distinct points.
+Power Driller device releases use the paced gameplay loop, with workflows for
+training, the first-stage clear, second-stage entry and restored native unlocks.
+Foreign Land prologue reserves both native save slots before writing, including
+when the second slot is saved first; its workflow covers the opening battle,
+school dialogue and saving/loading two distinct points.
+Ghost House supports matching native save-slot selection, with workflows for
+charms, stage progress, capture/restart, pause and both-slot saving/loading.
+Phantom Fighter has a workflow for movement bounds, pause/resume, shooting,
+enemy destruction and the first-stage clear with the second-stage weapon upgrade.
+Sky and Land III demo has a workflow for three areas, dialogue, combat rewards,
+potion use, native account saving/loading and confirmed exit.
+Sky and Land II has a workflow for character creation, village/field transitions,
+combat rewards, healing and native save restoration with continued movement.
+Sky and Land Helper can return from monster browsing to its menu. Its workflow
+reads a native account, views equipment and browses every monster and item.
+Empire v4.1 monochrome and grayscale builds preserve construction costs and
+pending upgrades across native saves, then finish the timed work and continue.
+Village Gold packaged and loose versions have a workflow for name entry, opening
+dialogue, movement, obstacle collision, menus and native diary saving/loading.
+Mountain Go v2.0 has a workflow for alternating moves, corner capture, undo/redo
+and native record saving, fresh loading and continued play. The v2.19 monochrome
+and grayscale builds also cover record selection through the file list. The save
+converter has an end-to-end legacy-format conversion and reload workflow.
+Five in a Row v0.80 has reproducible monochrome and grayscale workflows for
+winning, undo/redo, record persistence, restarting and confirmed exit.
+Five Tigers has complete-round workflows for alternating play, all five
+scoring categories, restarting and exit. Yahtzee has a full-game workflow
+covering held dice, reroll limits, all 14 scoring choices and final settlement.
+Fairy Fate has LAV and PAC workflows covering map movement, saved progress
+restoration, combat damage and confirmed defeat exit.
+Arbitrary Picture Puzzle has a workflow completing all four pictures with
+tile-swap checks, reconstructed image checks and normal completion exit.
+Russian Poker has a workflow for movement boundaries, accelerated falling,
+card locking, sampled scoring, stack overflow and Escape termination.
+Tetris v1.3 has monochrome and grayscale workflows for rotation, pause/resume,
+line clearing, scoring and ranking persistence. A fingerprinted compatibility
+repair prevents corrupted ranking names in the monochrome release.
+Adventure Island IV has monochrome and grayscale LAV/PAC workflows completing
+the first stage, exercising damage and respawn, and restoring custom controls.
+Battle on Namek has a workflow covering incorrect guesses, restarting after
+three misses, all five stages and normal victory exit. A fingerprinted repair
+restores new-game counters and makes its ending reachable.
+Volley Shooting v1.5 has a workflow for shooting goals, goalkeeper actions and
+record restoration. A fingerprinted repair preserves the separate record slots.
+Fighter of the Phoenix has a workflow covering movement, shooting, bombing,
+pause/resume, defeat/retry and defeating the first boss to enter stage two.
+Power Ski has a workflow for steering, jumping, collision recovery, status
+pause and completing the course. A fingerprinted repair makes both ending
+pictures visible while waiting for confirmation.
+Brave Legend has a workflow completing all 40 stages, verifying key-gated
+doors, all four platform directions, stage restart and the ending.
+Dragon Quest Monsters standard and special editions have a workflow for
+map travel, purchases, combat, recruitment and native save restoration.
+Hell Adventure has a workflow covering paired switches, forced movement,
+board restart, the first stage, help pages and normal exit.
+The Missing Doctor has a workflow covering conversations, scene changes,
+item collection and solving the first alarm diversion puzzle. Shared guest
+text memory restores its instruction and credit pages.
+Pokemon PK has a workflow configuring both teams and moves, replacing fainted
+party members, resolving wins for either player and returning to the title.
+The Pokemon exploration prototype has a workflow for room transitions, item
+collection, bag categories, the catalog and party pages. Inverted TextOut
+styles now preserve its menu and catalog contrast.
+Mooncake has a workflow for help, speed limits, movement boundaries, all five
+item reactions, recovery, returning to the menu and normal exit.
+Tunshi v0.29 has a workflow for map transitions, equipment and both battle
+results. Party defeat no longer produces a false victory, and Escape returns
+from exploration to the title.
+Closed Tunshi menus also redraw the map immediately.
+Sword packaged and loose versions have workflows for item collection, equipment,
+the opening story, a wild battle and native save restoration. Saving the second
+slot first now preserves its correct offset and keeps both slots independent.
+Four-player Mahjong has a workflow for tile selection, discarding, drawn and
+winning hands, redealing and exit. An empty wall now ends the hand before another draw.
+Trapped Spider packaged and loose versions have a workflow for collision recovery,
+four territory captures, victory, and native ranking save and reload.
+Territory Game has a workflow completing the small board in two-player and
+computer modes, including territory scores, extra turns, results and exit.
+Saints vs Gold has a workflow for its complete tutorial, an eight-member AI
+battle, victory and rating pages, and returning to mode selection.
+Tank 2004 packaged and loose versions have a workflow for movement, shooting,
+pause, native save restoration, an enemy kill, battle loss and normal exit.
+Zelda Minigames has a workflow for lizard hits and results, chest opening and
+timeout, speed settings, instructions, credits and normal exit.
+Expired chest timers now finish when input resumes after the deadline.
+Strategy packaged and loose versions have a workflow for unit movement,
+combat damage, both players' turns and native campaign save restoration.
+Sky Fighting Art has a workflow for all three modes, machine configuration,
+movement, weapons, shields, support fire, pause, battle results and exit.
+Eagle and its five VS builds have a single-player workflow for aiming, shooting,
+pause, results and native ranking restoration. Serial multiplayer is unverified.
+Liuye has a workflow for map movement, a rewarded riddle, a scripted duel,
+and restoring native progress in a fresh session.
+Space Treasure has a workflow for mirror placement, ray avoidance, first-stage
+completion, collision retry, instructions and normal exit.
+Space Battleship now paces its unthrottled battle loop to allow movement and
+shooting between turns, with checks for pause, enemy hits and native results.
+Nine Stars has a utility workflow covering all 64 orientation/direction
+combinations, result screens, selection wraparound and exit.
+Cosmos has a workflow for movement, pause, help, collision results and native
+records. Its identified release initializes complete records and saves on exit.
+Pet World TC800 can save with the virtual storage capacity report. Its workflow
+covers pet upgrades, menu and exit saves, and restoration in a fresh session.
+Pet Picture Converter restores and converts native pet pictures without
+appending album-header bytes to the imported image payload.
+Pixel Album has a workflow for 8×8 and 16×16 pixel editing, switching pictures,
+native album saves and reopening the edited content in a fresh session.
+Locked Room has a workflow for a Pinyin account, password confirmation, map
+movement, a story-triggered scene transition and native progress restoration.
+Rich World packaged and loose versions have a workflow for player setup,
+movement, turn changes, native saves and restoration of all three players.
+Battle Blocks device and computer builds have a workflow for both players’
+controls, line clearing and scoring, pause, native results and normal exit.
+Monkey River has a workflow for road placement, overlap rejection, failure and
+retry, an eight-placement successful crossing, instructions and normal exit.
+Plane Shooter reaches single-player practice and has a workflow for board
+cursor movement, selection and the in-game exit confirmation.
+Minesweeper has a workflow for opening cells, toggling a mark, moving the
+selection, and returning to the difficulty menu.
+
 ## Usage
 
 ### Standalone Mode
@@ -72,7 +204,7 @@ supported platforms, RetroPad mapping, and features.
 
 ### Browser (EmulatorJS)
 
-Open <https://AloysHF.github.io/LavaXEmu/play.html>, then pick a `.lav` program
+Open <https://AloysHF.github.io/LavaXEmu/play.html>, then pick a `.lav` program, a `.pac` package,
 or a `.zip` that bundles it with its companion data files. It runs locally in
 the browser through the LavaXEmu WebAssembly core; nothing is uploaded. See the
 [EmulatorJS Core](docs/EmulatorJS-Core.md) guide for embedding the core in your
@@ -99,6 +231,10 @@ The binary is produced at `target/release/lavaxemu.dll`
 (`liblavaxemu.so` on Linux, `liblavaxemu.dylib` on macOS). Rename it to
 `lavaxemu_libretro.<ext>` before placing it in RetroArch's `cores/`
 directory.
+
+Libretro frontends must provide a real `.lav` or `.pac` file path. The core
+opens that path and imports companion resources; in-memory content is ignored.
+The [Android core](docs/Android-Libretro-Core.md) uses the same loading rules.
 
 ### EmulatorJS Core (for the browser)
 
@@ -155,7 +291,9 @@ See [Architecture](docs/architecture.md) for implementation details.
 | --- | --- |
 | Direction keys | Arrow keys |
 | A–Z | A–Z |
-| B | Space or 1 |
+| B | B or 1 |
+| Space | Space |
+| 0 / period | 0 / period |
 | N | 2 |
 | M | 3 |
 | G | 4 |
@@ -179,15 +317,13 @@ The window also accepts mouse clicks as pointer input on the 160×240 screen.
 
 ## Game Compatibility
 
-The emulator supports LavaX bytecode programs in `.lav` format with 160×240
-display. Compatibility testing is in progress.
+The emulator loads `.lav` programs and uncompressed `.pac` packages. Display
+size and graphics mode come from the program header. Compatibility testing
+is in progress.
 
-| Status | Count |
-|--------|-------|
-| ✅ Pass | — |
-| ❌ Fail | — |
-
-For the full game list with screenshots, see [Game Compatibility](docs/Game-Compatibility.md).
+For verified operations and remaining entries, see the [Corpus Workflow Audit](docs/Game-Corpus-Audit.md)
+and [Game Fixes](docs/Game-Fixes.md). The [Game Compatibility gallery](docs/Game-Compatibility.md)
+contains historical startup screenshots.
 
 ## Testing
 
