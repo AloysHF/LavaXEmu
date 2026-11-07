@@ -2745,3 +2745,20 @@ without an execution error alone does not establish playability.
   key at pc `0x1681`; another key press halts the program at pc `0x1686`.
 - How the round or the 54-card deck ends, the role of the four piles' limits,
   and the meaning of the other header counters remain unverified.
+
+## Dream Mario (梦幻mario)
+
+- Content: `LAVA1 梦幻mario/梦幻mario.lav`.
+- The intro logo animation ignores an `Enter` pressed at 300 frames. Once the
+  title menu is shown, `Enter` on `Start` displays the `地图：1` prompt at pc
+  `0x3626`, and a second `Enter` starts the first map.
+- The map waits for input at pc `0x3092`. `D` and `A` walk right and left by
+  four pixels per step, `L` jumps (the player rises from y 26 to 22 and lands
+  again), and `W`/`S` leave the idle frame unchanged.
+- The player record is at `0x3880` (`0x80` marker, x at `0x3881`, y at
+  `0x3882`). Holding `D` for 120 frames moves the player from x 76 to 108 and
+  onto higher ground at y 38.
+- `Down` changes the title selection to the help entry, which displays
+  `帮助信息！` and stays on the title screen.
+- Later maps, enemies, items, the level progression and the map mode mentioned
+  by the bundled readme remain unverified.

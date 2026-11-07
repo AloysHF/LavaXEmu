@@ -14472,3 +14472,138 @@ fn dream_twenty_one_places_cards_into_the_selected_pile() {
     );
     assert_eq!(over.vm().pc(), 0x1686);
 }
+
+#[test]
+#[ignore = "requires the local game corpus via LAVAX_GAME_ROOT"]
+fn dream_mario_walks_jumps_and_ignores_unbound_keys() {
+    let mut emulator = load("LAVA1 梦幻mario/梦幻mario.lav");
+    advance(&mut emulator, 300);
+    assert_eq!(
+        emulator.vm().pc(),
+        0x3598,
+        "the intro starts with its logo animation"
+    );
+    let mut early = emulator.clone();
+    press(&mut early, 13);
+    assert_eq!(early.vm().pc(), 0x359b, "an early Enter is ignored");
+    assert_eq!(
+        early.vm().memory()[0x3881],
+        76,
+        "the player does not move during the intro"
+    );
+
+    advance(&mut emulator, 60);
+    assert_eq!(emulator.vm().pc(), 0x359b);
+    capture(&emulator, "mario-title");
+    let title = emulator.display().indexed_frame().to_vec();
+
+    let mut help = emulator.clone();
+    press(&mut help, 21);
+    assert_ne!(
+        help.display().indexed_frame(),
+        title,
+        "Down selects the help entry"
+    );
+    press(&mut help, 13);
+    assert_eq!(help.vm().pc(), 0x3598, "the help screen stays on the title");
+    capture(&help, "mario-help");
+
+    press(&mut emulator, 13);
+    assert_eq!(
+        emulator.vm().pc(),
+        0x3626,
+        "Enter selects Start and shows the map prompt"
+    );
+    assert_ne!(emulator.display().indexed_frame(), title);
+    capture(&emulator, "mario-map-prompt");
+
+    press(&mut emulator, 13);
+    advance(&mut emulator, 60);
+    assert_eq!(
+        emulator.vm().pc(),
+        0x3092,
+        "the first map waits at its game loop"
+    );
+    assert_eq!(emulator.vm().memory()[0x3880], 0x80);
+    assert_eq!(emulator.vm().memory()[0x3881], 76);
+    assert_eq!(emulator.vm().memory()[0x3882], 26);
+    capture(&emulator, "mario-map");
+
+    let idle = emulator.clone();
+    let mut still = emulator.clone();
+    advance(&mut still, 120);
+    assert_eq!(still.vm().pc(), 0x3092, "the map waits for input");
+    assert_eq!(
+        still.display().indexed_frame(),
+        emulator.display().indexed_frame(),
+        "the map does not animate while waiting"
+    );
+
+    let mut right = emulator.clone();
+    press(&mut right, b'd');
+    assert_eq!(right.vm().memory()[0x3881], 80, "D walks right");
+    assert_eq!(
+        right.vm().memory()[0x3882],
+        26,
+        "walking keeps the player on the ground"
+    );
+    assert_ne!(
+        right.display().indexed_frame(),
+        idle.display().indexed_frame()
+    );
+    capture(&right, "mario-right");
+
+    let mut left = emulator.clone();
+    press(&mut left, b'a');
+    assert_eq!(left.vm().memory()[0x3881], 72, "A walks left");
+    assert_ne!(
+        left.display().indexed_frame(),
+        idle.display().indexed_frame()
+    );
+    capture(&left, "mario-left");
+
+    let mut up = emulator.clone();
+    press(&mut up, b'w');
+    assert_eq!(up.vm().memory()[0x3881], 76, "W is not a movement key");
+    assert_eq!(up.vm().memory()[0x3882], 26);
+    assert_eq!(up.display().indexed_frame(), idle.display().indexed_frame());
+    let mut down = emulator.clone();
+    press(&mut down, b's');
+    assert_eq!(down.vm().memory()[0x3881], 76, "S is not a movement key");
+    assert_eq!(
+        down.display().indexed_frame(),
+        idle.display().indexed_frame()
+    );
+
+    let mut jump = emulator.clone();
+    hold(&mut jump, b'l', 20);
+    assert_eq!(
+        jump.vm().memory()[0x3881],
+        76,
+        "jumping does not shift the player sideways"
+    );
+    assert_eq!(jump.vm().memory()[0x3882], 22, "L jumps");
+    assert_ne!(
+        jump.display().indexed_frame(),
+        idle.display().indexed_frame()
+    );
+    capture(&jump, "mario-jump");
+    advance(&mut jump, 60);
+    assert_eq!(
+        jump.vm().memory()[0x3882],
+        26,
+        "the jump lands back on the ground"
+    );
+
+    let mut walk = emulator.clone();
+    for _ in 0..3 {
+        press(&mut walk, b'd');
+    }
+    assert_eq!(
+        walk.vm().memory()[0x3881],
+        88,
+        "three steps move the player right"
+    );
+    assert_eq!(walk.vm().memory()[0x3882], 26);
+    capture(&walk, "mario-walk");
+}
