@@ -2450,3 +2450,25 @@ without an execution error alone does not establish playability.
   Escape also exits from the number prompt.
 - A player-victory route, keypad edge cases, and the drawing delay remain
   unverified.
+
+## Pipe Connection (接水管)
+
+- Content: `LAVA1 接水管/接水管.lav`.
+- Startup-only evidence had not covered a round. No emulator runtime defect was
+  reproduced.
+- A dedicated release workflow waits on the title screen, starts a round, and
+  checks the deterministic opening state: the cursor sits on the water source at
+  column 19, row 25, the source cell holds 14, and the three-minute timer starts
+  at 180. It verifies one step in each cursor direction and the reverse step
+  that restores the position, places a pipe with `A` (first piece value 6),
+  confirms a second `A` does not overwrite it, and removes it with `S` without
+  disturbing the source.
+- The round turns the arrow keys: 23 and 22 move the cursor along the column and
+  21 and 20 along the row. `P` pauses the countdown and `P` again resumes it.
+  Escape returns to the title menu with a reset selection, and choosing
+  `离开游戏` reaches the credits screen, where any key halts the program.
+- The pause check holds `P` for several frames because the guest polls the
+  keyboard only after a 500 ms delay, so a short tap is lost. That pause loop
+  lives in the guest program and is not an emulator defect.
+- Level completion, scoring, ranking, the remaining menu items, and the other
+  arrow-key orientations remain unverified.

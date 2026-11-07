@@ -12695,3 +12695,149 @@ fn matchstick_game_takes_turns_and_restarts_or_quits() {
         "n must quit after the first game"
     );
 }
+
+#[test]
+#[ignore = "requires the local game corpus via LAVAX_GAME_ROOT"]
+fn pipe_game_places_pipes_counts_down_pauses_and_quits() {
+    fn byte(emulator: &Emulator, address: usize) -> u8 {
+        emulator.vm().memory()[address]
+    }
+    fn cursor(emulator: &Emulator) -> (usize, usize) {
+        (
+            byte(emulator, 0x3434).wrapping_add(byte(emulator, 0x3432)) as usize,
+            byte(emulator, 0x3435).wrapping_add(byte(emulator, 0x3433)) as usize,
+        )
+    }
+    fn cell(emulator: &Emulator) -> usize {
+        let (x, y) = cursor(emulator);
+        (x - 1) * 36 + (y - 1)
+    }
+    fn seconds(emulator: &Emulator) -> u8 {
+        byte(emulator, 0x342a)
+    }
+    fn tap(emulator: &mut Emulator, key: u8) {
+        emulator.input_mut().set_keys([key]);
+        advance(emulator, 2);
+        emulator.input_mut().release_all();
+        advance(emulator, 20);
+    }
+    fn hold(emulator: &mut Emulator, key: u8, frames: usize) {
+        for _ in 0..frames {
+            emulator.input_mut().set_keys([key]);
+            advance(emulator, 1);
+        }
+        emulator.input_mut().release_all();
+        advance(emulator, 30);
+    }
+    let mut emulator = load("LAVA1 接水管/接水管.lav");
+    advance(&mut emulator, 30);
+    assert_eq!(emulator.vm().pc(), 0x10ed, "title must wait for a key");
+    capture(&emulator, "pipe-title");
+    tap(&mut emulator, 13);
+    advance(&mut emulator, 100);
+    assert_eq!(
+        emulator.vm().pc(),
+        0x2ff4,
+        "start screen must wait before the round begins"
+    );
+    capture(&emulator, "pipe-start-screen");
+    for _ in 0..300 {
+        if emulator.vm().pc() == 0x2a75 {
+            break;
+        }
+        advance(&mut emulator, 1);
+    }
+    assert_eq!(emulator.vm().pc(), 0x2a75, "the round starts automatically");
+    assert_eq!(cursor(&emulator), (19, 25), "cursor starts on the source");
+    assert_eq!(cell(&emulator), 672, "cursor starts on the source cell");
+    assert_eq!(byte(&emulator, 0x2f08 + 672), 14, "water source cell");
+    assert_eq!(seconds(&emulator), 180, "three-minute time limit");
+    capture(&emulator, "pipe-play");
+    advance(&mut emulator, 150);
+    assert!(
+        seconds(&emulator) < 180,
+        "the clock must count down during play"
+    );
+    tap(&mut emulator, 23);
+    assert_eq!(cursor(&emulator), (18, 25), "one key narrows the column");
+    tap(&mut emulator, 22);
+    assert_eq!(cursor(&emulator), (19, 25), "the opposite key restores it");
+    tap(&mut emulator, 21);
+    assert_eq!(cursor(&emulator), (19, 26), "one key advances the row");
+    tap(&mut emulator, 20);
+    assert_eq!(cursor(&emulator), (19, 25), "the opposite key restores it");
+    tap(&mut emulator, 23);
+    assert_eq!(cell(&emulator), 636, "cursor moves onto an empty cell");
+    tap(&mut emulator, b'a');
+    assert_eq!(byte(&emulator, 0x2f08 + 636), 6, "A places a pipe");
+    capture(&emulator, "pipe-placed");
+    tap(&mut emulator, b'a');
+    assert_eq!(
+        byte(&emulator, 0x2f08 + 636),
+        6,
+        "A must not overwrite an existing pipe"
+    );
+    tap(&mut emulator, b's');
+    assert_eq!(
+        byte(&emulator, 0x2f08 + 636),
+        0,
+        "S removes the pipe under the cursor"
+    );
+    assert_eq!(byte(&emulator, 0x2f08 + 672), 14, "the source is untouched");
+    capture(&emulator, "pipe-removed");
+    hold(&mut emulator, b'p', 40);
+    let paused = seconds(&emulator);
+    capture(&emulator, "pipe-paused");
+    advance(&mut emulator, 180);
+    assert_eq!(
+        seconds(&emulator),
+        paused,
+        "the clock must stop while paused"
+    );
+    hold(&mut emulator, b'p', 45);
+    advance(&mut emulator, 120);
+    assert!(
+        seconds(&emulator) < paused,
+        "P must resume the countdown after the pause loop polls again"
+    );
+    hold(&mut emulator, 27, 60);
+    advance(&mut emulator, 90);
+    assert_eq!(
+        byte(&emulator, 0x3444),
+        0,
+        "escape returns to the title menu"
+    );
+    capture(&emulator, "pipe-title-again");
+    for index in 1..=4u8 {
+        for _ in 0..3 {
+            emulator.input_mut().set_keys([21]);
+            advance(&mut emulator, 1);
+        }
+        emulator.input_mut().release_all();
+        advance(&mut emulator, 30);
+        assert_eq!(byte(&emulator, 0x3444), index, "menu selection moves down");
+    }
+    tap(&mut emulator, 13);
+    for _ in 0..600 {
+        if emulator.vm().pc() == 0x2f17 {
+            break;
+        }
+        advance(&mut emulator, 1);
+    }
+    assert_eq!(emulator.vm().pc(), 0x2f17, "credits must wait for a key");
+    capture(&emulator, "pipe-credits");
+    emulator.input_mut().set_keys([13]);
+    for _ in 0..120 {
+        let result = emulator
+            .run_frame()
+            .expect("game must execute without errors");
+        if matches!(result.status, FrameStatus::Halted(_)) {
+            break;
+        }
+    }
+    emulator.input_mut().release_all();
+    assert!(
+        !emulator.vm().is_running(),
+        "a key at the credits must leave the game"
+    );
+}
