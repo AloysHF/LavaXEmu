@@ -89,9 +89,10 @@ do not satisfy this status.
 - Lianliankan checked on 2026-11-08: one dedicated release workflow covers the loose, packaged and LAVA2 builds. It waits on the logo, opens the four-entry menu with its wrap in both directions, pages the seven help screens, opens the ranking and returns, walks the settings level preview to its clamped top and back to the first level, starts learning mode and wraps the board cursor at all four edges, matches two adjacent equal pairs found in the live board map and verifies the cleared cells, the remaining counter dropping to 94 and the score rising to 2, cancels and confirms the quit dialog, shows the credits and exits with code 0. A fresh session starts challenge mode, matches one pair, quits to the hero table, enters a name and writes the 50-byte `/lavadata/llkhero.dat` with the name and challenge score at their fixed offsets. A second workflow confirms the stage-clear and finish animations exit with code 0 on a key press.
 - Maze Journey checked on 2026-11-08: one dedicated release workflow waits on the BoBo Studio title, enters the character selection screen, starts the maze with the player at x=5 facing down, verifies that all four arrow keys turn the player without moving from the start cell, and returns to the title on Escape without writing files.
 - Ace Attorney checked on 2026-11-08: one dedicated release workflow waits on the title logo, pages the intro into the defendant-room dialogue, inspects the attorney badge with `r`, closes the overlay with Enter and restores the identical dialogue frame, verifies five successive dialogue call sites and changing frames, reaches the courtroom after 65 dialogue advances, clamps the three-answer selector, retries a wrong defendant name and proceeds with the correct answer without writing files. Later testimony, evidence presentation and the ending remain unverified.
-- 200 dedicated release workflows passed in this audit.
-- 282 of 324 entry points were loaded by those successful workflows.
-- 42 entry points still need dedicated workflow verification.
+- Diamond Blocks checked on 2026-11-08: one dedicated release workflow covers the grey and black builds. It waits on the boot screen, passes the grey input-method warning into the four-entry menu, verifies the score save created at the menu with its five default records, default player name and fixed score tail, wraps the menu cursor in both directions, opens the three-row settings and the speed/height page, wraps the three difficulties and returns the cursor, starts the board with the piece in the center, moves it left and right and rotates and drops it, shows the Beijing-time clock from F1, pauses and resumes, cancels the pause-quit prompt with `n` and confirms it with `y`, cancels the exit prompt with `n`, exits cleanly through `y` and re-saves the five-record score table with the default name on exit.
+- 201 dedicated release workflows passed in this audit.
+- 284 of 324 entry points were loaded by those successful workflows.
+- 40 entry points still need dedicated workflow verification.
 - The historical [startup gallery](Game-Compatibility.md) is a separate check
   and must not be interpreted as this workflow audit.
 
@@ -395,8 +396,8 @@ an optional screenshot directory. Keep each test's logs and captures separate.
 | 280 | `LAVA1 连连看/过关动画/通关动画.lav` | Ending animation | [Workflow passed: `lianliankan_stage_and_finish_animations_exit_on_key`](../crates/lavaxemu/tests/game_compatibility.rs#L27475) |
 | 281 | `LAVA1 迷宫之旅/maze2.lav` | Game / game package | [Workflow passed: `maze_journey_title_character_maze_facing_and_escape`](../crates/lavaxemu/tests/game_compatibility.rs#L27495) |
 | 282 | `LAVA1 逆转裁判/逆转裁判.lav` | Game / game package | [Workflow passed: `ace_attorney_dialogue_badge_and_courtroom_answers`](../crates/lavaxemu/tests/game_compatibility.rs#L27547) |
-| 283 | `LAVA1 钻石方块1.1/钻石方块灰.lav` | Game / game package | Pending |
-| 284 | `LAVA1 钻石方块1.1/钻石方块黑.lav` | Game / game package | Pending |
+| 283 | `LAVA1 钻石方块1.1/钻石方块灰.lav` | Game / game package | [Workflow passed: `diamond_blocks_builds_cover_boot_menus_play_pause_clock_and_exit`](../crates/lavaxemu/tests/game_compatibility.rs#L27733) |
+| 284 | `LAVA1 钻石方块1.1/钻石方块黑.lav` | Game / game package | [Workflow passed: `diamond_blocks_builds_cover_boot_menus_play_pause_clock_and_exit`](../crates/lavaxemu/tests/game_compatibility.rs#L27733) |
 | 285 | `LAVA1 钻石棋/钻石棋.lav` | Game / game package | Pending |
 | 286 | `LAVA1 雪人传奇/雪人传奇.pac` | Game / game package | Pending |
 | 287 | `LAVA1 雪人传奇/非pac/雪人传奇.lav` | Game / game package | Pending |

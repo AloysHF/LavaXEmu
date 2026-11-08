@@ -27664,3 +27664,321 @@ fn ace_attorney_dialogue_badge_and_courtroom_answers() {
         "the game writes no files"
     );
 }
+
+struct DiamondBlocksBuild {
+    path: &'static str,
+    boot_pc: usize,
+    menu_pc: usize,
+    difficulty_pc: usize,
+    difficulty_cursor: [u8; 3],
+    settings_pc: usize,
+    height_pc: usize,
+    help_pc: usize,
+    ranking_pc: usize,
+    board_pc: usize,
+    piece_x: usize,
+    piece_depth: usize,
+    pause_pc: usize,
+    pause_quit_pc: usize,
+    clock_pc: usize,
+    exit_confirm_pc: usize,
+    halt_pc: usize,
+    keeps_default_name: bool,
+}
+
+const DIAMOND_BLOCKS_GREY: DiamondBlocksBuild = DiamondBlocksBuild {
+    path: "LAVA1 钻石方块1.1/钻石方块灰.lav",
+    boot_pc: 0x12af,
+    menu_pc: 0x52fe,
+    difficulty_pc: 0x4682,
+    difficulty_cursor: [0x20, 0x2d, 0x3a],
+    settings_pc: 0x4568,
+    height_pc: 0x4353,
+    help_pc: 0x492d,
+    ranking_pc: 0x2f24,
+    board_pc: 0x4003,
+    piece_x: 0x561a,
+    piece_depth: 0x561e,
+    pause_pc: 0x502c,
+    pause_quit_pc: 0x5129,
+    clock_pc: 0x34f9,
+    exit_confirm_pc: 0x5453,
+    halt_pc: 0x4897,
+    keeps_default_name: true,
+};
+
+const DIAMOND_BLOCKS_BLACK: DiamondBlocksBuild = DiamondBlocksBuild {
+    path: "LAVA1 钻石方块1.1/钻石方块黑.lav",
+    boot_pc: 0x38a4,
+    menu_pc: 0x38a4,
+    difficulty_pc: 0x2be1,
+    difficulty_cursor: [0x13, 0x20, 0x2d],
+    settings_pc: 0x2ac7,
+    height_pc: 0x28c1,
+    help_pc: 0x2e95,
+    ranking_pc: 0x139f,
+    board_pc: 0x2533,
+    piece_x: 0x3314,
+    piece_depth: 0x3318,
+    pause_pc: 0x35cd,
+    pause_quit_pc: 0x36c7,
+    clock_pc: 0x1989,
+    exit_confirm_pc: 0x3a15,
+    halt_pc: 0x2dff,
+    keeps_default_name: false,
+};
+
+#[test]
+#[ignore = "requires the local game corpus via LAVAX_GAME_ROOT"]
+fn diamond_blocks_builds_cover_boot_menus_play_pause_clock_and_exit() {
+    for build in [&DIAMOND_BLOCKS_GREY, &DIAMOND_BLOCKS_BLACK] {
+        let path = build.path;
+        let mut game = load(path);
+        advance(&mut game, 300);
+        assert_eq!(
+            game.vm().pc(),
+            build.boot_pc,
+            "{path} shows the boot screen"
+        );
+        let frame = |game: &Emulator| game.display().indexed_frame().to_vec();
+        let boot = frame(&game);
+        assert!(
+            boot.iter().any(|&pixel| pixel != boot[0]),
+            "{path} renders the boot screen"
+        );
+
+        assert_eq!(wait_for_input(&mut game), build.boot_pc);
+        if build.boot_pc != build.menu_pc {
+            press(&mut game, 13);
+        }
+        assert_eq!(game.vm().pc(), build.menu_pc, "{path} opens the menu");
+        assert_eq!(wait_for_input(&mut game), build.menu_pc);
+
+        let save = game
+            .files_mut()
+            .files()
+            .into_iter()
+            .find(|file| file.path == "/lavadata/zsboxsave.dat")
+            .unwrap_or_else(|| panic!("{path} creates the score save"));
+        assert_eq!(save.size, 101, "{path} writes five score records");
+        assert!(save.dirty, "{path} saves at the menu");
+
+        let written = game.files_mut().take_dirty_files();
+        assert_eq!(written.len(), 1, "{path} writes only the score save");
+        assert_eq!(written[0].0, "/lavadata/zsboxsave.dat");
+        assert_eq!(written[0].1.len(), 101);
+        assert_eq!(&written[0].1[96..], &[0x17, 0x16, 0x15, 0x14, 0x0d]);
+        let default_name = [0xce, 0xc4, 0xc7, 0xfa, 0xd0, 0xc7];
+        assert_eq!(
+            written[0]
+                .1
+                .windows(default_name.len())
+                .any(|bytes| bytes == default_name),
+            build.keeps_default_name,
+            "{path} stores the default player name"
+        );
+        let boot_save = written[0].1.clone();
+        assert_eq!(game.vm().memory()[0x1b08], 0x26);
+        let menu = frame(&game);
+
+        for expected in [0x4au8, 0x6e, 0x92] {
+            press(&mut game, 22);
+            assert_eq!(game.vm().pc(), build.menu_pc);
+            assert_eq!(
+                game.vm().memory()[0x1b08],
+                expected,
+                "{path} moves the menu cursor right"
+            );
+            assert_ne!(frame(&game), menu, "{path} highlights another entry");
+        }
+        press(&mut game, 23);
+        assert_eq!(game.vm().memory()[0x1b08], 0x6e);
+        press(&mut game, 23);
+        assert_eq!(game.vm().memory()[0x1b08], 0x4a);
+
+        press(&mut game, 13);
+        assert_eq!(
+            game.vm().pc(),
+            build.settings_pc,
+            "{path} opens the settings menu"
+        );
+        let settings = frame(&game);
+        let cursor = game.vm().memory()[0x1b04];
+        press(&mut game, 21);
+        assert_ne!(game.vm().memory()[0x1b04], cursor);
+        let cursor = game.vm().memory()[0x1b04];
+        press(&mut game, 21);
+        assert_ne!(game.vm().memory()[0x1b04], cursor);
+        assert_ne!(frame(&game), settings);
+        press(&mut game, 13);
+        assert_eq!(
+            game.vm().pc(),
+            build.height_pc,
+            "{path} opens the speed and height settings"
+        );
+        press(&mut game, 27);
+        assert_eq!(game.vm().pc(), build.settings_pc);
+        press(&mut game, 27);
+        assert_eq!(game.vm().pc(), build.menu_pc);
+        assert_eq!(game.vm().memory()[0x1b08], 0x4a);
+
+        press(&mut game, 22);
+        assert_eq!(game.vm().memory()[0x1b08], 0x6e);
+        press(&mut game, 13);
+        assert_eq!(game.vm().pc(), build.help_pc, "{path} opens the help page");
+        let help = frame(&game);
+        assert!(help.iter().any(|&pixel| pixel != help[0]));
+        press(&mut game, 27);
+        assert_eq!(game.vm().pc(), build.menu_pc);
+
+        press(&mut game, 22);
+        assert_eq!(game.vm().memory()[0x1b08], 0x92);
+        press(&mut game, 13);
+        assert_eq!(
+            game.vm().pc(),
+            build.ranking_pc,
+            "{path} opens the high score list"
+        );
+        let ranking = frame(&game);
+        assert!(ranking.iter().any(|&pixel| pixel != ranking[0]));
+        assert_ne!(
+            ranking, help,
+            "{path} shows separate help and ranking pages"
+        );
+        press(&mut game, 27);
+        assert_eq!(game.vm().pc(), build.menu_pc);
+
+        press(&mut game, 23);
+        press(&mut game, 23);
+        press(&mut game, 23);
+        assert_eq!(game.vm().memory()[0x1b08], 0x26);
+        press(&mut game, 13);
+        assert_eq!(
+            game.vm().pc(),
+            build.difficulty_pc,
+            "{path} offers three difficulties"
+        );
+        assert_eq!(game.vm().memory()[0x1b08], build.difficulty_cursor[0]);
+        for expected in [
+            build.difficulty_cursor[1],
+            build.difficulty_cursor[2],
+            build.difficulty_cursor[0],
+        ] {
+            press(&mut game, 21);
+            assert_eq!(
+                game.vm().memory()[0x1b08],
+                expected,
+                "{path} cycles the difficulty cursor"
+            );
+        }
+        for expected in [
+            build.difficulty_cursor[2],
+            build.difficulty_cursor[1],
+            build.difficulty_cursor[0],
+        ] {
+            press(&mut game, 20);
+            assert_eq!(
+                game.vm().memory()[0x1b08],
+                expected,
+                "{path} cycles the difficulty cursor back"
+            );
+        }
+        press(&mut game, 13);
+        advance(&mut game, 30);
+        assert_eq!(game.vm().pc(), build.board_pc, "{path} starts the board");
+
+        let piece_x = |game: &Emulator| {
+            let memory = game.vm().memory();
+            u16::from_le_bytes([memory[build.piece_x], memory[build.piece_x + 1]])
+        };
+        assert_eq!(piece_x(&game), 5, "{path} spawns the piece in the center");
+        let board = frame(&game);
+        press(&mut game, 23);
+        assert_eq!(game.vm().pc(), build.board_pc);
+        assert_eq!(piece_x(&game), 4, "{path} moves the piece left");
+        assert_ne!(frame(&game), board);
+        press(&mut game, 22);
+        assert_eq!(piece_x(&game), 5);
+        press(&mut game, 22);
+        assert_eq!(piece_x(&game), 6, "{path} moves the piece right");
+        let shape = game.vm().memory()[0x2042];
+        let unrotated = frame(&game);
+        press(&mut game, 20);
+        assert_eq!(game.vm().pc(), build.board_pc);
+        assert!(
+            game.vm().memory()[0x2042] != shape || frame(&game) != unrotated,
+            "{path} rotates the piece"
+        );
+        let depth = game.vm().memory()[build.piece_depth];
+        let before_drop_frame = frame(&game);
+        press(&mut game, 21);
+        assert_ne!(
+            game.vm().memory()[build.piece_depth],
+            depth,
+            "{path} drops the piece"
+        );
+        assert_ne!(frame(&game), before_drop_frame);
+
+        press(&mut game, 28);
+        assert_eq!(game.vm().pc(), build.clock_pc, "{path} opens the clock");
+        advance(&mut game, 10);
+        let clock = frame(&game);
+        advance(&mut game, 60);
+        assert_ne!(frame(&game), clock, "{path} advances the clock");
+        press(&mut game, 27);
+        assert_eq!(game.vm().pc(), build.board_pc);
+
+        press(&mut game, 13);
+        assert_eq!(game.vm().pc(), build.pause_pc, "{path} pauses the game");
+        assert_eq!(wait_for_input(&mut game), build.pause_pc);
+        press(&mut game, 13);
+        assert_eq!(game.vm().pc(), build.board_pc);
+        press(&mut game, 13);
+        assert_eq!(game.vm().pc(), build.pause_pc);
+        press(&mut game, 27);
+        assert_eq!(
+            game.vm().pc(),
+            build.pause_quit_pc,
+            "{path} asks before quitting"
+        );
+        press(&mut game, 110);
+        assert_eq!(game.vm().pc(), build.pause_pc);
+        press(&mut game, 27);
+        assert_eq!(game.vm().pc(), build.pause_quit_pc);
+        press(&mut game, 121);
+        assert_eq!(game.vm().pc(), build.menu_pc, "{path} returns to the menu");
+
+        press(&mut game, 27);
+        assert_eq!(
+            game.vm().pc(),
+            build.exit_confirm_pc,
+            "{path} asks before closing"
+        );
+        press(&mut game, 110);
+        assert_eq!(game.vm().pc(), build.menu_pc);
+        press(&mut game, 27);
+        assert_eq!(game.vm().pc(), build.exit_confirm_pc);
+        let (pc, code) = halt_with_key(&mut game, 121);
+        assert_eq!((pc, code), (build.halt_pc, 0), "{path} exits cleanly");
+        let written = game.files_mut().take_dirty_files();
+        assert_eq!(
+            written.len(),
+            1,
+            "{path} re-saves the score table on exit: {written:?}"
+        );
+        assert_eq!(written[0].0, "/lavadata/zsboxsave.dat");
+        assert_eq!(written[0].1.len(), 101);
+        assert_eq!(&written[0].1[..35], &[0u8; 35]);
+        assert_eq!(
+            &written[0].1[35..41],
+            &default_name,
+            "{path} stores the default player name on exit"
+        );
+        assert_eq!(
+            &written[0].1[41..96],
+            &boot_save[41..96],
+            "{path} keeps the stored scores on exit"
+        );
+        assert_eq!(&written[0].1[96..], &[0x17, 0x16, 0x15, 0x14, 0x0d]);
+    }
+}
