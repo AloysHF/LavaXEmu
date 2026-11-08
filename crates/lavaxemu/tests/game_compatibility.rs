@@ -27489,3 +27489,55 @@ fn lianliankan_stage_and_finish_animations_exit_on_key() {
     let (pc, code) = halt_with_key(&mut game, 13);
     assert_eq!((pc, code), (0x704, 0), "the finish animation exits cleanly");
 }
+
+#[test]
+#[ignore = "requires the local game corpus via LAVAX_GAME_ROOT"]
+fn maze_journey_title_character_maze_facing_and_escape() {
+    let mut game = load("LAVA1 迷宫之旅/maze2.lav");
+    advance(&mut game, 60);
+    assert_eq!(wait_for_input(&mut game), 0x3f0b, "the title waits");
+
+    let files = game.files_mut().files();
+    assert_eq!(files.len(), 1);
+    assert_eq!(files[0].path, "/mg_data.dat");
+    assert_eq!(files[0].size, 8473);
+    assert!(!files[0].dirty);
+
+    press(&mut game, 13);
+    assert_eq!(game.vm().pc(), 0x3d4b, "Enter opens character selection");
+    assert_eq!(
+        game.run_frame().unwrap().status,
+        FrameStatus::WaitingForInput
+    );
+
+    press(&mut game, 13);
+    assert_eq!(game.vm().pc(), 0x13fd, "Enter starts the maze");
+    advance(&mut game, 30);
+    assert_eq!(game.vm().memory()[0x2012], 5, "the player starts at x=5");
+    assert_eq!(game.vm().memory()[0x2008], 2, "the player faces down");
+
+    press(&mut game, 22);
+    assert_eq!(
+        game.vm().memory()[0x2008],
+        1,
+        "Right turns the player right"
+    );
+    press(&mut game, 21);
+    assert_eq!(game.vm().memory()[0x2008], 2, "Down turns the player down");
+    press(&mut game, 23);
+    assert_eq!(game.vm().memory()[0x2008], 0, "Left turns the player left");
+    press(&mut game, 20);
+    assert_eq!(game.vm().memory()[0x2008], 3, "Up turns the player up");
+    assert_eq!(
+        game.vm().memory()[0x2012],
+        5,
+        "the player stays at the start cell"
+    );
+
+    press(&mut game, 27);
+    assert_eq!(game.vm().pc(), 0x3f0b, "Escape returns to the title");
+    assert!(
+        game.files_mut().take_dirty_files().is_empty(),
+        "the game writes no files"
+    );
+}
