@@ -3891,3 +3891,70 @@ without an execution error alone does not establish playability.
 - Not covered: tile 9 doors, tile 6 stairs, the viewport PageUp/PageDown
   scrolling, the ten-flower item key, high-score writing, later map rows and
   the rest of the rooms.
+
+## Hero 2 Perfect Edition (LAVA1 英雄无敌2完美版)
+
+- Content: `LAVA1 英雄无敌2完美版/《英雄无敌2》完美版.lav` with the 14352-byte
+  `/h2-data.dat` companion. The title, menus, operations and battle run
+  without emulator changes, and no workflow writes to the companion.
+- The title waits at `0x114b2`: `1` asks for the player faction at
+  `0x114f2`, `2` opens a placeholder at `0x114a2` and any key returns, and
+  `3` halts with code 0 at `0x114b1`.
+- The player and AI faction grids wait at `0x11765` and `0x11a99` with the
+  cursor at the words `0x2011/0x2013`. The columns are `0/56/112` and the
+  rows `0/40`, wrapping on both axes. The choices reach the main menu at
+  `0x1128c` with the player faction at `0x205d` and the AI faction at
+  `0x205f`.
+- The main menu cursor clamps at columns `1/53/105` and rows `30/69`:
+  采矿, 部队 and 招募 on the top row, 查看, 攻击 and 系统 below. Each entry
+  is deterministic and read-only.
+- The mine submenu at `0x10da6` holds 采金, 强化, 金矿, 探索, 查看 and 返回.
+  采金 at `0xfd15` always adds 44 gold (word `0x58cf` 1000 → 1044, last gain
+  at `0x58e9`) and spends one of the five action points at `0x58eb`; the
+  result page passes through `0x85d8` and `0x85d9` before returning.
+- 强化 at `0xfdf3` spends 300 gold for the first tier (gold 1000 → 700,
+  tier flag `0x2001 = 1`) without spending an action. 金矿 at `0xff67`
+  spends 500 gold to build the mine (gold 1000 → 500, flag `0x2002 = 1`),
+  also without spending an action.
+- 探索 at `0x10024` finds 90 gold (gold 1000 → 1090, flag `0x58e7 = 1`,
+  gain `0x58e9 = 90`) and spends one action. 查看 at `0x10364` shows the
+  resources and at `0x10463` the hero, returning to the mine submenu.
+- 招募 at `0x10a77` lists the troops; the first troop at `0x10834` costs
+  150 gold (1000 → 850), adds a troop to the army (`0x2722 = 3`) and
+  spends one action. Escape returns to the main menu.
+- 系统 at `0x10565` opens 结束回合, 保存退出, 帮助, 退出, 关于 and 返回.
+  The help pages wait at `0xfbfc` and `0xfc96`, the about page at `0xfb9b`,
+  and 保存退出 is a no-op that writes nothing. 结束回合 runs through
+  `0x111b7` and refills the action points to five (`0x2015 = 6`). 退出
+  halts with code 0 at `0x1065d`.
+- 攻击 at `0xe8d5` asks for the attacking troops and `0xecc6` needs at
+  least one troop pick before `y` starts the battle at `0xdb60`. The battle
+  scene at `0xe386` shows the round result at `0xe440` on Space and returns
+  to the scene on Enter.
+- Not covered: the strategic map, movement, turn economy beyond one refill,
+  saves, magic, later rounds and victory conditions.
+
+## Hero Battle Edition (LAVA1 英雄无敌对战版)
+
+- Content: `LAVA1 英雄无敌对战版/英雄无敌v1.0.lav` with `/h2-data.dat`
+  (14352 bytes) and `/英雄无敌帮助.txt` (986 bytes). No emulator changes
+  were required and no workflow writes to either companion.
+- The splash waits at `0x110ff`; Space opens the title at `0x110b8`. The
+  title starts a single battle on `1`, a two-player battle on `2` (stored
+  at `0x2004`) and halts with code 0 on `3` at `0x110b7`.
+- After the faction grid at `0x11419` and its banner at `0x1148f`, the troop
+  draft waits at `0x118da`. The cursor is the word at `0x2006` and steps
+  through `0/20/40/60/80/100`, wrapping both ways.
+- Enter picks one copy of the highlighted troop: the army counts at
+  `0x2717` decrease and the pick counter at `0x2046` increases. `y` needs
+  at least one pick before it moves on, and an empty pick stays on the
+  draft.
+- The AI or second player is asked for its faction at `0x11950`, then uses
+  the grid at `0x11c11`, the banner at `0x11c87` and the draft at `0x120d6`
+  with its own reset pick counter. Both sides ready the battle at `0x10321`
+  and the scene appears at `0x10b52`.
+- Space at the battle shows the round result at `0x10c0c`, and Enter starts
+  the next round back at `0x10b52`. The two-player entry keeps `0x2004 = 2`
+  through the draft.
+- Not covered: faction and troop effects, magic, battle outcome, saving,
+  the help text contents and further rounds.

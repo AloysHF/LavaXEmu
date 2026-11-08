@@ -23334,3 +23334,611 @@ fn flower_spirit_collects_flowers_and_restores_a_save() {
         );
     }
 }
+
+#[test]
+#[ignore = "requires the local game corpus via LAVAX_GAME_ROOT"]
+fn hero2_perfect_edition_mines_recruits_and_fights() {
+    let mut game = load("LAVA1 英雄无敌2完美版/《英雄无敌2》完美版.lav");
+    let word = |game: &Emulator, address: usize| {
+        u16::from_le_bytes(game.vm().memory()[address..address + 2].try_into().unwrap())
+    };
+    let cursor = |game: &Emulator| (word(game, 0x2011), word(game, 0x2013));
+    let gold = |game: &Emulator| word(game, 0x58cf);
+    let action = |game: &Emulator| word(game, 0x58eb);
+
+    advance(&mut game, 300);
+    assert_eq!(game.vm().pc(), 0x114b2, "the title waits for a key");
+    assert!(
+        game.files_mut().take_dirty_files().is_empty(),
+        "the title writes nothing"
+    );
+    assert_eq!(
+        game.files().file("/h2-data.dat").map(|data| data.len()),
+        Some(14352),
+        "the companion data is loaded"
+    );
+    let title_frame = game.display().indexed_frame().to_vec();
+
+    let mut title_exit = game.clone();
+    title_exit.input_mut().set_keys(*b"m");
+    let mut halted = None;
+    for _ in 0..3 {
+        if let FrameStatus::Halted(code) = title_exit.run_frame().unwrap().status {
+            halted = Some(code);
+            break;
+        }
+    }
+    title_exit.input_mut().set_keys([]);
+    assert_eq!(halted, Some(0), "the third title entry quits");
+    assert_eq!(
+        title_exit.vm().pc(),
+        0x114b1,
+        "the title exits through its halt"
+    );
+
+    press(&mut game, b'n');
+    assert_eq!(game.vm().pc(), 0x114a2, "the second entry is a placeholder");
+    press(&mut game, 13);
+    assert_eq!(
+        game.vm().pc(),
+        0x114b2,
+        "a key returns from the placeholder"
+    );
+    press(&mut game, b'b');
+    assert_eq!(
+        game.vm().pc(),
+        0x114f2,
+        "the first entry asks for the player faction"
+    );
+    press(&mut game, 13);
+    assert_eq!(
+        game.vm().pc(),
+        0x11765,
+        "the faction grid waits for a choice"
+    );
+    assert_eq!(cursor(&game), (0, 0), "the grid starts on the first entry");
+    press(&mut game, b'd');
+    assert_eq!(cursor(&game), (56, 0), "right advances the column");
+    press(&mut game, b'd');
+    assert_eq!(cursor(&game), (112, 0));
+    press(&mut game, b'd');
+    assert_eq!(cursor(&game), (0, 0), "the row wraps");
+    press(&mut game, b'w');
+    assert_eq!(cursor(&game), (0, 40), "up advances the row");
+    press(&mut game, b'w');
+    assert_eq!(cursor(&game), (0, 0), "the column wraps vertically");
+    press(&mut game, 13);
+    assert_eq!(game.vm().pc(), 0x11814, "the grid asks for the AI faction");
+    press(&mut game, 13);
+    assert_eq!(game.vm().pc(), 0x11a99, "the AI grid waits for a choice");
+    assert_eq!(
+        cursor(&game),
+        (0, 0),
+        "the AI grid starts on the first entry"
+    );
+    press(&mut game, b'w');
+    assert_eq!(cursor(&game), (0, 40));
+    press(&mut game, b'd');
+    assert_eq!(cursor(&game), (56, 40));
+    press(&mut game, 13);
+    assert_eq!(game.vm().pc(), 0x1128c, "the choices open the main menu");
+    assert_eq!(word(&game, 0x205d), 0, "the player faction is stored");
+    assert_eq!(word(&game, 0x205f), 4, "the AI faction is stored");
+    assert_eq!(cursor(&game), (1, 30), "the main menu starts on mining");
+    let main_frame = game.display().indexed_frame().to_vec();
+    assert_ne!(
+        main_frame, title_frame,
+        "the main menu renders a different screen"
+    );
+
+    let mut recruit = game.clone();
+
+    press(&mut game, b'a');
+    assert_eq!(cursor(&game), (1, 30), "left clamps on the first column");
+    press(&mut game, b'd');
+    assert_eq!(cursor(&game), (53, 30));
+    press(&mut game, b'd');
+    assert_eq!(cursor(&game), (105, 30));
+    press(&mut game, b'd');
+    assert_eq!(cursor(&game), (105, 30), "right clamps on the last column");
+    press(&mut game, b'a');
+    assert_eq!(cursor(&game), (53, 30));
+    press(&mut game, b'a');
+    assert_eq!(cursor(&game), (1, 30));
+    press(&mut game, b'w');
+    assert_eq!(cursor(&game), (1, 30), "up clamps on the first row");
+    press(&mut game, b's');
+    assert_eq!(cursor(&game), (1, 69));
+    press(&mut game, b'w');
+    assert_eq!(cursor(&game), (1, 30));
+    press(&mut game, b's');
+    assert_eq!(cursor(&game), (1, 69));
+    press(&mut game, b'w');
+    assert_eq!(cursor(&game), (1, 30));
+
+    press(&mut game, 13);
+    assert_eq!(
+        game.vm().pc(),
+        0x10da6,
+        "the first entry opens the mine menu"
+    );
+    assert_eq!(cursor(&game), (1, 30), "the mine menu starts on mining");
+
+    let mut upgrade = game.clone();
+    press(&mut upgrade, b'd');
+    assert_eq!(cursor(&upgrade), (53, 30));
+    press(&mut upgrade, 13);
+    assert_eq!(upgrade.vm().pc(), 0xfdf3, "the upgrade page shows its cost");
+    assert_eq!(gold(&upgrade), 1000, "the page reads the treasury");
+    press(&mut upgrade, b'y');
+    assert_eq!(upgrade.vm().pc(), 0xfe5d, "gold pays for the upgrade");
+    assert_eq!(gold(&upgrade), 700, "the upgrade costs three hundred");
+    assert_eq!(word(&upgrade, 0x2001), 1, "the mine tier is upgraded");
+    assert_eq!(action(&upgrade), 5, "the upgrade does not spend an action");
+    advance(&mut upgrade, 60);
+    assert_eq!(upgrade.vm().pc(), 0x85d8, "the result message appears");
+    press(&mut upgrade, 13);
+    assert_eq!(upgrade.vm().pc(), 0xfea0, "the message starts closing");
+    advance(&mut upgrade, 60);
+    assert_eq!(upgrade.vm().pc(), 0x10da6, "the mine menu returns");
+    assert_eq!(cursor(&upgrade), (53, 30), "the cursor stays on upgrade");
+
+    let mut build = game.clone();
+    press(&mut build, b'd');
+    press(&mut build, b'd');
+    assert_eq!(cursor(&build), (105, 30));
+    press(&mut build, 13);
+    assert_eq!(build.vm().pc(), 0xff67, "the mine page shows its cost");
+    assert_eq!(gold(&build), 1000);
+    press(&mut build, b'y');
+    assert_eq!(build.vm().pc(), 0xffc3, "gold pays for the mine");
+    assert_eq!(gold(&build), 500, "the mine costs five hundred");
+    assert_eq!(word(&build, 0x2002), 1, "the mine is built");
+    assert_eq!(action(&build), 5, "building does not spend an action");
+    advance(&mut build, 60);
+    assert_eq!(build.vm().pc(), 0x85d8, "the result message appears");
+    press(&mut build, 13);
+    assert_eq!(build.vm().pc(), 0x10006, "the message starts closing");
+    advance(&mut build, 60);
+    assert_eq!(build.vm().pc(), 0x10da6, "the mine menu returns");
+    assert_eq!(cursor(&build), (105, 30), "the cursor stays on the mine");
+
+    let mut explore = game.clone();
+    press(&mut explore, b's');
+    assert_eq!(cursor(&explore), (1, 69));
+    press(&mut explore, 13);
+    assert_eq!(
+        explore.vm().pc(),
+        0x10024,
+        "the exploration page waits for a key"
+    );
+    press(&mut explore, 13);
+    assert_eq!(explore.vm().pc(), 0x10253, "the exploration finds gold");
+    assert_eq!(gold(&explore), 1090, "the find is added to the treasury");
+    assert_eq!(word(&explore, 0x58e7), 1, "the find is recorded");
+    assert_eq!(word(&explore, 0x58e9), 90, "the find is ninety gold");
+    assert_eq!(action(&explore), 4, "exploration spends one action");
+    advance(&mut explore, 60);
+    assert_eq!(explore.vm().pc(), 0x10253, "the find stays on screen");
+    press(&mut explore, 13);
+    assert_eq!(explore.vm().pc(), 0x85d8, "the find starts closing");
+    advance(&mut explore, 60);
+    assert_eq!(explore.vm().pc(), 0x85d9, "the closing message animates");
+    press(&mut explore, 13);
+    assert_eq!(explore.vm().pc(), 0x10da6, "the mine menu returns");
+    assert_eq!(cursor(&explore), (1, 69), "the cursor stays on exploration");
+
+    let mut view = game.clone();
+    press(&mut view, b'd');
+    press(&mut view, b's');
+    assert_eq!(cursor(&view), (53, 69));
+    press(&mut view, 13);
+    assert_eq!(view.vm().pc(), 0x10364, "the status page shows resources");
+    press(&mut view, 13);
+    assert_eq!(view.vm().pc(), 0x10463, "the status page shows the hero");
+    press(&mut view, 13);
+    assert_eq!(view.vm().pc(), 0x10da6, "the status pages return");
+    assert_eq!(cursor(&view), (53, 69), "the cursor stays on status");
+
+    let mut back = game.clone();
+    press(&mut back, b'd');
+    press(&mut back, b'd');
+    press(&mut back, b's');
+    press(&mut back, 13);
+    assert_eq!(back.vm().pc(), 0x1128c, "the last entry returns");
+    assert_eq!(cursor(&back), (1, 30), "the main menu restarts");
+
+    press(&mut game, 13);
+    assert_eq!(game.vm().pc(), 0xfd15, "the first entry starts mining");
+    assert_eq!(gold(&game), 1044, "the haul is added to the treasury");
+    assert_eq!(word(&game, 0x58e9), 44, "the haul is forty-four gold");
+    assert_eq!(action(&game), 4, "mining spends one action");
+    press(&mut game, 13);
+    assert_eq!(game.vm().pc(), 0x85d8, "the haul message appears");
+    advance(&mut game, 40);
+    assert_eq!(game.vm().pc(), 0x85d9, "the haul message animates");
+    press(&mut game, 13);
+    assert_eq!(game.vm().pc(), 0x10da6, "mining returns to the mine menu");
+    assert_eq!(cursor(&game), (1, 30), "the mine menu restarts");
+    press(&mut game, b'd');
+    press(&mut game, b'd');
+    press(&mut game, b's');
+    press(&mut game, 13);
+    assert_eq!(
+        game.vm().pc(),
+        0x1128c,
+        "the mine menu returns to the main menu"
+    );
+    assert_eq!(cursor(&game), (1, 30), "the main menu restarts");
+
+    press(&mut recruit, b'd');
+    press(&mut recruit, b'd');
+    assert_eq!(cursor(&recruit), (105, 30));
+    press(&mut recruit, 13);
+    assert_eq!(recruit.vm().pc(), 0x10a77, "the recruit list opens");
+    assert_eq!(
+        cursor(&recruit),
+        (1, 30),
+        "the recruit list starts on the first troop"
+    );
+    press(&mut recruit, 13);
+    assert_eq!(
+        recruit.vm().pc(),
+        0x10834,
+        "the first troop shows its stats"
+    );
+    assert_eq!(gold(&recruit), 1000);
+    press(&mut recruit, b'y');
+    assert_eq!(recruit.vm().pc(), 0x108f2, "gold pays for the troop");
+    press(&mut recruit, 13);
+    assert_eq!(recruit.vm().pc(), 0x85d8, "the recruit message appears");
+    advance(&mut recruit, 60);
+    assert_eq!(recruit.vm().pc(), 0x10a77, "the recruit list returns");
+    assert_eq!(gold(&recruit), 850, "the troop costs one hundred fifty");
+    assert_eq!(recruit.vm().memory()[0x2722], 3, "the troop joins the army");
+    assert_eq!(action(&recruit), 4, "recruiting spends one action");
+    press(&mut recruit, 27);
+    assert_eq!(recruit.vm().pc(), 0x1128c, "escape leaves the recruit list");
+    assert_eq!(cursor(&recruit), (1, 30));
+
+    press(&mut game, b'd');
+    press(&mut game, 13);
+    assert_eq!(game.vm().pc(), 0x10ca7, "the army page lists the troops");
+    press(&mut game, 13);
+    assert_eq!(game.vm().pc(), 0x1128c, "the army page returns");
+    assert_eq!(cursor(&game), (1, 30));
+
+    press(&mut game, b's');
+    press(&mut game, 13);
+    assert_eq!(
+        game.vm().pc(),
+        0x10364,
+        "the status page opens from the menu"
+    );
+    press(&mut game, 13);
+    assert_eq!(game.vm().pc(), 0x10463);
+    press(&mut game, 13);
+    assert_eq!(game.vm().pc(), 0x1128c);
+    assert_eq!(cursor(&game), (1, 69), "the cursor stays on status");
+
+    press(&mut game, b'd');
+    press(&mut game, b'd');
+    assert_eq!(cursor(&game), (105, 69));
+    press(&mut game, 13);
+    assert_eq!(game.vm().pc(), 0x10565, "the system menu opens");
+    assert_eq!(
+        cursor(&game),
+        (1, 30),
+        "the system menu starts on its first entry"
+    );
+
+    press(&mut game, b'd');
+    press(&mut game, b'd');
+    press(&mut game, 13);
+    assert_eq!(
+        game.vm().pc(),
+        0xfbfc,
+        "the first help page waits for a key"
+    );
+    press(&mut game, 13);
+    assert_eq!(
+        game.vm().pc(),
+        0xfc96,
+        "the second help page waits for a key"
+    );
+    press(&mut game, 13);
+    assert_eq!(game.vm().pc(), 0x10565, "the help pages return");
+    assert_eq!(cursor(&game), (105, 30), "the cursor stays on help");
+
+    press(&mut game, b's');
+    press(&mut game, b'a');
+    assert_eq!(cursor(&game), (53, 69));
+    press(&mut game, 13);
+    assert_eq!(game.vm().pc(), 0xfb9b, "the about page waits for a key");
+    press(&mut game, 13);
+    assert_eq!(game.vm().pc(), 0x10565, "the about page returns");
+    assert_eq!(cursor(&game), (53, 69), "the cursor stays on about");
+
+    press(&mut game, b'w');
+    assert_eq!(cursor(&game), (53, 30));
+    press(&mut game, 13);
+    assert_eq!(game.vm().pc(), 0x10565, "save and quit is not implemented");
+    assert_eq!(cursor(&game), (53, 30));
+    assert!(
+        game.files_mut().take_dirty_files().is_empty(),
+        "save and quit writes nothing"
+    );
+
+    press(&mut game, b'a');
+    assert_eq!(cursor(&game), (1, 30));
+    press(&mut game, 13);
+    assert_eq!(
+        game.vm().pc(),
+        0x111b7,
+        "ending the turn starts the transition"
+    );
+    let mut frames = 0;
+    loop {
+        let status = game.run_frame().unwrap().status;
+        frames += 1;
+        if matches!(status, FrameStatus::WaitingForInput) {
+            break;
+        }
+        assert!(frames < 600, "the turn transition settles");
+    }
+    assert_eq!(game.vm().pc(), 0x1128c, "the new turn opens the main menu");
+    assert_eq!(cursor(&game), (1, 30));
+    assert_eq!(action(&game), 5, "a new turn refills the action points");
+    assert_eq!(word(&game, 0x2015), 6, "the turn counter advances");
+
+    let mut quit = game.clone();
+    press(&mut quit, b'd');
+    press(&mut quit, b'd');
+    press(&mut quit, b's');
+    press(&mut quit, 13);
+    assert_eq!(quit.vm().pc(), 0x10565);
+    press(&mut quit, b's');
+    assert_eq!(cursor(&quit), (1, 69));
+    quit.input_mut().set_keys([13]);
+    let mut exited = None;
+    for _ in 0..3 {
+        if let FrameStatus::Halted(code) = quit.run_frame().unwrap().status {
+            exited = Some(code);
+            break;
+        }
+    }
+    quit.input_mut().set_keys([]);
+    assert_eq!(exited, Some(0), "the quit entry exits");
+    assert_eq!(
+        quit.vm().pc(),
+        0x1065d,
+        "the system menu exits through its halt"
+    );
+
+    press(&mut game, b'd');
+    press(&mut game, b's');
+    assert_eq!(cursor(&game), (53, 69));
+    press(&mut game, 13);
+    assert_eq!(
+        game.vm().pc(),
+        0xe8d5,
+        "attack asks for the attacking troops"
+    );
+    assert_eq!(cursor(&game), (53, 69));
+    press(&mut game, 13);
+    assert_eq!(game.vm().pc(), 0xecc6, "the battle draft waits for picks");
+
+    let mut unprepared = game.clone();
+    press(&mut unprepared, b'y');
+    assert_eq!(
+        unprepared.vm().pc(),
+        0xecc6,
+        "a battle needs at least one troop pick"
+    );
+
+    press(&mut game, 13);
+    assert_eq!(game.vm().pc(), 0xecc6, "the draft takes the pick");
+    press(&mut game, b'y');
+    assert_eq!(game.vm().pc(), 0xdb60, "the battle begins");
+    advance(&mut game, 60);
+    assert_eq!(game.vm().pc(), 0xe386, "the battle scene is shown");
+    let battle_frame = game.display().indexed_frame().to_vec();
+    assert_ne!(
+        battle_frame, main_frame,
+        "the battle renders a different screen"
+    );
+    press(&mut game, 32);
+    assert_eq!(game.vm().pc(), 0xe440, "space shows the round result");
+    press(&mut game, 13);
+    assert_eq!(game.vm().pc(), 0xe386, "enter starts the next round");
+    assert!(
+        game.files_mut().take_dirty_files().is_empty(),
+        "the battle writes nothing"
+    );
+    assert_eq!(
+        game.files().file("/h2-data.dat").map(|data| data.len()),
+        Some(14352),
+        "the companion data is unchanged"
+    );
+}
+
+#[test]
+#[ignore = "requires the local game corpus via LAVAX_GAME_ROOT"]
+fn hero_battle_edition_drafts_units_and_fights() {
+    let mut game = load("LAVA1 英雄无敌对战版/英雄无敌v1.0.lav");
+    let word = |game: &Emulator, address: usize| {
+        u16::from_le_bytes(game.vm().memory()[address..address + 2].try_into().unwrap())
+    };
+    let cursor = |game: &Emulator| word(game, 0x2006);
+
+    advance(&mut game, 600);
+    assert_eq!(game.vm().pc(), 0x110ff, "the splash waits for a key");
+    assert!(
+        game.files_mut().take_dirty_files().is_empty(),
+        "the splash writes nothing"
+    );
+    assert_eq!(
+        game.files().file("/h2-data.dat").map(|data| data.len()),
+        Some(14352),
+        "the companion data is loaded"
+    );
+    assert_eq!(
+        game.files()
+            .file("/英雄无敌帮助.txt")
+            .map(|data| data.len()),
+        Some(986),
+        "the help text is loaded"
+    );
+    let splash_frame = game.display().indexed_frame().to_vec();
+
+    press(&mut game, 32);
+    assert_eq!(game.vm().pc(), 0x110b8, "space opens the title");
+    let title_frame = game.display().indexed_frame().to_vec();
+    assert_ne!(
+        title_frame, splash_frame,
+        "the title renders a different screen"
+    );
+
+    let mut title_exit = game.clone();
+    title_exit.input_mut().set_keys(*b"m");
+    let mut halted = None;
+    for _ in 0..3 {
+        if let FrameStatus::Halted(code) = title_exit.run_frame().unwrap().status {
+            halted = Some(code);
+            break;
+        }
+    }
+    title_exit.input_mut().set_keys([]);
+    assert_eq!(halted, Some(0), "the third title entry quits");
+    assert_eq!(
+        title_exit.vm().pc(),
+        0x110b7,
+        "the title exits through its halt"
+    );
+
+    let mut two_player = game.clone();
+    press(&mut two_player, b'n');
+    assert_eq!(
+        two_player.vm().pc(),
+        0x111b5,
+        "the second entry starts a two player battle"
+    );
+    assert_eq!(word(&two_player, 0x2004), 2, "two players are stored");
+    press(&mut two_player, 13);
+    press(&mut two_player, 13);
+    press(&mut two_player, 13);
+    assert_eq!(
+        two_player.vm().pc(),
+        0x118da,
+        "the second player drafts troops"
+    );
+    assert_eq!(cursor(&two_player), 0);
+    press(&mut two_player, 13);
+    assert_eq!(word(&two_player, 0x2046), 1, "the pick is counted");
+    press(&mut two_player, b'y');
+    assert_eq!(
+        two_player.vm().pc(),
+        0x11950,
+        "the second player picks a faction"
+    );
+    assert_eq!(
+        word(&two_player, 0x2004),
+        2,
+        "both players stay in the battle"
+    );
+
+    press(&mut game, b'b');
+    assert_eq!(
+        game.vm().pc(),
+        0x111b5,
+        "the first entry starts a single battle"
+    );
+    assert_eq!(word(&game, 0x2004), 1, "one player is stored");
+    press(&mut game, 13);
+    assert_eq!(
+        game.vm().pc(),
+        0x11419,
+        "the faction grid waits for a choice"
+    );
+    press(&mut game, 13);
+    assert_eq!(
+        game.vm().pc(),
+        0x1148f,
+        "the grid asks for the player troops"
+    );
+    press(&mut game, 13);
+    assert_eq!(game.vm().pc(), 0x118da, "the troop draft waits for picks");
+    assert_eq!(cursor(&game), 0, "the draft starts on the first troop");
+
+    press(&mut game, b'd');
+    assert_eq!(cursor(&game), 20);
+    press(&mut game, b'd');
+    assert_eq!(cursor(&game), 40);
+    press(&mut game, b'd');
+    assert_eq!(cursor(&game), 60);
+    press(&mut game, b'd');
+    assert_eq!(cursor(&game), 80);
+    press(&mut game, b'd');
+    assert_eq!(cursor(&game), 100);
+    press(&mut game, b'd');
+    assert_eq!(cursor(&game), 0, "right wraps to the first troop");
+    press(&mut game, b'a');
+    assert_eq!(cursor(&game), 100, "left wraps to the last troop");
+    press(&mut game, b'a');
+    assert_eq!(cursor(&game), 80);
+
+    let mut no_pick = game.clone();
+    press(&mut no_pick, b'y');
+    assert_eq!(
+        no_pick.vm().pc(),
+        0x118da,
+        "a battle needs at least one troop"
+    );
+    assert_eq!(word(&no_pick, 0x2046), 0);
+
+    assert_eq!(
+        game.vm().memory()[0x271b],
+        6,
+        "the fifth troop has six copies"
+    );
+    press(&mut game, 13);
+    assert_eq!(game.vm().memory()[0x271b], 5, "the pick removes one copy");
+    assert_eq!(word(&game, 0x2046), 1, "the pick is counted");
+    press(&mut game, b'y');
+    assert_eq!(game.vm().pc(), 0x11950, "the AI drafts its troops");
+    assert_eq!(word(&game, 0x2004), 1);
+    press(&mut game, 13);
+    assert_eq!(
+        game.vm().pc(),
+        0x11c11,
+        "the AI faction grid waits for a choice"
+    );
+    press(&mut game, 13);
+    assert_eq!(game.vm().pc(), 0x11c87, "the grid asks for the AI troops");
+    press(&mut game, 13);
+    assert_eq!(
+        game.vm().pc(),
+        0x120d6,
+        "the AI troop draft waits for picks"
+    );
+    assert_eq!(word(&game, 0x2046), 0, "the AI draft resets the picks");
+    press(&mut game, 13);
+    assert_eq!(word(&game, 0x2046), 1, "the AI pick is counted");
+    press(&mut game, b'y');
+    assert_eq!(game.vm().pc(), 0x10321, "both sides ready the battle");
+    advance(&mut game, 60);
+    assert_eq!(game.vm().pc(), 0x10b52, "the battle scene is shown");
+    let battle_frame = game.display().indexed_frame().to_vec();
+    assert_ne!(
+        battle_frame, title_frame,
+        "the battle renders a different screen"
+    );
+    press(&mut game, 32);
+    assert_eq!(game.vm().pc(), 0x10c0c, "space shows the round result");
+    press(&mut game, 13);
+    assert_eq!(game.vm().pc(), 0x10b52, "enter starts the next round");
+    assert!(
+        game.files_mut().take_dirty_files().is_empty(),
+        "the battle writes nothing"
+    );
+}
