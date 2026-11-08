@@ -82,10 +82,11 @@ do not satisfy this status.
 - Shuai Ren Battle checked on 2026-11-08: one dedicated release workflow waits on the scrolling title, skips it into the punch/kick poster with its 130-step counter, verifies that a single tap draws the punch sprite during its pause and restores the poster, that a tap draws a different kick sprite and restores the poster, steps the counter down one per key through the five face pages at 80, 60, 30 and 15, keeps the last page at one counter step where the punch stays on screen, reaches the ending text at zero, and pages through the two ending screens to a halt with code 0 without writing files.
 - Gu Chong Maze Adventure checked on 2026-11-08: one dedicated release workflow covers the packaged and unpacked entries, walks the five-entry title menu, pages the five help screens with a clamped Down, selects the difficulty with clamped Up/Down, pages the prologue into the first maze cell, verifies the item pickup and the attack stat, stops at the wall, walks one cell right, resumes from Continue with the thirty-three-byte save, and pages the credits to a halt with code 0.
 - Clear Maze Caterpillar checked on 2026-11-08: one dedicated release workflow starts without input, verifies the 88-food map and start cell, walks right into food, left, blocks against the three surrounding walls, climbs the food corridor with the eaten cells cleared, is caught by the chaser and exits with code 0 from the lose page, then checks the pause overlay and resume, the help page and redraw key, the saved recording with its signature and key buffer, and the exit prompt cancel and confirm with a code 0 halt.
+- Jackal checked on 2026-11-08: one dedicated release workflow waits on the static JACKAL title, starts the 160x80 scrolling field with the jeep at 7,168 and camera 1,164, fires the forward shot that inherits the heading and expires, refuses reverse at the drop point, drives north to 7,143 with the camera at 1,139, reverses only to the screen edge at 7,162, clamps left at 4 and right at 29 as the camera scrolls to 18, fires a right-facing shot from 29,162 that inherits the turn, and exits with code 0 from Escape without writing files.
 - Snake Bob checked on 2026-11-08: one dedicated release workflow waits on the static 第0关 title, starts the board with the snake at 3,2 and food at 16,18, verifies the snake rests until a direction is pressed, steers right and down one cell per tap into two foods with deterministic respawns at 37,26 and 51,5 while the body grows from five to seven segments, confirms that food scores one step after the head arrives, that the opposite direction is ignored, and that running into the bottom wall shows the 第0关 game over line and exits with code 0 on a key without writing files.
-- 194 dedicated release workflows passed in this audit.
-- 271 of 324 entry points were loaded by those successful workflows.
-- 53 entry points still need dedicated workflow verification.
+- 195 dedicated release workflows passed in this audit.
+- 272 of 324 entry points were loaded by those successful workflows.
+- 52 entry points still need dedicated workflow verification.
 - The historical [startup gallery](Game-Compatibility.md) is a separate check
   and must not be interpreted as this workflow audit.
 
@@ -376,7 +377,7 @@ an optional screenshot directory. Keep each test's logs and captures separate.
 | 267 | `LAVA1 谷虫迷宫大冒险/未打包/gcdmx.lav` | Game / game package | [Workflow passed: `gu_chong_maze_adventure_runs_menus_help_pickup_and_credits`](../crates/lavaxemu/tests/game_compatibility.rs#L25848) |
 | 268 | `LAVA1 贪吃小精灵/Clear.lav` | Game / game package | [Workflow passed: `clear_maze_caterpillar_moves_pauses_helps_saves_and_exits`](../crates/lavaxemu/tests/game_compatibility.rs#L26197) |
 | 269 | `LAVA1 贪吃蛇鲍勃/贪吃蛇鲍勃.lav` | Game / game package | [Workflow passed: `snake_bob_eats_grows_ignores_reverse_and_ends_on_walls`](../crates/lavaxemu/tests/game_compatibility.rs#L26419) |
-| 270 | `LAVA1 赤色要塞/非pac/Jackal.lav` | Game / game package | Pending |
+| 270 | `LAVA1 赤色要塞/非pac/Jackal.lav` | Game / game package | [Workflow passed: `jackal_starts_scrolls_fires_and_exits`](../crates/lavaxemu/tests/game_compatibility.rs#L26607) |
 | 271 | `LAVA1 超级机器人大战/Download/SRW.pac` | Game / game package | Pending |
 | 272 | `LAVA1 超级机器人大战/file/SRW.lav` | Game / game package | Pending |
 | 273 | `LAVA1 超级机器人大战/Setup/SRW.lav` | Installer | [Workflow passed: `super_robot_wars_installs_resources_and_accepts_map_input`](../crates/lavaxemu/tests/game_compatibility.rs#L751) |

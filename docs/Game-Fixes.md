@@ -4292,3 +4292,31 @@ without an execution error alone does not establish playability.
   screen and halts with code 0. No emulator defect was found.
 - Not covered: later levels (the tested flow stayed on level 0 after twelve
   foods), self-collision through a closed loop, and audio.
+
+## Jackal (LAVA1 赤色要塞/非pac/Jackal.lav)
+
+- Content: a 20807-byte `Jackal.lav` that reads the neighboring `Jackal.dat`,
+  `JMap.dat`, `MAP.dat`, `MAP.data`, `enemy.dat` and `fort.dat` data files. It
+  shows a static JACKAL 赤色要塞 title with `PRESS START` over a 160x80 screen
+  and enters the scrolling field on Enter.
+- The jeep position is stored as bytes: `x` at `0x75e8`, `y` at `0x75e9`, and
+  the heading is the 16-bit word at `0x75ee`. The camera is the byte pair at
+  `0x75f8` (horizontal) and `0x75fa` (vertical); at the drop point they read
+  `1` and `164` with the jeep at `(7,168)`.
+- W (`119`) drives north, S (`115`) reverses, A (`97`) turns left and D (`100`)
+  turns right. Reverse is refused at the drop point and later stops at the
+  screen edge, so the tested run ends at `y=162`. The first screen stops
+  scrolling north at `y=143` with the camera at `139`. Driving left clamps at
+  `x=4`; driving right clamps at `x=29` while the horizontal camera advances
+  from `1` to `18`.
+- J (`106`) fires one projectile at the jeep's position. The record at `0x74f8`
+  holds `x`, `y`, an age at `0x74fc`, a direction at `0x74fd`, a live flag at
+  `0x74fe` and the inherited velocity at `0x74ff/0x7501`. The direction is the
+  heading word divided by three: `0` forward, `120` right, `40` left, `80`
+  down. The single slot is reused once the shot expires after sixty age units;
+  a second press while the shot is alive is ignored. K (`107`) does not fire
+  in the tested state.
+- Escape (`27`) exits immediately with code 0 and writes no files. No emulator
+  defect was found.
+- Not covered: enemy and fort combat, weapons and upgrades, later areas, the
+  title menu beyond Enter, and audio.

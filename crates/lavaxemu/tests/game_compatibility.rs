@@ -26601,3 +26601,130 @@ fn snake_bob_eats_grows_ignores_reverse_and_ends_on_walls() {
         "the workflow writes no files"
     );
 }
+
+#[test]
+#[ignore = "requires the local game corpus via LAVAX_GAME_ROOT"]
+fn jackal_starts_scrolls_fires_and_exits() {
+    const GAME: &str = "LAVA1 赤色要塞/非pac/Jackal.lav";
+
+    fn boot() -> Emulator {
+        let mut game = load(GAME);
+        advance(&mut game, 60);
+        game
+    }
+    fn start(game: &mut Emulator) {
+        game.input_mut().set_keys([13]);
+        advance(game, 3);
+        game.input_mut().set_keys([]);
+        advance(game, 90);
+    }
+    fn hold(game: &mut Emulator, key: u8, frames: usize) {
+        game.input_mut().set_keys([key]);
+        advance(game, frames);
+        game.input_mut().set_keys([]);
+    }
+    fn position(game: &Emulator) -> (usize, usize) {
+        let memory = game.vm().memory();
+        (usize::from(memory[0x75e8]), usize::from(memory[0x75e9]))
+    }
+    fn heading(game: &Emulator) -> usize {
+        let memory = game.vm().memory();
+        usize::from(u16::from_le_bytes([memory[0x75ee], memory[0x75ef]]))
+    }
+    fn camera(game: &Emulator) -> (usize, usize) {
+        let memory = game.vm().memory();
+        (usize::from(memory[0x75f8]), usize::from(memory[0x75fa]))
+    }
+    fn shot(game: &Emulator) -> [u8; 8] {
+        let mut bytes = [0; 8];
+        bytes.copy_from_slice(&game.vm().memory()[0x74f8..0x7500]);
+        bytes
+    }
+    fn frame(game: &Emulator) -> Vec<u8> {
+        game.display().indexed_frame().to_vec()
+    }
+
+    let mut game = boot();
+    assert_eq!((game.display().width(), game.display().height()), (160, 80));
+    let title = frame(&game);
+    advance(&mut game, 200);
+    assert_eq!(game.vm().pc(), 0x4fdf);
+    assert_eq!(frame(&game), title, "the title waits for the start key");
+
+    start(&mut game);
+    assert_ne!(frame(&game), title);
+    assert_eq!(position(&game), (7, 168));
+    assert_eq!(heading(&game), 0);
+    assert_eq!(camera(&game), (1, 164));
+
+    hold(&mut game, 106, 10);
+    advance(&mut game, 5);
+    assert_eq!(&shot(&game)[..2], &[7, 168], "the shot starts at the jeep");
+    assert_ne!(shot(&game)[6], 0, "the shot is live");
+    assert_eq!(shot(&game)[5], 0, "the shot follows the forward heading");
+    advance(&mut game, 120);
+    assert_eq!(shot(&game)[6], 0, "the shot expires");
+
+    hold(&mut game, 115, 60);
+    assert_eq!(
+        position(&game),
+        (7, 168),
+        "the jeep cannot reverse at the drop point"
+    );
+    assert_eq!(heading(&game), 240);
+
+    hold(&mut game, 119, 600);
+    assert_eq!(position(&game), (7, 144));
+    assert_eq!(camera(&game), (1, 140));
+    hold(&mut game, 119, 700);
+    assert_eq!(
+        position(&game),
+        (7, 143),
+        "the first screen scrolls no further"
+    );
+    assert_eq!(camera(&game), (1, 139));
+    hold(&mut game, 115, 1500);
+    assert_eq!(
+        position(&game),
+        (7, 162),
+        "reverse stops at the screen edge"
+    );
+    assert_eq!(camera(&game), (1, 158));
+
+    hold(&mut game, 97, 400);
+    assert_eq!(position(&game), (4, 162), "the left edge stops the jeep");
+    assert_eq!(heading(&game), 120);
+    hold(&mut game, 100, 600);
+    assert_eq!(position(&game), (28, 162));
+    assert_eq!(camera(&game), (18, 158), "driving right scrolls the field");
+    hold(&mut game, 100, 1000);
+    assert_eq!(position(&game), (29, 162), "the right edge stops the jeep");
+    assert_eq!(camera(&game), (18, 158));
+
+    hold(&mut game, 106, 10);
+    advance(&mut game, 5);
+    assert_eq!(&shot(&game)[..2], &[29, 162]);
+    assert_eq!(shot(&game)[5], 120, "the shot turns with the jeep");
+    assert_ne!(
+        shot(&game)[6],
+        0,
+        "the jeep fires again once the old shot is gone"
+    );
+    advance(&mut game, 120);
+    assert_eq!(shot(&game)[6], 0);
+
+    game.input_mut().set_keys([27]);
+    let mut halted = None;
+    for _ in 0..30 {
+        if let FrameStatus::Halted(code) = game.run_frame().unwrap().status {
+            halted = Some(code);
+            break;
+        }
+    }
+    game.input_mut().set_keys([]);
+    assert_eq!(halted, Some(0), "escape exits with code 0");
+    assert!(
+        game.files_mut().take_dirty_files().is_empty(),
+        "the workflow writes no files"
+    );
+}
