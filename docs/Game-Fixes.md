@@ -4126,6 +4126,40 @@ without an execution error alone does not establish playability.
   the exit and stage-advance path, the game-over screens after the last life
   and the sound.
 
+## Roach Adventure Final V3.2 (LAVA1 蟑螂历险记/终结完美版/蟑螂历险记V3.2.lav, LAVA1 蟑螂历险记3.2/蟑螂历险记V3.2.lav)
+
+- Content: two byte-identical builds of `蟑螂历险记V3.2.lav`. The title waits
+  at `0x2935`; Enter starts the menu animation at `0x2EB1`, which settles on
+  the 2x2 grid at `0x32E6` (start game / hotline help / quit / version info)
+  with its selection in byte `0x47CB`.
+- The grid is 1..4 and never wraps: Up and Down change the row by two and
+  clamp within the current column (1/2 or 3/4), Left and Right change the
+  column by one and clamp within the current row.
+- Start game opens the ten-stage level select at `0x38EC` after the `0x3761`
+  transition and keeps its cursor in byte `0x47EB`. Right and Up raise it,
+  Left and Down lower it, and both ends clamp between 1 and 10.
+- Enter generates the stage map at `0x44DC`: 11 rows of 20 sixteen-bit cells
+  in row-major order. The border is wall value 1; the player marker is row 10
+  column 1 and the chaser marker is row 1 column 18, mirrored in
+  `0x4765`/`0x4767` and `0x4769`/`0x476B`, and both marker cells are cleared.
+  Cell values 2..8 are the generated maze tiles.
+- Stage start converts the markers to pixels: the roach at `0x475F`/`0x4761`
+  starts at `(0, 72)`, the chaser at `0x4757`/`0x4759` starts at `(136, 0)`
+  and the lives at `0x4763` start at 5. The stage loop runs through
+  `0x3AE4`, `0x460A`, `0x4839` and `0x49A5`.
+- Up and Down move the roach two pixels per press and read the last key from
+  `0x47BF`; Left and Right are blocked by the border column and the wall cell
+  right of the start cell. The chaser homes diagonally and then horizontally,
+  and a collision lowers the lives to 4 and restarts the chaser on its marker
+  at `(136, 0)` while the roach keeps its cell.
+- Hotline help opens at `0x297C` and needs two key presses (`0x297C` →
+  `0x297E` → close at `0x29B8`) before returning to the menu. Version info
+  and quit both open the same credits page (`0x2D74`/`0x2D77`); Escape returns
+  from the version credits to the menu, while the quit entry fades through
+  `0x2DB4`/`0x2DEB` and exits with code 0 at `0x49DC`.
+- Not covered: stages 2 through 10, the exit and stage-advance path, the
+  game-over screens after the last life, the pause screens and the sound.
+
 ## Roach Adventure Compact V2.0 (LAVA1 蟑螂历险记/精简版/蟑螂历险记V2.0.lav)
 
 - Content: `蟑螂历险记V2.0.lav` plus two interchangeable map files. The
