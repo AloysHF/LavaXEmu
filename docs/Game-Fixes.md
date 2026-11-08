@@ -4038,3 +4038,39 @@ without an execution error alone does not establish playability.
 - Not covered: the leaderboard contents, later turns and property purchases,
   bankruptcy and win conditions, the four save slots beyond the first, and
   the board's event text and animations.
+
+## Wawa Circus (LAVA1 蛙蛙马戏团 1.2)
+
+- Content: `蛙蛙马戏团.lav` with `TanPic.dat` beside it. The splash waits at
+  `0x5B47` for three Enters and opens the six-entry menu at `0x39AF`; the
+  cursor is local `bp+5` on a two-column, three-row grid, with Row keys
+  stepping by two and column keys by one and clamped at both ends.
+- `速度` opens the slider at `0x3073`; the speed word at `0x267A` starts at 0,
+  Right raises it by 20 to its 60 cap and Left lowers it, Up is ignored, and
+  Escape returns to the menu without writing files.
+- `日记` opens `0x2D81` with the slot cursor at local `bp+9`; Left and Right
+  wrap the four slots, an empty slot reports at `0x2101` and Escape leaves.
+  Saving from the first show writes `/lavadata/tansav2.dat` (512 bytes) with
+  the player column and height at 0/4, the scroll and show timer at 0x1D4 and
+  0x1D8, and the starting scroll and timer start at 0x1F4 and 0x1F8.
+- `排行榜` opens `0x381E` and returns with Enter; the three story pages at
+  `0x3259`, `0x32FB`, `0x339C` and `0x344C` advance with Enter and the last
+  page returns to the menu.
+- The preparation screen at `0x5A68` selects one of three shows in `0x2899`
+  with clamped Left/Right and ignores Escape. The first show starts at
+  `0x58DB` with the player at `(30, 25)`, the camera at 2000 in `0x288F`
+  scrolling left one unit per Right frame and the timer starting at 2627 in
+  `0x2893`; a one-frame `a` tap starts the jump on the following frame with
+  the arc 22, 19, 16, 13, 10, 7, 4, 7, 10, 13, 16, 19, 22, 25.
+- The second show starts at `0x51DE` with the player at `(30, 55)` and the
+  third at `0x4910` with the player at `(35, 52)`; leaving the third show
+  without input runs into the result routine at `0x3B6E`, which lowers the
+  lives in `0x2897` and waits at `0x3BE1`.
+- A hit sets the miss flag at `0x28B5`, enters the result routine one frame
+  later, and Escape returns to preparation with the next show selected; Enter
+  starts it. A completed show leaves the timer at 0, keeps the miss flag at 0
+  and the player at `(30, 19)`, opens the score board at `0x3C79` with Enter,
+  returns to the menu with the next show selected and the lives restored, and
+  the credits at `0x34F0` halt with code 0 on Enter.
+- Not covered: the ranking contents, the diary load path, the later portions
+  of the second and third shows, and the score board text.

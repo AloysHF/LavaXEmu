@@ -24650,3 +24650,370 @@ fn wawa_monopoly_package_adjusts_players_before_the_first_roll() {
         );
     }
 }
+
+#[test]
+#[ignore = "requires the local game corpus via LAVAX_GAME_ROOT"]
+fn wawa_circus_runs_menus_settings_and_three_shows() {
+    let path = "LAVA1 蛙蛙马戏团 1.2/蛙蛙马戏团.lav";
+    let byte = |game: &Emulator, address: usize| game.vm().memory()[address];
+    let word = |game: &Emulator, address: usize| {
+        u16::from_le_bytes(game.vm().memory()[address..address + 2].try_into().unwrap())
+    };
+    let dword = |game: &Emulator, address: usize| {
+        u32::from_le_bytes(game.vm().memory()[address..address + 4].try_into().unwrap())
+    };
+    let local =
+        |game: &Emulator, offset: usize| game.vm().memory()[game.vm().local_bp() as usize + offset];
+    let open_menu = || {
+        let mut game = load(path);
+        advance(&mut game, 240);
+        assert_eq!(game.vm().pc(), 0x5b47, "the splash waits for a key");
+        for _ in 0..3 {
+            press(&mut game, 13);
+        }
+        assert_eq!(game.vm().pc(), 0x39af, "the splash opens the main menu");
+        game
+    };
+    let open_stage = || {
+        let mut game = open_menu();
+        press(&mut game, 13);
+        assert_eq!(game.vm().pc(), 0x5a68, "start opens the show preparation");
+        press(&mut game, 13);
+        assert_eq!(game.vm().pc(), 0x58db, "enter starts the first show");
+        game
+    };
+
+    let mut game = open_menu();
+    assert!(
+        game.files_mut().take_dirty_files().is_empty(),
+        "the splash writes nothing"
+    );
+    assert_eq!(local(&game, 5), 0, "the menu starts on the first entry");
+    press(&mut game, 23);
+    assert_eq!(local(&game, 5), 0, "left clamps on the first entry");
+    press(&mut game, 20);
+    assert_eq!(local(&game, 5), 0, "up clamps on the first entry");
+    press(&mut game, 21);
+    assert_eq!(local(&game, 5), 2, "down selects the second row");
+    press(&mut game, 21);
+    assert_eq!(local(&game, 5), 4, "down selects the third row");
+    press(&mut game, 21);
+    assert_eq!(local(&game, 5), 4, "down clamps on the third row");
+    press(&mut game, 22);
+    assert_eq!(local(&game, 5), 5, "right selects the second column");
+    press(&mut game, 22);
+    assert_eq!(local(&game, 5), 5, "right clamps on the second column");
+    press(&mut game, 23);
+    press(&mut game, 20);
+    press(&mut game, 20);
+    assert_eq!(local(&game, 5), 0, "up returns to the first entry");
+
+    press(&mut game, 22);
+    assert_eq!(local(&game, 5), 1, "right selects the speed entry");
+    press(&mut game, 13);
+    assert_eq!(game.vm().pc(), 0x3073, "enter opens the speed dialog");
+    assert_eq!(word(&game, 0x267a), 0, "the speed starts at the minimum");
+    press(&mut game, 23);
+    assert_eq!(word(&game, 0x267a), 20, "left raises the speed");
+    press(&mut game, 23);
+    assert_eq!(word(&game, 0x267a), 40, "left raises the speed again");
+    press(&mut game, 23);
+    assert_eq!(word(&game, 0x267a), 60, "left reaches the maximum");
+    press(&mut game, 22);
+    assert_eq!(word(&game, 0x267a), 40, "right lowers the speed");
+    press(&mut game, 20);
+    assert_eq!(word(&game, 0x267a), 40, "up does not change the speed");
+    press(&mut game, 27);
+    assert_eq!(game.vm().pc(), 0x39af, "escape returns to the menu");
+    assert_eq!(local(&game, 5), 1, "the menu keeps the speed entry");
+    assert!(
+        game.files_mut().take_dirty_files().is_empty(),
+        "the speed dialog writes nothing"
+    );
+
+    let mut game = open_menu();
+    press(&mut game, 21);
+    press(&mut game, 21);
+    assert_eq!(local(&game, 5), 4, "down reaches the story entry");
+    press(&mut game, 13);
+    assert_eq!(game.vm().pc(), 0x31b2, "enter opens the story pages");
+    for expected in [0x3259, 0x32fb, 0x339c, 0x344c] {
+        press(&mut game, 13);
+        assert_eq!(game.vm().pc(), expected, "enter advances the story");
+    }
+    press(&mut game, 13);
+    assert_eq!(
+        game.vm().pc(),
+        0x39af,
+        "the last story page returns to the menu"
+    );
+    press(&mut game, 27);
+    assert_eq!(game.vm().pc(), 0x39af, "escape returns from the story");
+
+    let mut game = open_menu();
+    press(&mut game, 21);
+    press(&mut game, 22);
+    assert_eq!(local(&game, 5), 3, "down and right reach the ranking entry");
+    press(&mut game, 13);
+    assert_eq!(game.vm().pc(), 0x381e, "enter opens the ranking");
+    press(&mut game, 13);
+    assert_eq!(game.vm().pc(), 0x39af, "the ranking returns to the menu");
+    assert!(
+        game.files_mut().take_dirty_files().is_empty(),
+        "the ranking writes nothing"
+    );
+
+    let mut game = open_menu();
+    press(&mut game, 21);
+    press(&mut game, 13);
+    assert_eq!(game.vm().pc(), 0x2d81, "enter opens the diary slots");
+    assert_eq!(local(&game, 9), 0, "the diary starts on the first slot");
+    press(&mut game, 21);
+    assert_eq!(local(&game, 9), 1, "down selects the second slot");
+    press(&mut game, 21);
+    assert_eq!(local(&game, 9), 2, "down selects the third slot");
+    press(&mut game, 21);
+    assert_eq!(local(&game, 9), 3, "down selects the fourth slot");
+    press(&mut game, 21);
+    assert_eq!(local(&game, 9), 0, "down wraps on the fourth slot");
+    press(&mut game, 22);
+    assert_eq!(local(&game, 9), 1, "right moves to the next slot");
+    press(&mut game, 23);
+    assert_eq!(local(&game, 9), 0, "left moves to the previous slot");
+    press(&mut game, 23);
+    assert_eq!(local(&game, 9), 3, "left wraps on the first slot");
+    press(&mut game, 13);
+    assert_eq!(game.vm().pc(), 0x2101, "an empty slot reports missing data");
+    assert!(
+        game.files_mut().take_dirty_files().is_empty(),
+        "an empty slot writes nothing"
+    );
+    press(&mut game, 13);
+    assert_eq!(game.vm().pc(), 0x39af, "the message returns to the menu");
+
+    let mut game = open_menu();
+    press(&mut game, 13);
+    assert_eq!(game.vm().pc(), 0x5a68, "start opens the show preparation");
+    assert_eq!(word(&game, 0x2899), 1, "the first show is selected");
+    press(&mut game, 22);
+    assert_eq!(word(&game, 0x2899), 2, "right selects the second show");
+    press(&mut game, 22);
+    assert_eq!(word(&game, 0x2899), 3, "right selects the third show");
+    press(&mut game, 22);
+    assert_eq!(word(&game, 0x2899), 1, "right wraps to the first show");
+    press(&mut game, 23);
+    assert_eq!(word(&game, 0x2899), 3, "left wraps to the last show");
+    press(&mut game, 23);
+    assert_eq!(word(&game, 0x2899), 2, "left selects the second show");
+    press(&mut game, 23);
+    assert_eq!(word(&game, 0x2899), 1, "left returns to the first show");
+    press(&mut game, 27);
+    assert_eq!(
+        game.vm().pc(),
+        0x5a68,
+        "escape is ignored during preparation"
+    );
+    press(&mut game, 22);
+    assert_eq!(
+        word(&game, 0x2899),
+        2,
+        "right selects the second show again"
+    );
+    press(&mut game, 13);
+    assert_eq!(
+        game.vm().pc(),
+        0x51de,
+        "the second show has its own routine"
+    );
+    assert_eq!(word(&game, 0x27a5), 30, "the second show places the player");
+    assert_eq!(
+        word(&game, 0x27a7),
+        55,
+        "the second show places the player high"
+    );
+    press(&mut game, 27);
+    assert_eq!(game.vm().pc(), 0x39af, "escape leaves the second show");
+
+    let mut game = open_menu();
+    press(&mut game, 13);
+    press(&mut game, 22);
+    press(&mut game, 22);
+    assert_eq!(word(&game, 0x2899), 3, "the third show is selected");
+    press(&mut game, 13);
+    assert_eq!(game.vm().pc(), 0x4910, "the third show has its own routine");
+    assert_eq!(word(&game, 0x27a5), 35, "the third show places the player");
+    assert_eq!(
+        word(&game, 0x27a7),
+        52,
+        "the third show places the player high"
+    );
+    let mut frames = 0;
+    while game.vm().pc() != 0x3b6e && frames < 60 {
+        advance(&mut game, 1);
+        frames += 1;
+    }
+    assert_eq!(game.vm().pc(), 0x3b6e, "the third show fails without input");
+    assert_eq!(word(&game, 0x2897), 2, "the third show costs a life");
+
+    let mut game = open_stage();
+    assert_eq!(word(&game, 0x27a5), 30, "the first show places the player");
+    assert_eq!(
+        word(&game, 0x27a7),
+        25,
+        "the first show places the player down"
+    );
+    assert_eq!(
+        dword(&game, 0x288f),
+        2000,
+        "the act starts at the left edge"
+    );
+    assert_eq!(dword(&game, 0x2893), 2627, "the show timer starts counting");
+    assert_eq!(word(&game, 0x2899), 1, "the first show is running");
+    game.input_mut().set_keys(*b"a");
+    advance(&mut game, 1);
+    game.input_mut().set_keys([]);
+    assert_eq!(word(&game, 0x27a7), 22, "the jump starts on the next frame");
+    for expected in [19, 16, 13, 10, 7, 4, 7, 10, 13, 16, 19, 22, 25] {
+        advance(&mut game, 1);
+        assert_eq!(word(&game, 0x27a7), expected, "the jump follows its arc");
+    }
+    assert_eq!(byte(&game, 0x28b5), 0, "the jump avoids the first lion");
+    assert_eq!(game.vm().pc(), 0x58db, "the stage keeps running");
+
+    let mut game = open_stage();
+    for _ in 0..10 {
+        game.input_mut().set_keys([22]);
+        advance(&mut game, 1);
+    }
+    game.input_mut().set_keys([]);
+    assert_eq!(dword(&game, 0x288f), 1990, "right scrolls the act forward");
+    assert_eq!(game.vm().pc(), 0x58db, "the scroll does not end the show");
+    assert_eq!(byte(&game, 0x28b5), 0, "the scroll avoids the first lion");
+
+    let mut game = open_stage();
+    press(&mut game, b's');
+    assert_eq!(game.vm().pc(), 0x2d81, "s opens the diary during the show");
+    press(&mut game, 21);
+    press(&mut game, 13);
+    let mut files = game.files_mut().take_dirty_files();
+    assert_eq!(files.len(), 1, "saving the diary writes one file");
+    let (path, bytes) = files.remove(0);
+    assert_eq!(path, "/lavadata/tansav2.dat", "the diary keeps its slot");
+    assert_eq!(bytes.len(), 512, "the diary keeps its fixed size");
+    let saved = |offset: usize| u32::from_le_bytes(bytes[offset..offset + 4].try_into().unwrap());
+    assert_eq!(saved(0), 30, "the diary stores the player column");
+    assert_eq!(saved(4), 25, "the diary stores the player height");
+    assert_eq!(saved(0x1d4), 2000, "the diary stores the scroll");
+    assert_eq!(saved(0x1d8), 2627, "the diary stores the show timer");
+    assert_eq!(saved(0x1f4), 2000, "the diary stores the starting scroll");
+    assert_eq!(saved(0x1f8), 2660, "the diary stores the timer start");
+
+    let mut game = open_stage();
+    assert_eq!(byte(&game, 0x28b5), 0, "the show starts without a miss");
+    let mut frames = 0;
+    while byte(&game, 0x28b5) == 0 && frames < 40 {
+        advance(&mut game, 1);
+        frames += 1;
+    }
+    assert_eq!(
+        byte(&game, 0x28b5),
+        1,
+        "the first lion reaches the idle player"
+    );
+    assert_eq!(game.vm().pc(), 0x58db, "the hit frame keeps the stage");
+    advance(&mut game, 1);
+    assert_eq!(
+        game.vm().pc(),
+        0x3b6e,
+        "the collision enters the result routine"
+    );
+    let mut frames = 0;
+    while game.vm().pc() != 0x3be1 && frames < 200 {
+        advance(&mut game, 1);
+        frames += 1;
+    }
+    assert_eq!(game.vm().pc(), 0x3be1, "the result screen waits for a key");
+    assert_eq!(word(&game, 0x2897), 2, "the collision costs one life");
+    press(&mut game, 27);
+    assert_eq!(
+        game.vm().pc(),
+        0x5a68,
+        "escape returns to the show preparation"
+    );
+    assert_eq!(word(&game, 0x2899), 2, "the next show is selected");
+    assert_eq!(word(&game, 0x2897), 2, "the lost life is kept");
+    press(&mut game, 13);
+    assert_eq!(
+        game.vm().pc(),
+        0x51de,
+        "the second show starts after the miss"
+    );
+    assert_eq!(
+        word(&game, 0x27a7),
+        55,
+        "the second show places the player high"
+    );
+    press(&mut game, 27);
+    assert_eq!(game.vm().pc(), 0x39af, "escape leaves the second show");
+
+    let mut game = open_stage();
+    let taps: [usize; 109] = [
+        21, 43, 62, 90, 124, 150, 169, 190, 216, 235, 260, 282, 311, 330, 350, 375, 402, 436, 454,
+        479, 501, 521, 550, 581, 599, 623, 645, 665, 689, 710, 733, 754, 775, 799, 820, 842, 863,
+        887, 909, 930, 952, 976, 1003, 1026, 1052, 1076, 1097, 1118, 1142, 1168, 1189, 1209, 1235,
+        1269, 1295, 1315, 1336, 1361, 1382, 1405, 1427, 1466, 1490, 1510, 1534, 1555, 1577, 1601,
+        1621, 1645, 1666, 1694, 1717, 1736, 1760, 1797, 1821, 1839, 1865, 1888, 1912, 1937, 1962,
+        1988, 2026, 2051, 2074, 2094, 2138, 2160, 2184, 2209, 2234, 2255, 2275, 2297, 2337, 2361,
+        2383, 2406, 2428, 2450, 2480, 2500, 2521, 2544, 2586, 2608, 2626,
+    ];
+    let mut elapsed = 0;
+    for tap in taps {
+        advance(&mut game, tap - elapsed - 1);
+        game.input_mut().set_keys(*b"a");
+        advance(&mut game, 1);
+        game.input_mut().set_keys([]);
+        elapsed = tap;
+    }
+    advance(&mut game, 62);
+    assert_eq!(
+        game.vm().pc(),
+        0x3be1,
+        "the full show reaches the result screen"
+    );
+    assert_eq!(dword(&game, 0x2893), 0, "the show timer runs out");
+    assert_eq!(byte(&game, 0x28b5), 0, "the full show avoids every lion");
+    assert_eq!(word(&game, 0x27a5), 30, "the player keeps the pad");
+    assert_eq!(word(&game, 0x27a7), 19, "the last jump is still in the air");
+    press(&mut game, 13);
+    assert_eq!(game.vm().pc(), 0x3c79, "enter opens the score board");
+    press(&mut game, 13);
+    assert_eq!(
+        game.vm().pc(),
+        0x39af,
+        "the score board returns to the menu"
+    );
+    assert_eq!(word(&game, 0x2899), 2, "the next show is selected");
+    assert_eq!(word(&game, 0x2897), 3, "the next show restores the lives");
+
+    press(&mut game, 21);
+    press(&mut game, 21);
+    press(&mut game, 22);
+    assert_eq!(local(&game, 5), 5, "down and right reach the exit entry");
+    press(&mut game, 13);
+    assert_eq!(game.vm().pc(), 0x34f0, "enter opens the credits");
+    game.input_mut().set_keys([13]);
+    let mut exit = None;
+    for _ in 0..120 {
+        if let FrameStatus::Halted(code) = game.run_frame().unwrap().status {
+            exit = Some(code);
+            break;
+        }
+    }
+    game.input_mut().set_keys([]);
+    assert_eq!(exit, Some(0), "enter exits the program from the credits");
+    assert_eq!(game.vm().pc(), 0x3b43, "the program halts from the credits");
+    assert!(
+        game.files_mut().take_dirty_files().is_empty(),
+        "the exit writes nothing"
+    );
+}
