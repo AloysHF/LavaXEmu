@@ -26413,3 +26413,191 @@ fn clear_maze_caterpillar_moves_pauses_helps_saves_and_exits() {
         "the exit path writes nothing"
     );
 }
+
+#[test]
+#[ignore = "requires the local game corpus via LAVAX_GAME_ROOT"]
+fn snake_bob_eats_grows_ignores_reverse_and_ends_on_walls() {
+    const GAME: &str = "LAVA1 贪吃蛇鲍勃/贪吃蛇鲍勃.lav";
+    const LEVEL_LINE: &[u8] = &[0xb5, 0xda, b'0', 0xb9, 0xd8];
+
+    fn boot() -> Emulator {
+        let mut game = load(GAME);
+        advance(&mut game, 60);
+        game
+    }
+    fn start(game: &mut Emulator) {
+        game.input_mut().set_keys([13]);
+        advance(game, 3);
+        game.input_mut().set_keys([]);
+        advance(game, 30);
+    }
+    fn tap(game: &mut Emulator, key: u8) {
+        game.input_mut().set_keys([key]);
+        advance(game, 2);
+        game.input_mut().set_keys([]);
+        advance(game, 1);
+    }
+    fn taps(game: &mut Emulator, key: u8, count: usize) {
+        for _ in 0..count {
+            tap(game, key);
+        }
+    }
+    fn word(memory: &[u8], address: usize) -> usize {
+        usize::from(u16::from_le_bytes([memory[address], memory[address + 1]]))
+    }
+    fn head(game: &Emulator) -> (usize, usize) {
+        let memory = game.vm().memory();
+        (word(memory, 0x530e), word(memory, 0x5310))
+    }
+    fn food(game: &Emulator) -> (usize, usize) {
+        let memory = game.vm().memory();
+        (word(memory, 0x5326), word(memory, 0x5328))
+    }
+    fn length(game: &Emulator) -> usize {
+        word(game.vm().memory(), 0x5312)
+    }
+    fn score(game: &Emulator) -> usize {
+        usize::from(game.vm().memory()[0x533b])
+    }
+    fn level(game: &Emulator) -> usize {
+        word(game.vm().memory(), 0x5324)
+    }
+    fn frame(game: &Emulator) -> Vec<u8> {
+        game.display().indexed_frame().to_vec()
+    }
+
+    let mut game = boot();
+    let intro = frame(&game);
+    assert!(
+        game.vm().memory()[0x530e..0x5320]
+            .iter()
+            .all(|&byte| byte == 0)
+    );
+    assert_eq!(
+        intro
+            .iter()
+            .copied()
+            .collect::<std::collections::BTreeSet<_>>()
+            .len(),
+        2,
+        "the title paints text over the background"
+    );
+    advance(&mut game, 200);
+    assert_eq!(frame(&game), intro, "the title waits without animating");
+
+    start(&mut game);
+    assert_eq!(head(&game), (3, 2));
+    assert_eq!(food(&game), (16, 18));
+    assert_eq!((length(&game), score(&game), level(&game)), (5, 0, 1));
+    assert_eq!(
+        &game.vm().memory()[0x533d..0x5342],
+        LEVEL_LINE,
+        "the level line reads 第0关"
+    );
+    let board = frame(&game);
+    assert_ne!(board, intro);
+    let width = game.display().width() as usize;
+    assert_ne!(
+        board[4 * width + 6],
+        board[4 * width + 12],
+        "the snake starts in the top-left cell"
+    );
+    assert_ne!(
+        board[36 * width + 32],
+        board[36 * width + 24],
+        "the first food is drawn at 16,18"
+    );
+    advance(&mut game, 200);
+    assert_eq!(head(&game), (3, 2), "the snake waits for a direction");
+    assert_eq!(frame(&game), board);
+
+    taps(&mut game, 22, 13);
+    assert_eq!(head(&game), (16, 2));
+    assert_eq!((length(&game), score(&game)), (5, 0));
+    taps(&mut game, 21, 16);
+    assert_eq!(head(&game), (16, 18));
+    assert_eq!(food(&game), (16, 18));
+    assert_eq!(
+        score(&game),
+        0,
+        "arriving on the food does not score until the next step"
+    );
+    tap(&mut game, 21);
+    assert_eq!(head(&game), (16, 19));
+    assert_eq!((length(&game), score(&game)), (6, 1));
+    assert_eq!(
+        food(&game),
+        (37, 26),
+        "the next food spawns deterministically"
+    );
+    let first_growth = frame(&game);
+    assert_ne!(first_growth, board);
+    assert_ne!(
+        first_growth[52 * width + 74],
+        first_growth[52 * width + 66],
+        "the second food is drawn at 37,26"
+    );
+
+    taps(&mut game, 22, 21);
+    assert_eq!(head(&game), (37, 19));
+    taps(&mut game, 21, 7);
+    assert_eq!(head(&game), (37, 26));
+    assert_eq!(score(&game), 1);
+    tap(&mut game, 21);
+    assert_eq!((length(&game), score(&game)), (7, 2));
+    assert_eq!(
+        food(&game),
+        (51, 5),
+        "the third food is drawn deterministically"
+    );
+
+    tap(&mut game, 20);
+    assert_eq!(head(&game), (37, 28), "reversing into the body is ignored");
+
+    let mut reached_game_over = false;
+    for _ in 0..6 {
+        game.input_mut().set_keys([21]);
+        for _ in 0..2 {
+            let status = game.run_frame().unwrap().status;
+            if matches!(status, FrameStatus::WaitingForInput) {
+                reached_game_over = true;
+                break;
+            }
+            assert!(
+                !matches!(status, FrameStatus::Halted(_)),
+                "the wall does not exit on its own"
+            );
+        }
+        game.input_mut().set_keys([]);
+        if reached_game_over {
+            break;
+        }
+        advance(&mut game, 1);
+    }
+    assert!(reached_game_over, "the snake runs into the bottom wall");
+    assert_eq!(head(&game), (37, 28));
+    assert_eq!((length(&game), score(&game)), (7, 2));
+    let over = frame(&game);
+    assert_ne!(over, first_growth);
+    assert_eq!(&game.vm().memory()[0x533d..0x5342], LEVEL_LINE);
+
+    game.input_mut().set_keys([13]);
+    let mut halted = None;
+    for _ in 0..30 {
+        if let FrameStatus::Halted(code) = game.run_frame().unwrap().status {
+            halted = Some(code);
+            break;
+        }
+    }
+    game.input_mut().set_keys([]);
+    assert_eq!(halted, Some(0), "a key on the game over screen exits");
+    let blank = frame(&game);
+    assert!(
+        blank.iter().all(|&pixel| pixel == blank[0]),
+        "the exit clears the screen"
+    );
+    assert!(
+        game.files_mut().take_dirty_files().is_empty(),
+        "the workflow writes no files"
+    );
+}

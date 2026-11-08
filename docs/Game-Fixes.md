@@ -4267,3 +4267,28 @@ without an execution error alone does not establish playability.
   the next key halts with code 0. No emulator defect was found.
 - Not covered: the win page (all 88 foods), loading and replaying recordings
   through the file dialog, and the graphics beyond the verified screens.
+
+## Snake Bob (LAVA1 贪吃蛇鲍勃/贪吃蛇鲍勃.lav)
+
+- Content: a 1683-byte `贪吃蛇鲍勃.lav` with no companion files. It shows a
+  static `贪吃蛇 第0关` title until a key starts the 160x80 board.
+- Globals are 16-bit little-endian: head `x` at `0x530e`, head `y` at `0x5310`,
+  body length at `0x5312` (copied to `0x531c` and `0x531e`), food `x`/`y` at
+  `0x5326/0x5328`, the one-based level at `0x5324`, a constant speed value at
+  `0x532a` and the eaten count at `0x533b`. The formatted `第0关` line sits at
+  `0x533d`.
+- The board uses two-pixel cells inside a border from pixel `(1,1)` to
+  `(112,58)`; cells run 0..55 horizontally and 0..28 vertically. The snake
+  starts at cell `(3,2)` with five body segments and does not move until a
+  direction key is pressed.
+- A two-frame key press followed by one idle frame moves exactly one cell. The
+  food at `(16,18)` is registered on the step after the head arrives: length
+  and eaten count update then, and the next food spawns at `(37,26)`. Eating
+  the second food at `(37,26)` grows the body to seven segments and spawns the
+  third at `(51,5)`; the sequence is deterministic.
+- The game ignores a direction opposite to the current heading, so pressing Up
+  while moving down keeps the snake going down. Running into the bottom border
+  shows `GAME OVER` and the `第0关` line, waits for a key, then clears the
+  screen and halts with code 0. No emulator defect was found.
+- Not covered: later levels (the tested flow stayed on level 0 after twelve
+  foods), self-collision through a closed loop, and audio.
