@@ -4101,3 +4101,27 @@ without an execution error alone does not establish playability.
 - Not covered: the mazes beyond the first stage, the completed-stage path,
   the game-over screens after the last life, the stage-clear text and the
   sound.
+
+## Roach Adventure Platinum V3.0 (LAVA1 蟑螂历险记/白金版/蟑螂历险记V3.0.lav)
+
+- Content: the single program `蟑螂历险记V3.0.lav`. The title waits at
+  `0x2935`; three Enters walk through the animated menu to the ten-stage level
+  select, which rests at `0x370D` after its animation and keeps the cursor in
+  `0x47C7`. Right and Up raise it and clamp at 9, Left and Down lower it and
+  clamp at 0; Enter draws the selected map preview and starts that stage.
+- The map lives at `0x44DC` as 11 rows of 20 sixteen-bit cells. The scan
+  stores marker 11 at `0x4765`/`0x4767`, marker 22 at `0x4769`/`0x476B`, the
+  exit at `0x47C9`/`0x47CB` (column and row minus one, times eight) and counts
+  the extra marker-33 cells in `0x47B9`; all marked cells are cleared.
+- Stage start converts the markers to pixels: the roach at `0x475F`/`0x4761`
+  and the chaser at `0x4757`/`0x4759`, with both chaser direction words
+  `0x475B`/`0x475D` set to 1. The life counter is `0x4763`. The first stage
+  starts with five lives, the roach at `(72, 32)`, the chaser near
+  `(136, 0)`, the exit at `(56, 32)` and two extra markers.
+- Gameplay reads the last key in `0x47C3` every frame. Up/down/left are
+  blocked by the walls around the first cell while Right moves the roach one
+  pixel per frame; the chaser homes toward the roach and a collision lowers
+  the life counter and resets the chaser to its marker cell.
+- Not covered: the extra marker-33 cells, the mazes beyond the first stage,
+  the exit and stage-advance path, the game-over screens after the last life
+  and the sound.

@@ -25180,3 +25180,163 @@ fn roach_adventure_runs_menus_levels_and_chase() {
     assert_eq!(word(&game, 0x4581), 24, "the roach keeps its start cell");
     assert_eq!(byte(&game, 0x45e7), 0, "the stage stays selected");
 }
+
+#[test]
+#[ignore = "requires the local game corpus via LAVAX_GAME_ROOT"]
+fn roach_adventure_platinum_runs_levels_and_chase() {
+    let path = "LAVA1 蟑螂历险记/白金版/蟑螂历险记V3.0.lav";
+    let byte = |game: &Emulator, address: usize| game.vm().memory()[address];
+    let word = |game: &Emulator, address: usize| {
+        u16::from_le_bytes(game.vm().memory()[address..address + 2].try_into().unwrap())
+    };
+    let open_levels = || {
+        let mut game = load(path);
+        advance(&mut game, 4300);
+        assert_eq!(game.vm().pc(), 0x2935, "the title waits for enter");
+        press(&mut game, 13);
+        advance(&mut game, 600);
+        assert_eq!(game.vm().pc(), 0x2fc8, "the menu animates in");
+        press(&mut game, 13);
+        advance(&mut game, 80);
+        assert_eq!(game.vm().pc(), 0x305d, "the menu settles");
+        press(&mut game, 13);
+        advance(&mut game, 2000);
+        assert_eq!(game.vm().pc(), 0x370d, "the level select waits for a key");
+        assert_eq!(
+            byte(&game, 0x47c7),
+            0,
+            "the level select starts on the first stage"
+        );
+        game
+    };
+    let open_stage = || {
+        let mut game = open_levels();
+        hold(&mut game, 13, 3);
+        game
+    };
+
+    let mut game = open_levels();
+    for _ in 0..3 {
+        press(&mut game, 22);
+    }
+    assert_eq!(byte(&game, 0x47c7), 3, "right walks the stage cursor up");
+    press(&mut game, 23);
+    press(&mut game, 23);
+    assert_eq!(byte(&game, 0x47c7), 1, "left walks the stage cursor back");
+    press(&mut game, 21);
+    assert_eq!(byte(&game, 0x47c7), 0, "down walks the stage cursor back");
+    press(&mut game, 20);
+    assert_eq!(byte(&game, 0x47c7), 1, "up walks the stage cursor up");
+    press(&mut game, 21);
+    assert_eq!(byte(&game, 0x47c7), 0, "down returns to the first stage");
+    for _ in 0..12 {
+        press(&mut game, 22);
+    }
+    assert_eq!(
+        byte(&game, 0x47c7),
+        9,
+        "the stage cursor clamps on the last stage"
+    );
+    for _ in 0..12 {
+        press(&mut game, 23);
+    }
+    assert_eq!(
+        byte(&game, 0x47c7),
+        0,
+        "the stage cursor clamps on the first stage"
+    );
+    assert!(
+        game.files_mut().take_dirty_files().is_empty(),
+        "the menus write nothing"
+    );
+
+    let mut game = open_stage();
+    assert_eq!(word(&game, 0x4763), 5, "the stage starts with five lives");
+    assert_eq!(
+        word(&game, 0x4765),
+        5,
+        "the player marker row comes from the map"
+    );
+    assert_eq!(
+        word(&game, 0x4767),
+        10,
+        "the player marker column comes from the map"
+    );
+    assert_eq!(
+        word(&game, 0x4769),
+        1,
+        "the chaser marker row comes from the map"
+    );
+    assert_eq!(
+        word(&game, 0x476b),
+        18,
+        "the chaser marker column comes from the map"
+    );
+    assert_eq!(
+        word(&game, 0x475f),
+        72,
+        "the roach starts on its marker cell"
+    );
+    assert_eq!(
+        word(&game, 0x4761),
+        32,
+        "the roach starts on its marker cell"
+    );
+    assert!(
+        (130..=136).contains(&word(&game, 0x4757)),
+        "the chaser starts on its marker cell"
+    );
+    assert!(
+        word(&game, 0x4759) <= 4,
+        "the chaser starts on its marker cell"
+    );
+    assert_eq!(word(&game, 0x47c9), 56, "the exit comes from the map");
+    assert_eq!(word(&game, 0x47cb), 32, "the exit comes from the map");
+    assert_eq!(word(&game, 0x47b9), 2, "the map holds two extra markers");
+    assert_eq!(byte(&game, 0x47c7), 0, "the stage keeps the selected level");
+
+    press(&mut game, 20);
+    assert_eq!(word(&game, 0x4761), 32, "the wall blocks the roach up");
+    assert_eq!(word(&game, 0x475f), 72, "the wall keeps the roach column");
+    press(&mut game, 21);
+    assert_eq!(word(&game, 0x4761), 32, "the wall blocks the roach down");
+    press(&mut game, 23);
+    assert_eq!(word(&game, 0x475f), 72, "the wall blocks the roach left");
+    press(&mut game, 22);
+    assert_eq!(word(&game, 0x475f), 76, "right moves the roach four pixels");
+    assert_eq!(word(&game, 0x4761), 32, "right keeps the roach row");
+
+    let mut game = open_stage();
+    let (start_x, start_y) = (word(&game, 0x4757), word(&game, 0x4759));
+    advance(&mut game, 200);
+    let (chase_x, chase_y) = (word(&game, 0x4757), word(&game, 0x4759));
+    assert!(chase_x < start_x, "the chaser closes in horizontally");
+    assert!(chase_y > start_y, "the chaser closes in vertically");
+    assert_eq!(word(&game, 0x475f), 72, "the idle roach keeps its cell");
+    assert_eq!(word(&game, 0x4761), 32, "the idle roach keeps its cell");
+    assert_eq!(
+        word(&game, 0x4763),
+        5,
+        "the chaser has not reached the roach"
+    );
+
+    let mut game = open_stage();
+    let mut frames = 0;
+    while word(&game, 0x4763) == 5 && frames < 1400 {
+        advance(&mut game, 1);
+        frames += 1;
+    }
+    assert_eq!(word(&game, 0x4763), 4, "the chaser takes one life");
+    advance(&mut game, 10);
+    assert!(
+        word(&game, 0x4757) > 130,
+        "the chaser restarts on its marker cell"
+    );
+    assert!(
+        word(&game, 0x4759) < 8,
+        "the chaser restarts on its marker cell"
+    );
+    assert_eq!(word(&game, 0x475f), 72, "the roach keeps its start cell");
+    assert_eq!(word(&game, 0x4761), 32, "the roach keeps its start cell");
+    assert_eq!(byte(&game, 0x47c7), 0, "the stage stays selected");
+}
