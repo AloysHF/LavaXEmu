@@ -4207,3 +4207,33 @@ without an execution error alone does not establish playability.
 - The demo never touches the filesystem, and no emulator defect was found.
 - Not covered: mixed punch/kick sequences across page thresholds, keys other
   than Enter on the ending screens, and the sound.
+
+## Gu Chong Maze Adventure (LAVA1 谷虫迷宫大冒险/打包/谷虫大冒险.pac, LAVA1 谷虫迷宫大冒险/未打包/gcdmx.lav)
+
+- Content: the packaged entry ships a single `.pac`; the unpacked entry adds
+  `guclist.dat` (8880 bytes) and `mappic.dat` (32631 bytes) next to
+  `gcdmx.lav`. Both builds behave identically in the tested paths.
+- The publisher splash waits at `0x2F6E` and any key leads to the title menu.
+  The menu selection lives in `0x3FD7`; five entries are walked with Up/Down.
+- The help entry draws at `0x54A4` with five distinct pages. Down advances and
+  clamps on the fifth page; Escape returns with the selection reset to 1.
+  The difficulty screen reuses `0x3FD7` for its 1..3 choice with Up/Down
+  clamps and Enter starting the prologue.
+- The prologue pages are the usual text screen; a key drops into the maze loop
+  at `0x4ED8`. The player position is the 16-bit pair at `0x3FE5` (row) and
+  `0x3FE7` (column); the first stage starts at row 1, column 5. The map base is
+  `0x3E16` with 23 columns per row, so the start cell `(1,5)` sits at
+  `0x3E16 + 1*23 + 5 = 0x3E4E`.
+- The item on the starting row is at `0x3E77`; Down collects it, clears the
+  tile, sets the attack stat byte at `0x4338` from 2 to 3 and moves the player
+  to row 4. The wall below blocks the next Down, and Right moves the player to
+  column 6.
+- Continue loads `/lavadata/gcsave.dat`, drawn through the loading screen at
+  `0xF88`/`0xF8B`/`0xF8F`, and Enter drops straight into the maze at `(1,5)`
+  without the prologue. The save is exactly 33 bytes and pins the first stage
+  with default stats.
+- The credits start after menu entry 5 and page through with Enter; the final
+  page at `0x558B` is followed by the exit at `0x558A`, which halts with code 0.
+  No emulator defect was found.
+- Not covered: the item table and level list in `guclist.dat`, the map
+  pictures in `mappic.dat`, later stages, combat rounds and the sound.

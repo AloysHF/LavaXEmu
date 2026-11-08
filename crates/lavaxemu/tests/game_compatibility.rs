@@ -25842,3 +25842,352 @@ fn shuai_ren_battle_punch_kick_pages_and_ending() {
         "the whole demo writes nothing"
     );
 }
+
+#[test]
+#[ignore = "requires the local game corpus via LAVAX_GAME_ROOT"]
+fn gu_chong_maze_adventure_runs_menus_help_pickup_and_credits() {
+    const UNPACKED: &str = "LAVA1 谷虫迷宫大冒险/未打包/gcdmx.lav";
+    const PACKAGED: &str = "LAVA1 谷虫迷宫大冒险/打包/谷虫大冒险.pac";
+
+    fn wait_pc(game: &mut Emulator, target: usize) {
+        for _ in 0..1200 {
+            if game.vm().pc() == target {
+                return;
+            }
+            let result = game.run_frame().unwrap();
+            assert!(
+                !matches!(result.status, FrameStatus::Halted(_)),
+                "the game exited before the expected screen"
+            );
+        }
+        assert_eq!(game.vm().pc(), target, "the expected screen did not appear");
+    }
+
+    fn wait_text(game: &mut Emulator) {
+        for _ in 0..800 {
+            if matches!(game.vm().pc(), 0xf88 | 0xf8b | 0xf8f) {
+                return;
+            }
+            let result = game.run_frame().unwrap();
+            assert!(
+                !matches!(result.status, FrameStatus::Halted(_)),
+                "the game exited before the text screen"
+            );
+        }
+        panic!("the text screen did not appear");
+    }
+
+    fn boot_to_title(game: &mut Emulator) {
+        let result = game.run_frame().unwrap();
+        assert!(
+            matches!(result.status, FrameStatus::WaitingForInput),
+            "the game starts by waiting for a key"
+        );
+        assert_eq!(game.vm().pc(), 0x2f6e, "the opening waits on getchar");
+        let blank = game.display().indexed_frame().to_vec();
+        hold(game, 13, 8);
+        wait_text(game);
+        advance(game, 20);
+        assert_ne!(
+            game.display().indexed_frame(),
+            &blank[..],
+            "the publisher splash replaces the blank screen"
+        );
+        hold(game, 13, 8);
+        wait_pc(game, 0x2993);
+        assert_eq!(game.vm().pc(), 0x2993, "the title menu waits for a key");
+    }
+
+    let frame = |game: &Emulator| game.display().indexed_frame().to_vec();
+
+    for path in [UNPACKED, PACKAGED] {
+        let mut game = load(path);
+        boot_to_title(&mut game);
+        hold(&mut game, 20, 8);
+        advance(&mut game, 20);
+        assert_eq!(
+            game.vm().memory()[0x3fd7],
+            1,
+            "the up key selects the new game entry"
+        );
+        let title = frame(&game);
+
+        hold(&mut game, 21, 8);
+        advance(&mut game, 20);
+        hold(&mut game, 21, 8);
+        advance(&mut game, 20);
+        assert_eq!(
+            game.vm().memory()[0x3fd7],
+            3,
+            "two downs move the cursor to help"
+        );
+
+        hold(&mut game, 13, 8);
+        wait_pc(&mut game, 0x54a4);
+        advance(&mut game, 20);
+        assert_eq!(game.vm().pc(), 0x54a4, "help replaces the title panel");
+        let page_one = frame(&game);
+        assert_ne!(page_one, title, "the help pages replace the title");
+        hold(&mut game, 21, 8);
+        advance(&mut game, 20);
+        let page_two = frame(&game);
+        assert_ne!(page_two, page_one, "the second help page is different");
+        hold(&mut game, 21, 8);
+        advance(&mut game, 20);
+        let page_three = frame(&game);
+        assert_ne!(page_three, page_two, "the third help page is different");
+        hold(&mut game, 21, 8);
+        advance(&mut game, 20);
+        let page_four = frame(&game);
+        assert_ne!(page_four, page_three, "the fourth help page is different");
+        hold(&mut game, 21, 8);
+        advance(&mut game, 20);
+        let page_five = frame(&game);
+        assert_ne!(page_five, page_four, "the fifth help page is different");
+        hold(&mut game, 21, 8);
+        advance(&mut game, 20);
+        assert_eq!(frame(&game), page_five, "the last help page ignores down");
+        assert_eq!(game.vm().pc(), 0x54a4, "help keeps waiting for a key");
+
+        hold(&mut game, 27, 8);
+        wait_pc(&mut game, 0x2993);
+        assert_eq!(game.vm().pc(), 0x2993, "escape returns to the title menu");
+        assert_eq!(
+            game.vm().memory()[0x3fd7],
+            1,
+            "escape resets the cursor to the new game"
+        );
+
+        hold(&mut game, 13, 8);
+        advance(&mut game, 40);
+        assert_eq!(
+            game.vm().pc(),
+            0x2993,
+            "the difficulty screen shares the menu loop"
+        );
+        assert_eq!(
+            game.vm().memory()[0x3fd7],
+            1,
+            "the difficulty defaults to hard"
+        );
+        let hard = frame(&game);
+        assert_ne!(hard, title, "the difficulty panel replaces the title");
+        hold(&mut game, 21, 8);
+        advance(&mut game, 20);
+        assert_eq!(game.vm().memory()[0x3fd7], 2, "down selects normal");
+        hold(&mut game, 21, 8);
+        advance(&mut game, 20);
+        assert_eq!(game.vm().memory()[0x3fd7], 3, "down selects easy");
+        let easy = frame(&game);
+        assert_ne!(easy, hard, "the difficulty highlight moves");
+        hold(&mut game, 21, 8);
+        advance(&mut game, 20);
+        assert_eq!(game.vm().memory()[0x3fd7], 3, "down clamps at easy");
+        assert_eq!(frame(&game), easy, "the clamped highlight stays put");
+        hold(&mut game, 20, 8);
+        advance(&mut game, 20);
+        assert_eq!(game.vm().memory()[0x3fd7], 2, "up selects normal");
+        hold(&mut game, 20, 8);
+        advance(&mut game, 20);
+        assert_eq!(game.vm().memory()[0x3fd7], 1, "up selects hard");
+        hold(&mut game, 20, 8);
+        advance(&mut game, 20);
+        assert_eq!(game.vm().memory()[0x3fd7], 1, "up clamps at hard");
+
+        hold(&mut game, 13, 8);
+        wait_text(&mut game);
+        advance(&mut game, 20);
+        assert!(
+            matches!(game.vm().pc(), 0xf88 | 0xf8b | 0xf8f),
+            "the prologue starts after the choice"
+        );
+        let prologue_one = frame(&game);
+        assert_ne!(
+            prologue_one, hard,
+            "the prologue replaces the difficulty panel"
+        );
+        hold(&mut game, 13, 8);
+        advance(&mut game, 60);
+        assert!(
+            matches!(game.vm().pc(), 0xf88 | 0xf8b | 0xf8f),
+            "the prologue has a second page"
+        );
+        let prologue_two = frame(&game);
+        assert_ne!(
+            prologue_two, prologue_one,
+            "the second prologue page differs"
+        );
+
+        press(&mut game, 20);
+        wait_pc(&mut game, 0x4ed8);
+        assert_eq!(
+            game.vm().pc(),
+            0x4ed8,
+            "the maze waits on the movement loop"
+        );
+        let memory = game.vm().memory();
+        assert_eq!(memory[0x3fe5], 1, "the hero starts on the first row");
+        assert_eq!(memory[0x3fe7], 5, "the hero starts in the fifth column");
+        assert_eq!(memory[0x3e16 + 23 + 5], 0, "the starting cell is open");
+        assert_eq!(memory[0x3e77], 4, "the attack speed stone waits below");
+        assert_eq!(memory[0x4338], 2, "the attack speed starts at two");
+        let before_pickup = frame(&game);
+
+        hold(&mut game, 21, 40);
+        advance(&mut game, 20);
+        assert_eq!(
+            game.vm().memory()[0x3fe5],
+            3,
+            "holding down walks two cells"
+        );
+        assert_eq!(game.vm().memory()[0x3fe7], 5, "the column is unchanged");
+        hold(&mut game, 21, 40);
+        advance(&mut game, 20);
+        assert_eq!(
+            game.vm().memory()[0x3fe5],
+            4,
+            "the hero steps onto the item"
+        );
+        assert_eq!(
+            game.vm().memory()[0x3fe7],
+            5,
+            "the item is in the fifth column"
+        );
+        assert_eq!(
+            game.vm().memory()[0x3e77],
+            0,
+            "picking the stone clears its cell"
+        );
+        assert_eq!(
+            game.vm().memory()[0x4338],
+            3,
+            "the attack speed stone raises the stat"
+        );
+        assert_ne!(
+            frame(&game),
+            before_pickup,
+            "the pickup changes the maze view"
+        );
+
+        hold(&mut game, 21, 40);
+        advance(&mut game, 20);
+        assert_eq!(
+            game.vm().memory()[0x3fe5],
+            4,
+            "a wall below blocks the step"
+        );
+        assert_eq!(
+            game.vm().memory()[0x3fe7],
+            5,
+            "the blocked step keeps the column"
+        );
+        hold(&mut game, 22, 60);
+        advance(&mut game, 20);
+        assert_eq!(
+            game.vm().memory()[0x3fe5],
+            4,
+            "the right step keeps the row"
+        );
+        assert_eq!(
+            game.vm().memory()[0x3fe7],
+            6,
+            "holding right walks into the next cell"
+        );
+    }
+
+    let mut continue_game = load(UNPACKED);
+    boot_to_title(&mut continue_game);
+    hold(&mut continue_game, 21, 8);
+    advance(&mut continue_game, 20);
+    assert_eq!(
+        continue_game.vm().memory()[0x3fd7],
+        2,
+        "down selects the continue entry"
+    );
+    hold(&mut continue_game, 13, 8);
+    wait_text(&mut continue_game);
+    advance(&mut continue_game, 20);
+    assert!(
+        matches!(continue_game.vm().pc(), 0xf88 | 0xf8b | 0xf8f),
+        "continue draws the loading screen"
+    );
+    let save = continue_game
+        .files_mut()
+        .take_dirty_files()
+        .into_iter()
+        .find(|(name, _)| name == "/lavadata/gcsave.dat")
+        .expect("continue writes its save file");
+    assert_eq!(
+        save.1,
+        vec![
+            0x00, 0x00, 0x00, 0x00, 0x03, 0x04, 0x03, 0x03, 0x01, 0x09, 0x09, 0x02, 0x02, 0x00,
+            0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x14, 0x00, 0x20, 0x03, 0x20, 0x03, 0x96,
+            0x00, 0x96, 0x00, 0x00, 0x00
+        ],
+        "the save pins the first stage and its defaults"
+    );
+    hold(&mut continue_game, 13, 8);
+    wait_pc(&mut continue_game, 0x4ed8);
+    assert_eq!(
+        continue_game.vm().pc(),
+        0x4ed8,
+        "continue drops into the maze"
+    );
+    assert_eq!(
+        continue_game.vm().memory()[0x3fe5],
+        1,
+        "continue restores the row"
+    );
+    assert_eq!(
+        continue_game.vm().memory()[0x3fe7],
+        5,
+        "continue restores the column"
+    );
+
+    let mut exit_game = load(UNPACKED);
+    boot_to_title(&mut exit_game);
+    hold(&mut exit_game, 20, 8);
+    advance(&mut exit_game, 20);
+    for _ in 0..3 {
+        hold(&mut exit_game, 21, 8);
+        advance(&mut exit_game, 20);
+    }
+    assert_eq!(
+        exit_game.vm().memory()[0x3fd7],
+        4,
+        "down walks the cursor to quit"
+    );
+    let title = frame(&exit_game);
+    hold(&mut exit_game, 13, 8);
+    wait_text(&mut exit_game);
+    advance(&mut exit_game, 20);
+    let credits_one = frame(&exit_game);
+    assert_ne!(credits_one, title, "the credits replace the title menu");
+    press(&mut exit_game, 13);
+    advance(&mut exit_game, 60);
+    let credits_two = frame(&exit_game);
+    assert_ne!(
+        credits_two, credits_one,
+        "the second page lists the testers"
+    );
+    exit_game.input_mut().set_keys([13]);
+    let mut reached_final = false;
+    let mut halted = None;
+    for _ in 0..400 {
+        let result = exit_game.run_frame().unwrap();
+        if exit_game.vm().pc() == 0x558b {
+            reached_final = true;
+        }
+        if let FrameStatus::Halted(code) = result.status {
+            halted = Some(code);
+            break;
+        }
+    }
+    exit_game.input_mut().set_keys([]);
+    assert!(reached_final, "the final credit page is reached");
+    assert_eq!(halted, Some(0), "the credits exit with code 0");
+    assert!(
+        exit_game.files_mut().take_dirty_files().is_empty(),
+        "the credits leave no files behind"
+    );
+}

@@ -80,9 +80,10 @@ do not satisfy this status.
 - Roach Adventure Compact checked on 2026-11-08: one dedicated release workflow walks the four-entry title grid without wrapping, opens the ten-stage level select, clamps the stage cursor with left and right, verifies that starting a stage without the game's renamed map data reports the missing file and leads to the credits page, then checks the two key presses that close the help page and escape returning from the credits while the quit entry exits with code 0.
 - Roach Adventure Final checked on 2026-11-08: one dedicated release workflow covers both identical V3.2 builds. It walks the 2x2 title grid and clamps every edge, opens the ten-stage level select and clamps the stage cursor with all four arrows, starts the first stage with five lives, the map's player/chaser marker cells and wall border, verifies up/down movement and the walls blocking left and right, watches the chaser home in and take the first life while the roach stays on its start cell, then checks the two help pages, escape returning from the version credits to the reset menu and the quit entry exiting with code 0.
 - Shuai Ren Battle checked on 2026-11-08: one dedicated release workflow waits on the scrolling title, skips it into the punch/kick poster with its 130-step counter, verifies that a single tap draws the punch sprite during its pause and restores the poster, that a tap draws a different kick sprite and restores the poster, steps the counter down one per key through the five face pages at 80, 60, 30 and 15, keeps the last page at one counter step where the punch stays on screen, reaches the ending text at zero, and pages through the two ending screens to a halt with code 0 without writing files.
-- 191 dedicated release workflows passed in this audit.
-- 267 of 324 entry points were loaded by those successful workflows.
-- 57 entry points still need dedicated workflow verification.
+- Gu Chong Maze Adventure checked on 2026-11-08: one dedicated release workflow covers the packaged and unpacked entries, walks the five-entry title menu, pages the five help screens with a clamped Down, selects the difficulty with clamped Up/Down, pages the prologue into the first maze cell, verifies the item pickup and the attack stat, stops at the wall, walks one cell right, resumes from Continue with the thirty-three-byte save, and pages the credits to a halt with code 0.
+- 192 dedicated release workflows passed in this audit.
+- 269 of 324 entry points were loaded by those successful workflows.
+- 55 entry points still need dedicated workflow verification.
 - The historical [startup gallery](Game-Compatibility.md) is a separate check
   and must not be interpreted as this workflow audit.
 
@@ -369,8 +370,8 @@ an optional screenshot directory. Keep each test's logs and captures separate.
 | 263 | `LAVA1 蟑螂历险记/终结完美版/蟑螂历险记V3.2.lav` | Game / game package | [Workflow passed: `roach_adventure_final_menus_levels_and_chase`](../crates/lavaxemu/tests/game_compatibility.rs#L25473) |
 | 264 | `LAVA1 蟑螂历险记3.2/蟑螂历险记V3.2.lav` | Game / game package | [Workflow passed: `roach_adventure_final_menus_levels_and_chase`](../crates/lavaxemu/tests/game_compatibility.rs#L25473) |
 | 265 | `LAVA1 衰人大战（很小的游戏）/衰.lav` | Game / game package | [Workflow passed: `shuai_ren_battle_punch_kick_pages_and_ending`](../crates/lavaxemu/tests/game_compatibility.rs#L25704) |
-| 266 | `LAVA1 谷虫迷宫大冒险/打包/谷虫大冒险.pac` | Game / game package | Pending |
-| 267 | `LAVA1 谷虫迷宫大冒险/未打包/gcdmx.lav` | Game / game package | Pending |
+| 266 | `LAVA1 谷虫迷宫大冒险/打包/谷虫大冒险.pac` | Game / game package | [Workflow passed: `gu_chong_maze_adventure_runs_menus_help_pickup_and_credits`](../crates/lavaxemu/tests/game_compatibility.rs#L25848) |
+| 267 | `LAVA1 谷虫迷宫大冒险/未打包/gcdmx.lav` | Game / game package | [Workflow passed: `gu_chong_maze_adventure_runs_menus_help_pickup_and_credits`](../crates/lavaxemu/tests/game_compatibility.rs#L25848) |
 | 268 | `LAVA1 贪吃小精灵/Clear.lav` | Game / game package | Pending |
 | 269 | `LAVA1 贪吃蛇鲍勃/贪吃蛇鲍勃.lav` | Game / game package | Pending |
 | 270 | `LAVA1 赤色要塞/非pac/Jackal.lav` | Game / game package | Pending |
