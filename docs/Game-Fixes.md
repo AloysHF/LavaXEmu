@@ -4074,3 +4074,30 @@ without an execution error alone does not establish playability.
   the credits at `0x34F0` halt with code 0 on Enter.
 - Not covered: the ranking contents, the diary load path, the later portions
   of the second and third shows, and the score board text.
+
+## Roach Adventure V1.0 (LAVA1 蟑螂历险记/测试版/蟑螂历险记 V1.0.lav)
+
+- Content: the single program `蟑螂历险记 V1.0.lav`. The title waits at
+  `0x2935`, an Enter reaches the animated menu at `0x2FC5`, a second Enter
+  settles it at `0x305A`, and a third Enter opens the ten-stage level select
+  at `0x35BC`.
+- The level select keeps its cursor in `0x45E7`. Right and Up raise it and
+  clamp at 9, Left and Down lower it and clamp at 0, and Enter starts the
+  selected stage.
+- Stage start copies the map's marker cells: the marker-11 row/column words
+  `0x4585`/`0x4587` become the roach pixel position `0x457F`/`0x4581` at
+  `(column-1)*8, (row-1)*8`, the marker-22 words `0x4589`/`0x458B` become the
+  chaser position `0x4577`/`0x4579`, and the exit cell becomes
+  `0x45E9`/`0x45EB`. The first stage starts with five lives in `0x4583`, the
+  roach at `(64, 24)`, the chaser at `(135, 1)` and the exit at `(40, 32)`.
+- Arrow keys set the facing byte `0x45E5` (Up 7, Down 2, Left 5, Right 4) and
+  move the roach one 8-pixel cell when the neighbouring cell is open; a wall
+  still updates the facing without moving. The chaser homes one pixel per
+  animation step toward the roach, and a collision lowers the life counter
+  and restarts the chaser on its marker cell.
+- The exit check at `0x474F` advances the stage cursor when the roach pixel
+  equals `0x45E9`/`0x45EB`; that path is documented from the code and is not
+  exercised by the workflow.
+- Not covered: the mazes beyond the first stage, the completed-stage path,
+  the game-over screens after the last life, the stage-clear text and the
+  sound.
