@@ -4339,3 +4339,29 @@ without an execution error alone does not establish playability.
   defect was found.
 - Not covered: enemy and fort combat, weapons and upgrades, later areas, the
   title menu beyond Enter, and audio.
+
+## Super Dancer (LAVA1 超级舞者/超级舞者.lav)
+
+- Content: a rhythm game on a 160x80 screen. After a boot warning it shows a
+  four-entry main menu: start, ranking page, settings and quit. The menu index
+  is the byte at `0x1b14`.
+- The settings grid keeps its cursor at `0x2877`. Entry `0` opens the key
+  configuration page, `1` the delay page, `2` the speed page, and `4` the
+  save-file creation entry. The delay and speed sliders share the byte at
+  `0x287f`; the delay defaults to 0 and the speed to 1.
+- Gameplay runs four lanes with signed 16-bit timers at `0x2747`, `0x2749`,
+  `0x274b` and `0x274d`, mapped to Left, Up, Down and Right (`23`, `20`, `21`,
+  `22`). A tap is COOL while its timer is within `+4..-1`, GOOD within
+  `-2..-7`, BAD within `-8..-13`, and a note that passes unhit is a miss.
+  The counters are stored at `0x273b`, `0x273d`, `0x273f` and `0x2741` for
+  COOL, GOOD, BAD and MISS. The round ends after seven misses at `0x1571` with
+  the 连击, 延时, 总分 and 速度 summary.
+- A qualifying game over asks for a leaderboard name at `0x948`. Typing a
+  character and pressing Enter returns to the identical main-menu frame.
+- The save-file entry asks for confirmation at `0xf0b`. Accepting with `y`
+  writes a 201-byte `/lavadata/cjwz.sav` consisting of a six-byte header and
+  three 65-byte records.
+- The quit entry opens the credits at `0x1215`; Enter after the credits
+  animation halts with code 0 at `0x1a12`. No emulator defect was found.
+- Not covered: repeated rounds, different songs or difficulty, the ranking
+  list contents, the key rebinding result in gameplay, and audio.

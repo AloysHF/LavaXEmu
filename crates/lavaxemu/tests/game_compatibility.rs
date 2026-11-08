@@ -26902,3 +26902,237 @@ fn srw_packaged_and_loose_versions_run_the_menu_intro_and_map() {
         );
     }
 }
+
+#[test]
+#[ignore = "requires the local game corpus via LAVAX_GAME_ROOT"]
+fn super_dancer_runs_menus_settings_rhythm_round_and_creates_save() {
+    fn frame(game: &Emulator) -> Vec<u8> {
+        game.display().indexed_frame().to_vec()
+    }
+    fn tap(game: &mut Emulator, key: u8) {
+        game.input_mut().set_keys([key]);
+        advance(game, 1);
+        game.input_mut().set_keys([]);
+    }
+    fn menu(game: &Emulator) -> u8 {
+        game.vm().memory()[0x1b14]
+    }
+    fn grid(game: &Emulator) -> u8 {
+        game.vm().memory()[0x2877]
+    }
+    fn slider(game: &Emulator) -> u8 {
+        game.vm().memory()[0x287f]
+    }
+    fn counters(game: &Emulator) -> (u8, u8, u8, u8) {
+        let memory = game.vm().memory();
+        (
+            memory[0x273b],
+            memory[0x273d],
+            memory[0x273f],
+            memory[0x2741],
+        )
+    }
+
+    let path = "LAVA1 超级舞者/超级舞者.lav";
+    let mut game = load(path);
+    advance(&mut game, 60);
+    assert_eq!((game.display().width(), game.display().height()), (160, 80));
+    assert_eq!(game.vm().pc(), 0x7e4, "{path} waits on the boot warning");
+    assert!(
+        game.files_mut().take_dirty_files().is_empty(),
+        "{path} writes nothing at boot"
+    );
+
+    press(&mut game, 13);
+    assert_eq!(game.vm().pc(), 0x1960, "{path} opens the main menu");
+    assert_eq!(menu(&game), 0);
+    let main_menu = frame(&game);
+
+    hold(&mut game, 20, 10);
+    assert_eq!(menu(&game), 0, "{path} clamps the menu at the top");
+    assert_eq!(frame(&game), main_menu);
+    hold(&mut game, 21, 10);
+    assert_eq!(menu(&game), 1);
+    let ranking_entry = frame(&game);
+    assert_ne!(ranking_entry, main_menu);
+
+    press(&mut game, 13);
+    assert_eq!(game.vm().pc(), 0x53e, "{path} opens the ranking page");
+    hold(&mut game, 27, 10);
+    assert_eq!(game.vm().pc(), 0x1960);
+    assert_eq!(menu(&game), 1);
+    assert_eq!(frame(&game), ranking_entry, "{path} restores the menu");
+
+    hold(&mut game, 21, 10);
+    assert_eq!(menu(&game), 2);
+    press(&mut game, 13);
+    assert_eq!(game.vm().pc(), 0x1049, "{path} opens the settings grid");
+
+    hold(&mut game, 22, 10);
+    assert_eq!(grid(&game), 1);
+    hold(&mut game, 23, 10);
+    assert_eq!(grid(&game), 0);
+    hold(&mut game, 21, 10);
+    assert_eq!(grid(&game), 2);
+    hold(&mut game, 21, 10);
+    assert_eq!(grid(&game), 3);
+    hold(&mut game, 22, 10);
+    assert_eq!(grid(&game), 4);
+    hold(&mut game, 23, 10);
+    assert_eq!(grid(&game), 3);
+    hold(&mut game, 20, 10);
+    assert_eq!(grid(&game), 2);
+    hold(&mut game, 20, 10);
+    assert_eq!(grid(&game), 0);
+
+    press(&mut game, 13);
+    assert_eq!(
+        game.vm().pc(),
+        0xd93,
+        "{path} opens the key configuration page"
+    );
+    let keys_page = frame(&game);
+    hold(&mut game, 22, 10);
+    assert_ne!(frame(&game), keys_page);
+    hold(&mut game, 27, 10);
+    assert_eq!(game.vm().pc(), 0x1049);
+    assert_eq!(grid(&game), 0);
+
+    hold(&mut game, 22, 10);
+    press(&mut game, 13);
+    assert_eq!(game.vm().pc(), 0xbbc, "{path} opens the delay page");
+    assert_eq!(slider(&game), 0);
+    press(&mut game, 22);
+    assert_eq!(slider(&game), 1);
+    press(&mut game, 23);
+    assert_eq!(slider(&game), 0);
+    hold(&mut game, 27, 10);
+    assert_eq!(game.vm().pc(), 0x1049);
+    assert_eq!(grid(&game), 1);
+
+    hold(&mut game, 21, 10);
+    assert_eq!(grid(&game), 2);
+    press(&mut game, 13);
+    assert_eq!(game.vm().pc(), 0xcf4, "{path} opens the speed page");
+    assert_eq!(slider(&game), 1);
+    press(&mut game, 22);
+    assert_eq!(slider(&game), 2);
+    press(&mut game, 23);
+    assert_eq!(slider(&game), 1);
+    hold(&mut game, 27, 10);
+    assert_eq!(game.vm().pc(), 0x1049);
+
+    hold(&mut game, 27, 10);
+    assert_eq!(game.vm().pc(), 0x1960);
+    assert_eq!(menu(&game), 2);
+    hold(&mut game, 20, 10);
+    hold(&mut game, 20, 10);
+    assert_eq!(menu(&game), 0);
+
+    press(&mut game, 13);
+    advance(&mut game, 10);
+    assert_eq!(game.vm().pc(), 0x18f4, "{path} starts the rhythm round");
+    assert_eq!(counters(&game), (0, 0, 0, 0));
+
+    advance(&mut game, 66);
+    tap(&mut game, 20);
+    advance(&mut game, 1);
+    tap(&mut game, 21);
+    advance(&mut game, 7);
+    tap(&mut game, 22);
+    advance(&mut game, 5);
+    tap(&mut game, 23);
+    advance(&mut game, 69);
+    tap(&mut game, 20);
+    advance(&mut game, 12);
+    tap(&mut game, 21);
+    advance(&mut game, 11);
+    tap(&mut game, 23);
+    advance(&mut game, 23);
+    tap(&mut game, 22);
+    advance(&mut game, 5);
+    assert_eq!(
+        counters(&game),
+        (8, 0, 0, 0),
+        "{path} scores eight COOL hits"
+    );
+
+    advance(&mut game, 60);
+    tap(&mut game, 23);
+    advance(&mut game, 1);
+    assert_eq!(counters(&game), (8, 1, 0, 0));
+    advance(&mut game, 104);
+    tap(&mut game, 23);
+    advance(&mut game, 1);
+    assert_eq!(counters(&game), (8, 2, 0, 3));
+    advance(&mut game, 31);
+    tap(&mut game, 21);
+    advance(&mut game, 1);
+    assert_eq!(counters(&game), (8, 2, 1, 3));
+
+    advance(&mut game, 360);
+    assert_eq!(
+        game.vm().pc(),
+        0x1571,
+        "{path} ends the round after seven misses"
+    );
+    assert_eq!(counters(&game), (8, 2, 1, 7));
+
+    hold(&mut game, 27, 10);
+    assert_eq!(game.vm().pc(), 0x948, "{path} asks for a leaderboard name");
+    press(&mut game, b'A');
+    press(&mut game, 13);
+    assert_eq!(game.vm().pc(), 0x1960);
+    assert_eq!(menu(&game), 0);
+    assert_eq!(frame(&game), main_menu, "{path} returns to the main menu");
+
+    hold(&mut game, 21, 10);
+    hold(&mut game, 21, 10);
+    press(&mut game, 13);
+    assert_eq!(game.vm().pc(), 0x1049);
+    hold(&mut game, 21, 10);
+    hold(&mut game, 21, 10);
+    hold(&mut game, 22, 10);
+    assert_eq!(grid(&game), 4);
+    press(&mut game, 13);
+    assert_eq!(
+        game.vm().pc(),
+        0xf0b,
+        "{path} asks to confirm file creation"
+    );
+    press(&mut game, b'y');
+    assert_eq!(game.vm().pc(), 0x1006);
+
+    let saved = game.files_mut().take_dirty_files();
+    assert_eq!(saved.len(), 1);
+    let (save, bytes) = &saved[0];
+    assert_eq!(save, "/lavadata/cjwz.sav");
+    assert_eq!(bytes.len(), 201);
+    assert_eq!(&bytes[..6], &[0x96, 0x1d, 0x35, 0x2d, 0x36, 0x63]);
+
+    hold(&mut game, 27, 10);
+    assert_eq!(game.vm().pc(), 0x1049);
+    hold(&mut game, 27, 10);
+    assert_eq!(game.vm().pc(), 0x1960);
+    assert_eq!(menu(&game), 2);
+
+    hold(&mut game, 21, 10);
+    hold(&mut game, 21, 10);
+    hold(&mut game, 21, 10);
+    assert_eq!(menu(&game), 3);
+    press(&mut game, 13);
+    assert_eq!(game.vm().pc(), 0x1215, "{path} opens the credits");
+    advance(&mut game, 120);
+
+    let mut halted = false;
+    game.input_mut().release_all();
+    for frame in 0..600 {
+        game.input_mut().set_keys((frame < 3).then_some(13));
+        if game.run_frame().unwrap().status == FrameStatus::Halted(0) {
+            halted = true;
+            break;
+        }
+    }
+    assert!(halted, "{path} exits cleanly");
+    assert_eq!(game.vm().pc(), 0x1a12);
+}
