@@ -3958,3 +3958,39 @@ without an execution error alone does not establish playability.
   through the draft.
 - Not covered: faction and troop effects, magic, battle outcome, saving,
   the help text contents and further rounds.
+
+## Carrot Battle Remake (LAVA1 萝卜大作战修改版)
+
+- Content: `萝卜大作战.pac`, `非pac/萝卜大作战.lav`, `非pac/MapEditor.lav`
+  with `TZBB_MP.dat` (36453 bytes), `TZBB_PT.dat` (62400 bytes) and
+  `TZBB_SV.dat` (7000 bytes). The three regression workflows write nothing
+  except the map editor save branch.
+- The core `CheckKey` "any key" mode now falls back to the lowest held LavaX
+  code when no host virtual key maps to it. Device-specific side keys remain
+  visible to the guest instead of making busy-wait loops spin forever.
+- Both frontends expose the side keys as numpad 8/2/4/6 (codes 37/15/39/38).
+  The game remaps its directions to those codes, so the standard arrows do
+  nothing during play while the numpad keys move the rabbit.
+- The menu waits at `0x56b5`; `menuk` at `0x3C94` steps through four entries
+  and wraps both ways. Enter opens the mode select at `0x530a`, whose three
+  entries wrap; selecting the third mode stores `si = 3` at `0x3C8F`.
+- The stage select waits at `0x553e` and starts from the saved stage. `SHUI`
+  (19) subtracts ten and `MD` (14) adds ten with a wrap over the stage count;
+  Enter stores `st`/`st1` at `0x3C8B`/`0x3C8C`. The empty custom stage 10
+  reports an error at `0x2d81` and returns to the menu.
+- In stage 24 the dog starts at `(10, 8)` with the camera at `(5, 6)` and
+  eleven carrots. The side up key walks to `(10, 6)` across a one-way wall
+  (tile 17 at `0x3662`); the side left key collects the carrot at `(9, 6)`,
+  increments `luobo` at `0x406F`, turns the carrot into tile 7 and the used
+  one-way wall into hazard tile 18.
+- After ten idle seconds the game enters the busy wait at `0x520c`; any key
+  resumes it. Escape opens "请按Y键退出" at `0x35C1`, `n` returns to the game
+  and `y` returns to the menu.
+- The map editor opens with stage 1 of the custom mode and switches with the
+  page keys; protected modes show "您无权编辑本模式!" at `0x2D6` and return
+  to the menu. Stage 2 loads from offset 24400 of `TZBB_MP.dat`; arrows move
+  the cursor at `0x25F5`/`0x25F6`, a letter stamps its tile, and the save
+  dialog at `0x853` writes the edited map back to the same offset.
+- Not covered: the settings screen, help text contents, recording and replay,
+  all later stages, death and win animations, and the editor auto/full-screen
+  modes.

@@ -75,6 +75,7 @@ lavaxemu path/to/game.lav -- first second
 | LavaX Key | Keyboard |
 | --- | --- |
 | Direction keys | Arrow keys |
+| Side keys (37 / 15 / 39 / 38) | Numpad 8 / 2 / 4 / 6 |
 | A–Z | A–Z |
 | B | B or 1 |
 | Space | Space |

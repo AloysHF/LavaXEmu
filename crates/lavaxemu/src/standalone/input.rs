@@ -52,6 +52,10 @@ const SPECIAL_KEYS: &[(Key, u8)] = &[
     (Key::F4, 0x1f),
     (Key::F5, 25),
     (Key::F6, 18),
+    (Key::NumPad8, 37),
+    (Key::NumPad2, 15),
+    (Key::NumPad4, 39),
+    (Key::NumPad6, 38),
 ];
 
 const NUMBER_KEYS: &[(Key, u8)] = &[

@@ -666,11 +666,14 @@ impl Emulator {
         } else {
             // LVM scans physical key codes in ascending order and reports the
             // first one that is pressed (mapped back to a LavaX key code).
+            // Keys without a host mapping, such as device-specific side keys,
+            // still have to be reported so the guest can act on them.
             (0..256u16)
                 .find_map(|vk| {
                     let lava = lava_key_from_vk(vk);
                     (lava != 0 && self.input.is_pressed(lava)).then_some(i32::from(lava))
                 })
+                .or_else(|| self.input.first_pressed().map(i32::from))
                 .unwrap_or(0)
         };
         self.vm.push_value(value)?;
@@ -1392,6 +1395,31 @@ mod tests {
         emulator.input_mut().set_key(13, true);
         assert_eq!(emulator.run_frame().unwrap().status, FrameStatus::Halted(0));
         assert_eq!(emulator.vm().result(), 13);
+    }
+
+    #[test]
+    fn checkkey_any_key_reports_side_keys_without_a_host_mapping() {
+        let mut emulator = emulator(&[0x01, 0x80, 0xbc, 0x38, 0x40]);
+        emulator.input_mut().set_key(37, true);
+        assert_eq!(emulator.run_frame().unwrap().status, FrameStatus::Halted(0));
+        assert_eq!(emulator.vm().result(), 37);
+    }
+
+    #[test]
+    fn checkkey_any_key_prefers_a_host_mapped_key() {
+        let mut emulator = emulator(&[0x01, 0x80, 0xbc, 0x38, 0x40]);
+        emulator.input_mut().set_key(37, true);
+        emulator.input_mut().set_key(b'y', true);
+        assert_eq!(emulator.run_frame().unwrap().status, FrameStatus::Halted(0));
+        assert_eq!(emulator.vm().result(), i32::from(b'y'));
+    }
+
+    #[test]
+    fn checkkey_polls_side_keys_directly() {
+        let mut emulator = emulator(&[0x01, 39, 0xbc, 0x38, 0x40]);
+        emulator.input_mut().set_key(39, true);
+        assert_eq!(emulator.run_frame().unwrap().status, FrameStatus::Halted(0));
+        assert_eq!(emulator.vm().result(), -1);
     }
 
     #[test]

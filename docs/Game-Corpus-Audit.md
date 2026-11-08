@@ -72,9 +72,10 @@ do not satisfy this status.
 - Flower Spirit checked on 2026-11-08: one dedicated release workflow covers the packaged and unpacked entries with byte-identical frames at every step, checks both menu clamps and all four items, verifies the help page text, the empty leaderboard, a new game, the flower tiles on the first row, saving the first slot, loading it back with the flower count restored and the map reset, the pit trap losing ten flowers, the game-over return to the menu and the halt on escape.
 - Wing Sword checked on 2026-11-08: one dedicated release workflow covers the packaged and unpacked entries with byte-identical frames at every step, waits on the title, opens the prologue text pages, loads the opening map with the hero at the start, pages through the dialogue into player control, steps right, left, up and down between fixed cells, shows a wall blocking the downward step while still turning the hero, and writes no files.
 - Hero 2 checked on 2026-11-08: two dedicated release workflows cover the perfect edition and the battle edition. The perfect edition workflow halts from the title, opens the placeholder, wraps and clamps both faction grids and the main and mine menus, mines a fixed 44 gold with one action spent, upgrades the mine for 300 gold, builds it for 500, finds 90 gold by exploring, reads both status pages, recruits a troop for 150 gold, opens both help pages and the about page, verifies the save-and-quit no-op, ends a turn to refill the actions, quits from the system menu and fights a battle round. The battle edition workflow halts from the title, drafts troops in single and two-player battles with both cursor wraps, enforces at least one pick per side, keeps the two-player flag, and plays a battle round.
-- 179 dedicated release workflows passed in this audit.
-- 255 of 324 entry points were loaded by those successful workflows.
-- 69 entry points still need dedicated workflow verification.
+- Carrot Battle Remake checked on 2026-11-08: three dedicated release workflows cover the game package, the unpacked program and the map editor. The package workflow wraps the main menu and the mode and stage selectors, rejects an out-of-range custom stage, loads stage 24 with its dog, carrot pair, one-way wall and header values, climbs the wall with the side key, collects a carrot, leaves the wall turning into a hazard and taps a direction key during the idle pause. The unpacked workflow walks the same menus, gets blocked by a wall, ignores the standard direction keys, resumes after the ten-second idle pause, opens the quit dialog and returns through the menu. The map editor workflow opens a custom level, moves the cursor, stamps a tile with a letter key, opens and cancels the save dialog, writes one stage-two map file with the edited byte at its fixed offset and exits with the protected-mode warning.
+- 182 dedicated release workflows passed in this audit.
+- 258 of 324 entry points were loaded by those successful workflows.
+- 66 entry points still need dedicated workflow verification.
 - The historical [startup gallery](Game-Compatibility.md) is a separate check
   and must not be interpreted as this workflow audit.
 
@@ -347,9 +348,9 @@ an optional screenshot directory. Keep each test's logs and captures separate.
 | 249 | `LAVA1 花之精灵2.0/非pac/花之精灵.lav` | Game / game package | [Workflow passed: `flower_spirit_collects_flowers_and_restores_a_save`](../crates/lavaxemu/tests/game_compatibility.rs#L23066) |
 | 250 | `LAVA1 英雄无敌2完美版/《英雄无敌2》完美版.lav` | Game / game package | [Workflow passed: `hero2_perfect_edition_mines_recruits_and_fights`](../crates/lavaxemu/tests/game_compatibility.rs#L23340) |
 | 251 | `LAVA1 英雄无敌对战版/英雄无敌v1.0.lav` | Game / game package | [Workflow passed: `hero_battle_edition_drafts_units_and_fights`](../crates/lavaxemu/tests/game_compatibility.rs#L23767) |
-| 252 | `LAVA1 萝卜大作战修改版/萝卜大作战.pac` | Game / game package | Pending |
-| 253 | `LAVA1 萝卜大作战修改版/非pac/MapEditor.lav` | Map editor | Pending |
-| 254 | `LAVA1 萝卜大作战修改版/非pac/萝卜大作战.lav` | Game / game package | Pending |
+| 252 | `LAVA1 萝卜大作战修改版/萝卜大作战.pac` | Game / game package | [Workflow passed: `luobo_dazuo_zhan_package_walks_the_menus_and_uses_side_keys`](../crates/lavaxemu/tests/game_compatibility.rs#L23948) |
+| 253 | `LAVA1 萝卜大作战修改版/非pac/MapEditor.lav` | Map editor | [Workflow passed: `luobo_dazuo_zhan_map_editor_edits_and_saves_stage_two`](../crates/lavaxemu/tests/game_compatibility.rs#L24117) |
+| 254 | `LAVA1 萝卜大作战修改版/非pac/萝卜大作战.lav` | Game / game package | [Workflow passed: `luobo_dazuo_zhan_unpacked_blocks_walls_and_resumes_after_idle`](../crates/lavaxemu/tests/game_compatibility.rs#L24058) |
 | 255 | `LAVA1 蛙蛙大富翁/蛙蛙大富翁打包.pac` | Game / game package | Pending |
 | 256 | `LAVA1 蛙蛙大富翁/非pac/蛙蛙大富翁.lav` | Game / game package | Pending |
 | 257 | `LAVA1 蛙蛙马戏团 1.2/蛙蛙马戏团.lav` | Game / game package | Pending |

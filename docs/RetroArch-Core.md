@@ -71,6 +71,7 @@ Keyboard input is polled alongside the joypad. Letters, Enter, Escape, Space,
 arrows, page keys, Shift, and F1–F6 use the same guest codes as the standalone
 emulator. Space sends a real space; B or physical 1 sends B. Physical 2–9 retain
 the N/M/G/H/J/T/Y/U aliases, and 0 and period are available for text input.
+Numpad 8, 2, 4 and 6 send the device side keys 37, 15, 39 and 38.
 
 ## Features
 

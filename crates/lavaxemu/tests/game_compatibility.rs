@@ -23942,3 +23942,238 @@ fn hero_battle_edition_drafts_units_and_fights() {
         "the battle writes nothing"
     );
 }
+
+#[test]
+#[ignore = "requires the local game corpus via LAVAX_GAME_ROOT"]
+fn luobo_dazuo_zhan_package_walks_the_menus_and_uses_side_keys() {
+    let mut game = load("LAVA1 萝卜大作战修改版/萝卜大作战.pac");
+    let byte = |game: &Emulator, address: usize| game.vm().memory()[address];
+    let word = |game: &Emulator, address: usize| {
+        u16::from_le_bytes(game.vm().memory()[address..address + 2].try_into().unwrap())
+    };
+
+    advance(&mut game, 60);
+    assert_eq!(game.vm().pc(), 0x56b5, "the menu waits for a key");
+    assert_eq!(byte(&game, 0x3c94), 0, "the menu starts on the first entry");
+    press(&mut game, 21);
+    assert_eq!(byte(&game, 0x3c94), 1, "down advances the menu");
+    press(&mut game, 21);
+    assert_eq!(byte(&game, 0x3c94), 2);
+    press(&mut game, 21);
+    assert_eq!(byte(&game, 0x3c94), 3);
+    press(&mut game, 21);
+    assert_eq!(byte(&game, 0x3c94), 0, "down wraps to the first entry");
+    press(&mut game, 20);
+    assert_eq!(byte(&game, 0x3c94), 3, "up wraps to the last entry");
+    press(&mut game, 20);
+    assert_eq!(byte(&game, 0x3c94), 2);
+    press(&mut game, 20);
+    assert_eq!(byte(&game, 0x3c94), 1);
+    press(&mut game, 20);
+    assert_eq!(byte(&game, 0x3c94), 0);
+
+    press(&mut game, 13);
+    assert_eq!(
+        game.vm().pc(),
+        0x530a,
+        "the first entry opens the mode select"
+    );
+    press(&mut game, 21);
+    press(&mut game, 21);
+    press(&mut game, 21);
+    press(&mut game, 20);
+    press(&mut game, 13);
+    assert_eq!(byte(&game, 0x3c8f), 3, "the third mode is selected");
+    assert_eq!(game.vm().pc(), 0x553e, "the stage select follows the mode");
+    press(&mut game, 13);
+    assert_eq!(
+        game.vm().pc(),
+        0x2d81,
+        "the empty custom stage reports an error"
+    );
+    advance(&mut game, 120);
+    assert_eq!(game.vm().pc(), 0x56b5, "the error returns to the menu");
+    assert_eq!(byte(&game, 0x3c8e), 10, "the custom stage is stored");
+
+    press(&mut game, 13);
+    assert_eq!(
+        game.vm().pc(),
+        0x530a,
+        "the mode select keeps the last mode"
+    );
+    press(&mut game, 21);
+    press(&mut game, 13);
+    assert_eq!(byte(&game, 0x3c8f), 1, "down wraps to the first mode");
+    assert_eq!(game.vm().pc(), 0x553e, "the stage select opens stage 24");
+    press(&mut game, 19);
+    press(&mut game, 14);
+    press(&mut game, 13);
+    assert_eq!(game.vm().pc(), 0x4fc8, "enter starts the level banner");
+    assert_eq!(byte(&game, 0x3c8b), 24, "the selected stage is 24");
+    assert_eq!(byte(&game, 0x3c8c), 24, "the mode remembers stage 24");
+    advance(&mut game, 60);
+    assert_eq!(game.vm().pc(), 0x3029, "the game loop waits for input");
+    assert_eq!(byte(&game, 0x3c8f), 1, "mode one is active");
+    assert_eq!(word(&game, 0x4071), 11, "the level has eleven carrots");
+    assert_eq!(
+        (word(&game, 0x4083), word(&game, 0x4085)),
+        (10, 8),
+        "the dog starts on the entrance"
+    );
+    assert_eq!(
+        (word(&game, 0x4077), word(&game, 0x4079)),
+        (5, 6),
+        "the camera starts at the spawn"
+    );
+
+    hold(&mut game, 37, 20);
+    assert_eq!(
+        (word(&game, 0x4083), word(&game, 0x4085)),
+        (10, 6),
+        "the side up key walks north"
+    );
+    assert_eq!(byte(&game, 0x3662), 17, "the one-way wall is still intact");
+    hold(&mut game, 39, 15);
+    assert_eq!(
+        (word(&game, 0x4083), word(&game, 0x4085)),
+        (9, 6),
+        "the side left key walks onto the carrot"
+    );
+    assert_eq!(word(&game, 0x406f), 1, "the carrot is collected");
+    assert_eq!(byte(&game, 0x3661), 7, "the carrot tile becomes empty");
+    assert_eq!(byte(&game, 0x3662), 18, "the one-way wall becomes a hazard");
+    assert_eq!(
+        (word(&game, 0x4077), word(&game, 0x4079)),
+        (4, 4),
+        "the camera follows the dog"
+    );
+    assert!(
+        game.files_mut().take_dirty_files().is_empty(),
+        "the run writes nothing"
+    );
+}
+
+#[test]
+#[ignore = "requires the local game corpus via LAVAX_GAME_ROOT"]
+fn luobo_dazuo_zhan_unpacked_blocks_walls_and_resumes_after_idle() {
+    let mut game = load("LAVA1 萝卜大作战修改版/非pac/萝卜大作战.lav");
+    let word = |game: &Emulator, address: usize| {
+        u16::from_le_bytes(game.vm().memory()[address..address + 2].try_into().unwrap())
+    };
+    let dog = |game: &Emulator| (word(game, 0x4083), word(game, 0x4085));
+
+    advance(&mut game, 60);
+    assert_eq!(game.vm().pc(), 0x56b5, "the menu waits for a key");
+    press(&mut game, 13);
+    assert_eq!(game.vm().pc(), 0x530a, "enter opens the mode select");
+    press(&mut game, 13);
+    assert_eq!(game.vm().pc(), 0x553e, "enter opens the stage select");
+    press(&mut game, 13);
+    assert_eq!(game.vm().pc(), 0x4fc8, "enter starts the level banner");
+    advance(&mut game, 60);
+    assert_eq!(game.vm().pc(), 0x3029, "the game loop waits for input");
+    assert_eq!(dog(&game), (10, 8), "the dog starts on the entrance");
+
+    hold(&mut game, 39, 15);
+    assert_eq!(dog(&game), (10, 8), "the wall blocks the side left key");
+    hold(&mut game, 23, 15);
+    assert_eq!(dog(&game), (10, 8), "the standard left arrow is unused");
+    hold(&mut game, 20, 15);
+    assert_eq!(dog(&game), (10, 8), "the standard up arrow is unused");
+
+    advance(&mut game, 700);
+    let pc = game.vm().pc();
+    assert!(
+        (0x520c..=0x5218).contains(&pc),
+        "the game pauses after ten idle seconds, pc=0x{pc:x}"
+    );
+    hold(&mut game, 37, 20);
+    assert_eq!(dog(&game), (10, 6), "a side key resumes and walks");
+
+    press(&mut game, 27);
+    assert!(
+        (0x35c1..=0x35ca).contains(&game.vm().pc()),
+        "escape asks before leaving, pc=0x{:x}",
+        game.vm().pc()
+    );
+    press(&mut game, b'n');
+    assert_eq!(game.vm().pc(), 0x3029, "n returns to the game");
+    press(&mut game, 27);
+    assert!(
+        (0x35c1..=0x35ca).contains(&game.vm().pc()),
+        "escape asks again, pc=0x{:x}",
+        game.vm().pc()
+    );
+    press(&mut game, b'y');
+    assert_eq!(game.vm().pc(), 0x56b5, "y returns to the menu");
+    assert!(
+        game.files_mut().take_dirty_files().is_empty(),
+        "the run writes nothing"
+    );
+}
+
+#[test]
+#[ignore = "requires the local game corpus via LAVAX_GAME_ROOT"]
+fn luobo_dazuo_zhan_map_editor_edits_and_saves_stage_two() {
+    let mut game = load("LAVA1 萝卜大作战修改版/非pac/MapEditor.lav");
+    let byte = |game: &Emulator, address: usize| game.vm().memory()[address];
+
+    advance(&mut game, 60);
+    assert_eq!(game.vm().pc(), 0x1aa, "the editor menu waits for a key");
+    press(&mut game, 21);
+    assert_eq!(
+        game.vm().pc(),
+        0x1aa,
+        "the stage selector stays on the menu"
+    );
+    press(&mut game, 13);
+    assert_eq!(game.vm().pc(), 0x3dd, "enter opens the map editor");
+    assert_eq!(byte(&game, 0x2000), 2, "the second custom stage is loaded");
+    assert_eq!(
+        (byte(&game, 0x25f5), byte(&game, 0x25f6)),
+        (0, 0),
+        "the cursor starts at the origin"
+    );
+    press(&mut game, 22);
+    assert_eq!(byte(&game, 0x25f5), 1, "right moves the cursor");
+    press(&mut game, 21);
+    assert_eq!(byte(&game, 0x25f6), 1, "down moves the cursor");
+    press(&mut game, b'a');
+    assert_eq!(byte(&game, 0x2000 + 21), 0x0b, "a letter stamps its tile");
+    press(&mut game, 13);
+    assert_eq!(game.vm().pc(), 0x853, "the editor asks about saving");
+    press(&mut game, 27);
+    assert_eq!(game.vm().pc(), 0x3d8, "escape returns to the editor");
+    press(&mut game, 13);
+    assert_eq!(game.vm().pc(), 0x853);
+    press(&mut game, 13);
+    assert_eq!(game.vm().pc(), 0x8f3, "enter saves the map");
+    let mut files = game.files_mut().take_dirty_files();
+    assert_eq!(files.len(), 1, "saving writes one file");
+    let (path, bytes) = files.remove(0);
+    assert_eq!(path, "/tzbb_mp.dat");
+    assert_eq!(bytes.len(), 36453);
+    assert_eq!(
+        bytes[24421], 0x0b,
+        "the stamped tile is stored in stage two"
+    );
+    press(&mut game, 113);
+    assert_eq!(game.vm().pc(), 0x1aa, "q returns to the editor menu");
+
+    let mut protected = load("LAVA1 萝卜大作战修改版/非pac/MapEditor.lav");
+    advance(&mut protected, 60);
+    press(&mut protected, 19);
+    press(&mut protected, 13);
+    assert_eq!(protected.vm().pc(), 0x2d6, "a protected mode is refused");
+    assert_eq!(
+        byte(&protected, 0x2000),
+        0,
+        "no map is loaded for a protected mode"
+    );
+    press(&mut protected, 13);
+    assert_eq!(
+        protected.vm().pc(),
+        0x1aa,
+        "the warning returns to the menu"
+    );
+}
