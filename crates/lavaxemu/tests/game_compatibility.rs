@@ -26728,3 +26728,177 @@ fn jackal_starts_scrolls_fires_and_exits() {
         "the workflow writes no files"
     );
 }
+
+#[test]
+#[ignore = "requires the local game corpus via LAVAX_GAME_ROOT"]
+fn srw_packaged_and_loose_versions_run_the_menu_intro_and_map() {
+    const GAMES: [&str; 2] = [
+        "LAVA1 超级机器人大战/Download/SRW.pac",
+        "LAVA1 超级机器人大战/file/SRW.lav",
+    ];
+
+    fn frame(game: &Emulator) -> Vec<u8> {
+        game.display().indexed_frame().to_vec()
+    }
+    fn menu(game: &Emulator) -> (usize, usize) {
+        let memory = game.vm().memory();
+        (usize::from(memory[0x3529]), usize::from(memory[0x352b]))
+    }
+    fn story_pointer(game: &Emulator) -> usize {
+        let memory = game.vm().memory();
+        usize::from(u16::from_le_bytes([memory[0x2b61], memory[0x2b62]]))
+    }
+    fn cursor(game: &Emulator) -> (usize, usize) {
+        let memory = game.vm().memory();
+        (usize::from(memory[0x5355]), usize::from(memory[0x5356]))
+    }
+
+    for path in GAMES {
+        let mut game = load(path);
+        advance(&mut game, 60);
+        assert_eq!((game.display().width(), game.display().height()), (160, 80));
+
+        let boot = game.files_mut().take_dirty_files();
+        assert_eq!(boot.len(), 1, "{path} creates the save file at boot");
+        let (save, bytes) = &boot[0];
+        assert_eq!(save, "/lavadata/srwsave.dat");
+        assert_eq!(bytes.len(), 12696);
+        assert_eq!(&bytes[0xccb..0xcd1], &[0xd0, 0xc2, 0xd3, 0xce, 0xcf, 0xb7]);
+        assert_eq!(&bytes[0xce9..0xcec], &[0x80, 0x81, 0x82]);
+        assert_eq!(&bytes[0xd51..0xd53], &[0xc0, 0x2e]);
+        assert_eq!(bytes.iter().filter(|&&byte| byte != 0).count(), 11);
+
+        let title = frame(&game);
+        advance(&mut game, 200);
+        assert_eq!(game.vm().pc(), 0x855, "{path}");
+        assert_eq!(frame(&game), title, "{path} waits on the title screen");
+        assert_eq!(menu(&game), (0, 0));
+
+        hold(&mut game, 21, 10);
+        assert_eq!(menu(&game), (0, 1));
+        hold(&mut game, 21, 10);
+        assert_eq!(menu(&game), (0, 2));
+        let selected = frame(&game);
+        hold(&mut game, 21, 10);
+        assert_eq!(
+            menu(&game),
+            (1, 2),
+            "{path} scrolls the list past the last row"
+        );
+        assert_ne!(frame(&game), selected);
+        for _ in 0..3 {
+            hold(&mut game, 20, 10);
+        }
+        assert_eq!(menu(&game), (0, 0), "{path} returns to the first entry");
+
+        hold(&mut game, 21, 10);
+        assert_eq!(menu(&game), (0, 1));
+        press(&mut game, 13);
+        assert_eq!(game.vm().pc(), 0xf9a, "{path} opens the load screen");
+        let load = frame(&game);
+        assert_ne!(load, title);
+        hold(&mut game, 27, 10);
+        assert_eq!(game.vm().pc(), 0x855);
+        assert_eq!(frame(&game), title, "{path} cancels back to the title");
+        assert_eq!(menu(&game), (0, 0), "{path} resets the selection");
+
+        press(&mut game, 13);
+        advance(&mut game, 4200);
+        assert_eq!(
+            game.vm().pc(),
+            0x1413,
+            "{path} reaches the first intro scene"
+        );
+        let scene = frame(&game);
+        assert_eq!(story_pointer(&game), 0x2aa2);
+
+        press(&mut game, 13);
+        assert_eq!(
+            story_pointer(&game),
+            0x2aa9,
+            "{path} advances one script line"
+        );
+        let line = frame(&game);
+        assert_ne!(line, scene);
+        press(&mut game, 13);
+        assert_eq!(story_pointer(&game), 0x2ab0);
+        press(&mut game, 13);
+        assert_eq!(story_pointer(&game), 0x2ab7);
+
+        for _ in 0..17 {
+            press(&mut game, 13);
+        }
+        assert_eq!(game.vm().pc(), 0x54bf, "{path} enters the map");
+        assert_eq!(cursor(&game), (5, 2));
+        let map = frame(&game);
+        assert_ne!(map, scene);
+
+        press(&mut game, 22);
+        assert_eq!(cursor(&game), (6, 2));
+        assert_ne!(frame(&game), map);
+        press(&mut game, 23);
+        assert_eq!(cursor(&game), (5, 2));
+        assert_eq!(frame(&game), map, "{path} restores the cursor position");
+
+        press(&mut game, 13);
+        press(&mut game, 13);
+        assert_eq!(game.vm().pc(), 0x855, "{path} opens the unit menu");
+        assert_eq!(game.vm().local_bp(), 0x5479);
+        assert_eq!(game.vm().memory()[0x5898], 0);
+        let unit_menu = frame(&game);
+        assert_ne!(unit_menu, map);
+        hold(&mut game, 21, 10);
+        assert_eq!(game.vm().memory()[0x5898], 1);
+        hold(&mut game, 20, 10);
+        assert_eq!(game.vm().memory()[0x5898], 0);
+        hold(&mut game, 27, 10);
+        assert_eq!(game.vm().pc(), 0x54bf);
+        assert_eq!(frame(&game), map, "{path} closes the unit menu");
+
+        for _ in 0..5 {
+            press(&mut game, 22);
+        }
+        assert_eq!(
+            cursor(&game),
+            (8, 2),
+            "{path} stops the cursor at the right edge"
+        );
+        press(&mut game, 22);
+        assert_eq!(cursor(&game), (8, 2));
+        for _ in 0..7 {
+            press(&mut game, 23);
+        }
+        assert_eq!(
+            cursor(&game),
+            (1, 2),
+            "{path} stops the cursor at the left edge"
+        );
+        press(&mut game, 23);
+        assert_eq!(cursor(&game), (1, 2));
+        for _ in 0..2 {
+            press(&mut game, 21);
+        }
+        assert_eq!(
+            cursor(&game),
+            (1, 3),
+            "{path} stops the cursor at the last row"
+        );
+        press(&mut game, 21);
+        assert_eq!(cursor(&game), (1, 3));
+        for _ in 0..3 {
+            press(&mut game, 20);
+        }
+        assert_eq!(
+            cursor(&game),
+            (1, 1),
+            "{path} stops the cursor at the first row"
+        );
+        press(&mut game, 20);
+        assert_eq!(cursor(&game), (1, 1));
+
+        assert!(
+            game.files_mut().take_dirty_files().is_empty(),
+            "{path} writes nothing after the boot save"
+        );
+    }
+}

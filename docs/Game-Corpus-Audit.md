@@ -84,9 +84,10 @@ do not satisfy this status.
 - Clear Maze Caterpillar checked on 2026-11-08: one dedicated release workflow starts without input, verifies the 88-food map and start cell, walks right into food, left, blocks against the three surrounding walls, climbs the food corridor with the eaten cells cleared, is caught by the chaser and exits with code 0 from the lose page, then checks the pause overlay and resume, the help page and redraw key, the saved recording with its signature and key buffer, and the exit prompt cancel and confirm with a code 0 halt.
 - Jackal checked on 2026-11-08: one dedicated release workflow waits on the static JACKAL title, starts the 160x80 scrolling field with the jeep at 7,168 and camera 1,164, fires the forward shot that inherits the heading and expires, refuses reverse at the drop point, drives north to 7,143 with the camera at 1,139, reverses only to the screen edge at 7,162, clamps left at 4 and right at 29 as the camera scrolls to 18, fires a right-facing shot from 29,162 that inherits the turn, and exits with code 0 from Escape without writing files.
 - Snake Bob checked on 2026-11-08: one dedicated release workflow waits on the static 第0关 title, starts the board with the snake at 3,2 and food at 16,18, verifies the snake rests until a direction is pressed, steers right and down one cell per tap into two foods with deterministic respawns at 37,26 and 51,5 while the body grows from five to seven segments, confirms that food scores one step after the head arrives, that the opposite direction is ignored, and that running into the bottom wall shows the 第0关 game over line and exits with code 0 on a key without writing files.
-- 195 dedicated release workflows passed in this audit.
-- 272 of 324 entry points were loaded by those successful workflows.
-- 52 entry points still need dedicated workflow verification.
+- Super Robot Wars checked on 2026-11-08: one dedicated release workflow covers the packaged and unpacked entries with identical results. It verifies the 12696-byte boot save file with its eleven fixed marker bytes, walks the four-entry title menu through the scrolling window and back to the first entry, opens the two empty load slots and cancels back to the identical title frame with a reset selection, enters New Game and reaches the scrolling intro's first dialogue scene, advances the script pointer through three records, pages the intro into the 160x80 map with the cursor at 5,2, moves the cursor right and restores the frame moving left, opens the unit menu and moves its cursor, and clamps the map cursor at columns 1 and 8 and rows 1 and 3 without writing files after the boot save.
+- 196 dedicated release workflows passed in this audit.
+- 274 of 324 entry points were loaded by those successful workflows.
+- 50 entry points still need dedicated workflow verification.
 - The historical [startup gallery](Game-Compatibility.md) is a separate check
   and must not be interpreted as this workflow audit.
 
@@ -378,8 +379,8 @@ an optional screenshot directory. Keep each test's logs and captures separate.
 | 268 | `LAVA1 贪吃小精灵/Clear.lav` | Game / game package | [Workflow passed: `clear_maze_caterpillar_moves_pauses_helps_saves_and_exits`](../crates/lavaxemu/tests/game_compatibility.rs#L26197) |
 | 269 | `LAVA1 贪吃蛇鲍勃/贪吃蛇鲍勃.lav` | Game / game package | [Workflow passed: `snake_bob_eats_grows_ignores_reverse_and_ends_on_walls`](../crates/lavaxemu/tests/game_compatibility.rs#L26419) |
 | 270 | `LAVA1 赤色要塞/非pac/Jackal.lav` | Game / game package | [Workflow passed: `jackal_starts_scrolls_fires_and_exits`](../crates/lavaxemu/tests/game_compatibility.rs#L26607) |
-| 271 | `LAVA1 超级机器人大战/Download/SRW.pac` | Game / game package | Pending |
-| 272 | `LAVA1 超级机器人大战/file/SRW.lav` | Game / game package | Pending |
+| 271 | `LAVA1 超级机器人大战/Download/SRW.pac` | Game / game package | [Workflow passed: `srw_packaged_and_loose_versions_run_the_menu_intro_and_map`](../crates/lavaxemu/tests/game_compatibility.rs#L26734) |
+| 272 | `LAVA1 超级机器人大战/file/SRW.lav` | Game / game package | [Workflow passed: `srw_packaged_and_loose_versions_run_the_menu_intro_and_map`](../crates/lavaxemu/tests/game_compatibility.rs#L26734) |
 | 273 | `LAVA1 超级机器人大战/Setup/SRW.lav` | Installer | [Workflow passed: `super_robot_wars_installs_resources_and_accepts_map_input`](../crates/lavaxemu/tests/game_compatibility.rs#L751) |
 | 274 | `LAVA1 超级机器人大战/Setup/SRWDate.lav` | Installer | [Workflow passed: `super_robot_wars_installs_resources_and_accepts_map_input`](../crates/lavaxemu/tests/game_compatibility.rs#L751) |
 | 275 | `LAVA1 超级舞者/超级舞者.lav` | Game / game package | Pending |

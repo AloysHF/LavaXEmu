@@ -266,6 +266,25 @@ without an execution error alone does not establish playability.
 | --- | --- |
 | ![Map](images/fixes/srw-map.png) | ![Cursor](images/fixes/srw-cursor.png) |
 
+- The packaged `Download/SRW.pac` and the loose `file/SRW.lav` behave the same.
+  Boot creates `/lavadata/srwsave.dat` with 12696 bytes, eleven of them fixed
+  markers at `0xccb`, `0xce9` and `0xd51`; the rest are zero.
+- The title keeps the first visible menu row at `0x3529` and the cursor row at
+  `0x352b`. Down past the third row scrolls the four-entry window to top `1`,
+  Up returns to the first entry, and Escape on the load screen returns to the
+  identical title frame with the selection reset to `0`.
+- New Game scrolls the opening text into the first dialogue scene. The 16-bit
+  script pointer at `0x2b61` starts at `0x2aa2` and advances by one 7-byte
+  record per Enter (`0x2aa9`, `0x2ab0`, `0x2ab7`). Twenty confirms reach the
+  160x80 tactical map.
+- The map cursor is the byte pair at `0x5355` (column) and `0x5356` (row),
+  starting at `(5,2)`. It clamps at columns `1` and `8` and rows `1` and `3`.
+  Two confirms open the unit menu, whose frame base is `0x5479` and whose row
+  is at `0x5898`; Escape closes it back to the identical map frame.
+- No emulator defect was found.
+- Not covered: scenario progression past the first map, battles, writing a
+  real save slot, and audio.
+
 ## Magic Era (魔法纪元)
 
 - Content: `LAVA2 魔法纪元/魔法纪元.lav`.
