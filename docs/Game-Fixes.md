@@ -4237,3 +4237,33 @@ without an execution error alone does not establish playability.
   No emulator defect was found.
 - Not covered: the item table and level list in `guclist.dat`, the map
   pictures in `mappic.dat`, later stages, combat rounds and the sound.
+
+## Clear Maze Caterpillar (LAVA1 贪吃小精灵/Clear.lav)
+
+- Content: a 5146-byte `Clear.lav` plus `Clear.dat` (256 bytes: 56 bytes of
+  tile bitmaps and a 200-byte 20x10 map), a source listing in `Clear.txt` and
+  four GIFs. The game opens `/LavaData/Clear.dat` when it starts.
+- The loading text and two `Inkey()` calls do not block, so the board appears
+  without input. The caterpillar starts at pixel `(48,64)` (cell 6,8); the
+  chaser at `(152,8)`; the map holds 88 foods and one chaser (`0x2014`).
+- Globals are packed little-endian: caterpillar `n`/`x`/`y` at `0x2000/01/03`,
+  chaser `n`/`x`/`y` at `0x2005/06/08`, `FoodNum` at `0x2015`, `EatFoodNum` at
+  `0x2016`, `Str` at `0x201A`, `IfChange` at `0x20B6`, `PicDat` at `0x20B7`,
+  `MapDat` at `0x20EF`, `SaveMapDat` at `0x21B7`, `VdoDat` at `0x227F` and
+  `VdoNum` at `0x23AB`.
+- Direction keys are 20..23 and step eight pixels. The start cell is boxed in
+  above, below and left; right enters a food cell. The corridor at column 7 is
+  open from row 8 up to row 4, where a wall stops the climb.
+- `Move` reads `Move_X[key-20]` even when the key is outside the four direction
+  codes, so idle frames (key 0) and menu letters index out of bounds and can
+  consume a wrapped food cell. The tests only pin the states this produces.
+- Space (32) draws the pause box with the eaten and remaining counts and waits
+  for a key; F5 (25) draws the five-line rules page; `r` (114) repaints the
+  map; `s` (115) writes `/ClearVdo/Vdo[n].vdo` as `"Vdo."`, a two-byte key
+  count and the 300-byte key buffer.
+- The chaser homes in on the caterpillar; when they meet, the lose text waits
+  for a key, where Escape exits with code 0 and any other key restarts. Escape
+  on the board asks `y/n`: `n` repaints and returns, `y` shows the credits and
+  the next key halts with code 0. No emulator defect was found.
+- Not covered: the win page (all 88 foods), loading and replaying recordings
+  through the file dialog, and the graphics beyond the verified screens.

@@ -81,9 +81,10 @@ do not satisfy this status.
 - Roach Adventure Final checked on 2026-11-08: one dedicated release workflow covers both identical V3.2 builds. It walks the 2x2 title grid and clamps every edge, opens the ten-stage level select and clamps the stage cursor with all four arrows, starts the first stage with five lives, the map's player/chaser marker cells and wall border, verifies up/down movement and the walls blocking left and right, watches the chaser home in and take the first life while the roach stays on its start cell, then checks the two help pages, escape returning from the version credits to the reset menu and the quit entry exiting with code 0.
 - Shuai Ren Battle checked on 2026-11-08: one dedicated release workflow waits on the scrolling title, skips it into the punch/kick poster with its 130-step counter, verifies that a single tap draws the punch sprite during its pause and restores the poster, that a tap draws a different kick sprite and restores the poster, steps the counter down one per key through the five face pages at 80, 60, 30 and 15, keeps the last page at one counter step where the punch stays on screen, reaches the ending text at zero, and pages through the two ending screens to a halt with code 0 without writing files.
 - Gu Chong Maze Adventure checked on 2026-11-08: one dedicated release workflow covers the packaged and unpacked entries, walks the five-entry title menu, pages the five help screens with a clamped Down, selects the difficulty with clamped Up/Down, pages the prologue into the first maze cell, verifies the item pickup and the attack stat, stops at the wall, walks one cell right, resumes from Continue with the thirty-three-byte save, and pages the credits to a halt with code 0.
-- 192 dedicated release workflows passed in this audit.
-- 269 of 324 entry points were loaded by those successful workflows.
-- 55 entry points still need dedicated workflow verification.
+- Clear Maze Caterpillar checked on 2026-11-08: one dedicated release workflow starts without input, verifies the 88-food map and start cell, walks right into food, left, blocks against the three surrounding walls, climbs the food corridor with the eaten cells cleared, is caught by the chaser and exits with code 0 from the lose page, then checks the pause overlay and resume, the help page and redraw key, the saved recording with its signature and key buffer, and the exit prompt cancel and confirm with a code 0 halt.
+- 193 dedicated release workflows passed in this audit.
+- 270 of 324 entry points were loaded by those successful workflows.
+- 54 entry points still need dedicated workflow verification.
 - The historical [startup gallery](Game-Compatibility.md) is a separate check
   and must not be interpreted as this workflow audit.
 
@@ -372,7 +373,7 @@ an optional screenshot directory. Keep each test's logs and captures separate.
 | 265 | `LAVA1 衰人大战（很小的游戏）/衰.lav` | Game / game package | [Workflow passed: `shuai_ren_battle_punch_kick_pages_and_ending`](../crates/lavaxemu/tests/game_compatibility.rs#L25704) |
 | 266 | `LAVA1 谷虫迷宫大冒险/打包/谷虫大冒险.pac` | Game / game package | [Workflow passed: `gu_chong_maze_adventure_runs_menus_help_pickup_and_credits`](../crates/lavaxemu/tests/game_compatibility.rs#L25848) |
 | 267 | `LAVA1 谷虫迷宫大冒险/未打包/gcdmx.lav` | Game / game package | [Workflow passed: `gu_chong_maze_adventure_runs_menus_help_pickup_and_credits`](../crates/lavaxemu/tests/game_compatibility.rs#L25848) |
-| 268 | `LAVA1 贪吃小精灵/Clear.lav` | Game / game package | Pending |
+| 268 | `LAVA1 贪吃小精灵/Clear.lav` | Game / game package | [Workflow passed: `clear_maze_caterpillar_moves_pauses_helps_saves_and_exits`](../crates/lavaxemu/tests/game_compatibility.rs#L26197) |
 | 269 | `LAVA1 贪吃蛇鲍勃/贪吃蛇鲍勃.lav` | Game / game package | Pending |
 | 270 | `LAVA1 赤色要塞/非pac/Jackal.lav` | Game / game package | Pending |
 | 271 | `LAVA1 超级机器人大战/Download/SRW.pac` | Game / game package | Pending |

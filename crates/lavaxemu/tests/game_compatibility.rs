@@ -26191,3 +26191,225 @@ fn gu_chong_maze_adventure_runs_menus_help_pickup_and_credits() {
         "the credits leave no files behind"
     );
 }
+
+#[test]
+#[ignore = "requires the local game corpus via LAVAX_GAME_ROOT"]
+fn clear_maze_caterpillar_moves_pauses_helps_saves_and_exits() {
+    const GAME: &str = "LAVA1 贪吃小精灵/Clear.lav";
+
+    fn boot() -> Emulator {
+        let mut game = load(GAME);
+        advance(&mut game, 60);
+        game
+    }
+    fn tap(game: &mut Emulator, key: u8, frames: usize, settle: usize) {
+        game.input_mut().set_keys([key]);
+        advance(game, frames);
+        game.input_mut().set_keys([]);
+        advance(game, settle);
+    }
+    fn word(memory: &[u8], address: usize) -> usize {
+        usize::from(u16::from_le_bytes([memory[address], memory[address + 1]]))
+    }
+    fn position(game: &Emulator) -> (usize, usize) {
+        let memory = game.vm().memory();
+        (word(memory, 0x2001), word(memory, 0x2003))
+    }
+    fn chaser(game: &Emulator) -> (usize, usize) {
+        let memory = game.vm().memory();
+        (word(memory, 0x2006), word(memory, 0x2008))
+    }
+    let frame = |game: &Emulator| game.display().indexed_frame().to_vec();
+    let food = |game: &Emulator| game.vm().memory()[0x2015];
+    let eaten = |game: &Emulator| game.vm().memory()[0x2016];
+
+    let mut walk = boot();
+    assert_eq!(
+        position(&walk),
+        (48, 64),
+        "the caterpillar starts on its cell"
+    );
+    assert_eq!(walk.vm().memory()[0x2014], 1, "one chaser appears");
+    assert_eq!(food(&walk), 88, "the level starts with 88 foods");
+    assert_eq!(eaten(&walk), 0);
+    let board = frame(&walk);
+
+    tap(&mut walk, 22, 20, 4);
+    assert_eq!(position(&walk), (56, 64), "right steps into the next cell");
+    assert_eq!(
+        food(&walk),
+        87,
+        "the caterpillar eats the food under its step"
+    );
+    assert_eq!(eaten(&walk), 1);
+    assert_eq!(
+        walk.vm().memory()[0x20EF + 8 * 20 + 7],
+        0,
+        "the cell is cleared"
+    );
+
+    tap(&mut walk, 23, 20, 4);
+    assert_eq!(
+        position(&walk),
+        (48, 64),
+        "left walks back to the start cell"
+    );
+    tap(&mut walk, 20, 20, 4);
+    assert_eq!(position(&walk), (48, 64), "the wall above blocks the step");
+    tap(&mut walk, 21, 20, 4);
+    assert_eq!(position(&walk), (48, 64), "the wall below blocks the step");
+    tap(&mut walk, 22, 20, 4);
+    assert_eq!(position(&walk), (56, 64), "right returns to the open cell");
+
+    tap(&mut walk, 20, 20, 4);
+    assert_eq!(position(&walk), (56, 56), "up enters the food corridor");
+    assert_eq!(food(&walk), 85, "two foods are gone");
+    assert_eq!(eaten(&walk), 3);
+    assert_eq!(
+        walk.vm().memory()[0x20EF + 7 * 20 + 7],
+        0,
+        "the corridor cell is cleared"
+    );
+
+    tap(&mut walk, 20, 20, 4);
+    assert_eq!(position(&walk), (56, 40), "the corridor keeps climbing");
+    assert_eq!(food(&walk), 83, "two more foods are gone");
+    assert_eq!(eaten(&walk), 5);
+
+    tap(&mut walk, 20, 20, 4);
+    assert_eq!(
+        position(&walk),
+        (56, 32),
+        "the fourth climb stops on row four"
+    );
+    tap(&mut walk, 20, 20, 4);
+    assert_eq!(
+        position(&walk),
+        (56, 32),
+        "the wall above pins the caterpillar"
+    );
+    tap(&mut walk, 20, 20, 4);
+    assert_eq!(
+        position(&walk),
+        (56, 32),
+        "the caterpillar stays at the wall"
+    );
+    let safe = frame(&walk);
+    tap(&mut walk, 20, 20, 4);
+    assert_eq!(
+        position(&walk),
+        chaser(&walk),
+        "the chaser reaches the caterpillar"
+    );
+    assert_ne!(
+        frame(&walk),
+        safe,
+        "the catch replaces the board with the lose text"
+    );
+    assert_ne!(frame(&walk), board);
+    let waiting = walk.run_frame().unwrap();
+    assert!(
+        matches!(waiting.status, FrameStatus::WaitingForInput),
+        "the lose text waits for a key"
+    );
+    walk.input_mut().set_keys([27]);
+    let mut halted = None;
+    for _ in 0..30 {
+        let result = walk.run_frame().unwrap();
+        if let FrameStatus::Halted(code) = result.status {
+            halted = Some(code);
+            break;
+        }
+    }
+    walk.input_mut().set_keys([]);
+    assert_eq!(halted, Some(0), "Escape leaves the lose page with code 0");
+    assert!(walk.files_mut().take_dirty_files().is_empty());
+
+    let mut board_game = boot();
+    assert_eq!(position(&board_game), (48, 64));
+    tap(&mut board_game, 32, 6, 2);
+    let paused = frame(&board_game);
+    assert_ne!(paused, board, "the pause key draws the pause overlay");
+    assert_eq!(position(&board_game), (48, 64), "the pause holds the board");
+    assert_ne!(food(&board_game), 0, "the pause keeps the food count");
+    assert_ne!(
+        board_game.vm().memory()[0x201A],
+        0,
+        "the pause prints the score line"
+    );
+    tap(&mut board_game, 13, 6, 2);
+    assert_ne!(frame(&board_game), paused, "a key resumes the board");
+
+    tap(&mut board_game, 25, 6, 2);
+    let help = frame(&board_game);
+    assert_ne!(help, board, "the help key draws the rules page");
+    tap(&mut board_game, 114, 10, 4);
+    assert_ne!(
+        frame(&board_game),
+        help,
+        "the redraw key restores the board"
+    );
+
+    let recorded = board_game.vm().memory()[0x227F..0x23AB].to_vec();
+    tap(&mut board_game, 115, 10, 6);
+    let files = board_game.files_mut().take_dirty_files();
+    let save = files
+        .iter()
+        .find(|(name, _)| name == "/clearvdo/vdo[1].vdo")
+        .expect("the save key writes the first recording");
+    assert_eq!(
+        save.1.len(),
+        306,
+        "the recording holds the header and the key buffer"
+    );
+    assert_eq!(
+        &save.1[..4],
+        b"Vdo.",
+        "the recording starts with its signature"
+    );
+    let count = usize::from(u16::from_le_bytes([save.1[4], save.1[5]]));
+    assert!(
+        count > 0 && count <= 300,
+        "the recording stores its key count"
+    );
+    assert_eq!(
+        &save.1[6..],
+        &recorded[..],
+        "the recording stores the key buffer"
+    );
+    assert!(
+        files
+            .iter()
+            .all(|(name, _)| name.starts_with("/clearvdo/vdo")),
+        "only the recordings are written"
+    );
+
+    let mut exit_game = boot();
+    tap(&mut exit_game, 27, 6, 4);
+    let prompt = frame(&exit_game);
+    assert_ne!(prompt, board, "the escape key asks for confirmation");
+    tap(&mut exit_game, 110, 6, 4);
+    let cancelled = frame(&exit_game);
+    assert_ne!(cancelled, prompt, "the n answer returns to the board");
+    tap(&mut exit_game, 27, 6, 4);
+    let prompt_again = frame(&exit_game);
+    assert_eq!(prompt_again, prompt, "the confirmation is drawn again");
+    tap(&mut exit_game, 121, 6, 4);
+    let credits = frame(&exit_game);
+    assert_ne!(credits, prompt_again, "the y answer shows the credits");
+    exit_game.input_mut().set_keys([13]);
+    let mut halted = None;
+    for _ in 0..40 {
+        let result = exit_game.run_frame().unwrap();
+        if let FrameStatus::Halted(code) = result.status {
+            halted = Some(code);
+            break;
+        }
+    }
+    exit_game.input_mut().set_keys([]);
+    assert_eq!(halted, Some(0), "the credits key exits with code 0");
+    assert!(
+        exit_game.files_mut().take_dirty_files().is_empty(),
+        "the exit path writes nothing"
+    );
+}
