@@ -25698,3 +25698,147 @@ fn roach_adventure_final_menus_levels_and_chase() {
         assert_eq!(halted, Some(0), "escape exits from the quit credits");
     }
 }
+
+#[test]
+#[ignore = "requires the local game corpus via LAVAX_GAME_ROOT"]
+fn shuai_ren_battle_punch_kick_pages_and_ending() {
+    let frame = |game: &Emulator| game.display().indexed_frame().to_vec();
+    let local =
+        |game: &Emulator, index: usize| game.vm().memory()[game.vm().local_bp() as usize + index];
+
+    let mut game = load("LAVA1 衰人大战（很小的游戏）/衰.lav");
+    advance(&mut game, 300);
+    assert_eq!(
+        game.vm().pc(),
+        0x2931,
+        "the scrolling title waits for a key"
+    );
+    let title = frame(&game);
+    assert!(
+        game.files_mut().take_dirty_files().is_empty(),
+        "the title writes nothing"
+    );
+
+    press(&mut game, 13);
+    assert_eq!(
+        game.vm().pc(),
+        0x29e5,
+        "the poster asks for a punch or kick"
+    );
+    assert_eq!(local(&game, 7), 130, "the poster counter starts at 130");
+    assert_eq!(local(&game, 8), 0, "the poster key starts empty");
+    let poster = frame(&game);
+    assert_ne!(poster, title, "the poster replaces the scrolling title");
+
+    game.input_mut().set_keys([113]);
+    advance(&mut game, 1);
+    game.input_mut().set_keys([]);
+    let result = game.run_frame().unwrap();
+    assert!(
+        matches!(result.status, FrameStatus::Delayed),
+        "the punch pauses on its sprite"
+    );
+    assert_eq!(game.vm().pc(), 0x2a04, "the punch sprite is on screen");
+    let punch = frame(&game);
+    assert_ne!(punch, poster, "the punch draws over the poster");
+    advance(&mut game, 40);
+    assert_eq!(game.vm().pc(), 0x29e5, "the punch returns to the key loop");
+    assert_eq!(local(&game, 7), 129, "the punch advances the counter");
+    assert_eq!(local(&game, 8), 113, "the punch key is remembered");
+    assert_eq!(frame(&game), poster, "the punch restores the poster");
+
+    game.input_mut().set_keys([112]);
+    advance(&mut game, 1);
+    game.input_mut().set_keys([]);
+    let result = game.run_frame().unwrap();
+    assert!(
+        matches!(result.status, FrameStatus::Delayed),
+        "the kick pauses on its sprite"
+    );
+    assert_eq!(game.vm().pc(), 0x2a32, "the kick sprite is on screen");
+    let kick = frame(&game);
+    assert_ne!(kick, poster, "the kick draws over the poster");
+    assert_ne!(kick, punch, "the kick differs from the punch");
+    advance(&mut game, 40);
+    assert_eq!(game.vm().pc(), 0x29e5, "the kick returns to the key loop");
+    assert_eq!(local(&game, 7), 128, "the kick advances the counter");
+    assert_eq!(local(&game, 8), 112, "the kick key is remembered");
+    assert_eq!(frame(&game), poster, "the kick restores the poster");
+
+    for _ in 0..48 {
+        press(&mut game, 113);
+    }
+    assert_eq!(local(&game, 7), 80, "every key steps the counter down once");
+    let page_two = frame(&game);
+    assert_ne!(page_two, poster, "the face changes after fifty hits");
+
+    for _ in 0..20 {
+        press(&mut game, 113);
+    }
+    assert_eq!(local(&game, 7), 60, "the counter keeps stepping down");
+    let page_three = frame(&game);
+    assert_ne!(page_three, page_two, "the face changes again");
+
+    for _ in 0..30 {
+        press(&mut game, 113);
+    }
+    assert_eq!(local(&game, 7), 30, "the counter keeps stepping down");
+    let page_four = frame(&game);
+    assert_ne!(
+        page_four, page_three,
+        "the dazed face replaces the bruised one"
+    );
+
+    for _ in 0..15 {
+        press(&mut game, 113);
+    }
+    assert_eq!(local(&game, 7), 15, "the counter keeps stepping down");
+    let surrender = frame(&game);
+    assert_ne!(
+        surrender, page_four,
+        "the surrender flag replaces the dazed face"
+    );
+
+    for _ in 0..13 {
+        press(&mut game, 113);
+    }
+    assert_eq!(local(&game, 7), 2, "the counter stops one key above zero");
+    assert_eq!(frame(&game), surrender, "the surrender page keeps its face");
+
+    press(&mut game, 113);
+    assert_eq!(local(&game, 7), 1, "the last key before zero");
+    assert_ne!(
+        frame(&game),
+        surrender,
+        "the last key leaves its punch over the surrender page"
+    );
+
+    press(&mut game, 113);
+    assert_eq!(local(&game, 7), 0, "the counter reaches zero");
+    assert_eq!(game.vm().pc(), 0x2a9d, "the ending text waits for a key");
+    let ending = frame(&game);
+    assert_ne!(ending, surrender, "the ending text replaces the poster");
+
+    press(&mut game, 13);
+    assert_eq!(game.vm().pc(), 0x2abe, "the ending asks for one more key");
+    let credits = frame(&game);
+    assert_ne!(credits, ending, "the credits replace the ending text");
+
+    game.input_mut().set_keys([13]);
+    let mut frames = 0;
+    let mut halted = None;
+    while frames < 120 {
+        if let FrameStatus::Halted(code) = game.run_frame().unwrap().status {
+            halted = Some(code);
+            break;
+        }
+        frames += 1;
+    }
+    game.input_mut().set_keys([]);
+    assert_eq!(halted, Some(0), "the credits exit with code 0");
+    assert_eq!(game.vm().pc(), 0x2ac2, "the exit stays at the credits");
+    assert!(
+        game.files_mut().take_dirty_files().is_empty(),
+        "the whole demo writes nothing"
+    );
+}

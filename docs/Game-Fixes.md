@@ -4182,3 +4182,28 @@ without an execution error alone does not establish playability.
   (3) opens the credits page and Escape exits with code 0.
 - Not covered: the stages themselves, because no map file with the required
   name is present; stage clear, lives and the chaser are untested here.
+
+## Shuai Ren Battle (LAVA1 衰人大战（很小的游戏）/衰.lav)
+
+- Content: a single 10947-byte `衰.lav` with no companion files.
+- The opening scrolls the 160x80 mono title bitmap at `0x2000` one row at a
+  time with a 30 ms delay and presents after every row. A key during the
+  scroll jumps to the last row; the key wait is at `0x2931` with frame local 5
+  at 79 (local base `0x4889`).
+- The first key draws the full 160x80 poster at `0x2640` and opens the key
+  loop at `0x29DF`/`0x29E5`. Frame local 7 (`0x4890`) is the 130-step counter;
+  frame local 8 (`0x4891`) keeps the last handled key.
+- Q (113) blits the 56x53 punch bitmap at `0x4580` to `(55, 30)`, presents,
+  waits 200 ms, then decrements the counter and redraws the page that the new
+  counter selects. P (112) does the same with the 56x58 kick bitmap at `0x4716`
+  and `(90, 30)`. Other keys return to the key loop; Escape exits with code 0
+  at `0x2A50`.
+- The page chain at `0x2932` picks `0x2640` above 80, `0x2C80` at 61..80,
+  `0x32C0` at 31..60, `0x3900` at 16..30 and `0x3F40` at 2..15. At 1 no page
+  is redrawn, so the last punch or kick sprite stays over the surrender page;
+  at 0 the program jumps to the ending text at `0x2A55` and waits at `0x2A9D`.
+- The ending has two text screens (`0x2A9D`, then `0x2ABE` after Enter); one
+  more Enter reaches the exit at `0x2AC2` and halts with code 0.
+- The demo never touches the filesystem, and no emulator defect was found.
+- Not covered: mixed punch/kick sequences across page thresholds, keys other
+  than Enter on the ending screens, and the sound.
