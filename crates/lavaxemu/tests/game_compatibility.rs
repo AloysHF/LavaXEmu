@@ -28500,3 +28500,175 @@ fn snowman_legend_splash_menu_settings_gameplay_and_exit() {
         );
     }
 }
+
+#[test]
+#[ignore = "requires the local game corpus via LAVAX_GAME_ROOT"]
+fn zero_panic_menu_difficulty_password_and_win() {
+    let path = "LAVA1 零度恐慌/零度恐惧.lav";
+    let frame = |game: &Emulator| game.display().indexed_frame().to_vec();
+    let word = |game: &Emulator, address: usize| {
+        u16::from_le_bytes([game.vm().memory()[address], game.vm().memory()[address + 1]])
+    };
+
+    for (key, difficulty) in [(b'b', 100u16), (b'n', 80), (b'm', 50), (b'g', 30)] {
+        let mut game = load(path);
+        assert!(
+            game.files().files().is_empty(),
+            "{path} mounts no data companions"
+        );
+        advance(&mut game, 1100);
+        assert_eq!(
+            game.vm().pc(),
+            0x1242,
+            "{path} boot intro reaches the main menu"
+        );
+        press(&mut game, b'b');
+        assert_eq!(
+            game.vm().pc(),
+            0xea4,
+            "{path} B opens the difficulty screen"
+        );
+        press(&mut game, key);
+        assert_eq!(
+            game.vm().pc(),
+            0x105c,
+            "{path} difficulty {} starts the round",
+            key as char
+        );
+        assert_eq!(
+            word(&game, 0x2644),
+            difficulty,
+            "{path} difficulty {} sets the timer",
+            key as char
+        );
+        assert_eq!(
+            word(&game, 0x2640),
+            346,
+            "{path} generates a deterministic password"
+        );
+        let round = frame(&game);
+        assert!(
+            round.iter().any(|&pixel| pixel != round[0]),
+            "{path} renders the round"
+        );
+    }
+
+    let mut game = load(path);
+    advance(&mut game, 1100);
+    assert_eq!(game.vm().pc(), 0x1242);
+    let menu = frame(&game);
+    assert!(
+        menu.iter().any(|&pixel| pixel != menu[0]),
+        "{path} renders the menu"
+    );
+
+    press(&mut game, b'm');
+    assert_eq!(game.vm().pc(), 0x6fa, "{path} M opens the first help page");
+    let help = frame(&game);
+    assert_ne!(help, menu, "{path} the help page replaces the menu");
+    press(&mut game, 27);
+    assert_eq!(game.vm().pc(), 0x793, "{path} Escape advances the help");
+    press(&mut game, 27);
+    assert_eq!(game.vm().pc(), 0x81f, "{path} the third help page opens");
+    press(&mut game, 27);
+    assert_eq!(game.vm().pc(), 0x1242, "{path} the last Escape returns");
+
+    press(&mut game, b'b');
+    assert_eq!(game.vm().pc(), 0xea4);
+    press(&mut game, b'b');
+    assert_eq!(game.vm().pc(), 0x105c);
+    assert_eq!(word(&game, 0x2644), 100);
+    assert_eq!(word(&game, 0x2640), 346);
+
+    for _ in 0..3 {
+        press(&mut game, b'u');
+    }
+    assert_eq!(game.vm().pc(), 0xe40, "{path} the third digit is judged");
+    assert_eq!(word(&game, 0x2642), 3, "{path} accepts three digits");
+    assert_eq!(
+        game.vm().memory()[0x2648],
+        9,
+        "{path} maps U to the digit 9"
+    );
+    advance(&mut game, 20);
+    let too_high = frame(&game);
+    assert!(
+        too_high.iter().any(|&pixel| pixel != too_high[0]),
+        "{path} draws the guess feedback"
+    );
+    advance(&mut game, 40);
+    assert_eq!(
+        game.vm().pc(),
+        0x105c,
+        "{path} a wrong guess resets the input"
+    );
+    assert_eq!(word(&game, 0x2642), 0);
+
+    for _ in 0..3 {
+        press(&mut game, b'b');
+    }
+    assert_eq!(game.vm().pc(), 0xe40);
+    assert_eq!(word(&game, 0x2642), 3);
+    assert_eq!(
+        game.vm().memory()[0x2648],
+        1,
+        "{path} maps B to the digit 1"
+    );
+    advance(&mut game, 20);
+    let too_low = frame(&game);
+    assert_ne!(
+        too_low, too_high,
+        "{path} the feedback changes with the guess"
+    );
+    advance(&mut game, 40);
+    assert_eq!(game.vm().pc(), 0x105c);
+    assert_eq!(word(&game, 0x2642), 0);
+
+    for key in [b'm', b'g', b'j'] {
+        press(&mut game, key);
+    }
+    assert_eq!(game.vm().pc(), 0xe40);
+    assert_eq!(word(&game, 0x2642), 3);
+    assert_eq!(
+        game.vm().memory()[0x2648],
+        6,
+        "{path} maps J to the digit 6"
+    );
+    advance(&mut game, 447);
+    assert_eq!(game.vm().pc(), 0x93f, "{path} the password opens the door");
+    assert_eq!(
+        game.run_frame().unwrap().status,
+        FrameStatus::WaitingForInput
+    );
+    let win = frame(&game);
+    assert!(
+        win.iter().any(|&pixel| pixel != win[0]),
+        "{path} renders the victory screen"
+    );
+
+    press(&mut game, 13);
+    assert_eq!(game.vm().pc(), 0x1290);
+    press(&mut game, 27);
+    assert_eq!(game.vm().pc(), 0x1242, "{path} returns to the main menu");
+
+    press(&mut game, b'n');
+    assert_eq!(game.vm().pc(), 0x8d4, "{path} N opens the farewell screen");
+    let farewell = frame(&game);
+    assert!(
+        farewell.iter().any(|&pixel| pixel != farewell[0]),
+        "{path} renders the farewell screen"
+    );
+    let mut halted = None;
+    game.input_mut().set_keys([13]);
+    for _ in 0..600 {
+        if let FrameStatus::Halted(code) = game.run_frame().unwrap().status {
+            halted = Some((game.vm().pc(), code));
+            break;
+        }
+    }
+    assert_eq!(halted, Some((0x8d8, 0)), "{path} exits cleanly");
+    assert!(
+        game.files_mut().take_dirty_files().is_empty(),
+        "{path} writes no files"
+    );
+}
