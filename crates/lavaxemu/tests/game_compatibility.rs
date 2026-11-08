@@ -24177,3 +24177,476 @@ fn luobo_dazuo_zhan_map_editor_edits_and_saves_stage_two() {
         "the warning returns to the menu"
     );
 }
+
+#[test]
+#[ignore = "requires the local game corpus via LAVAX_GAME_ROOT"]
+fn wawa_monopoly_package_walks_menus_writes_settings_and_exits() {
+    let builds = [
+        "LAVA1 蛙蛙大富翁/蛙蛙大富翁打包.pac",
+        "LAVA1 蛙蛙大富翁/非pac/蛙蛙大富翁.lav",
+    ];
+    let mut all_frames = Vec::new();
+    let mut all_configs = Vec::new();
+    for path in builds {
+        let mut game = load(path);
+        let local = |game: &Emulator, offset: usize| {
+            game.vm().memory()[game.vm().local_bp() as usize + offset]
+        };
+
+        advance(&mut game, 300);
+        assert_eq!(game.vm().pc(), 0x13fb9, "the splash waits for a key");
+        assert!(
+            game.files_mut().take_dirty_files().is_empty(),
+            "the splash writes nothing"
+        );
+        let mut frames = vec![game.display().indexed_frame().to_vec()];
+
+        for _ in 0..4 {
+            press(&mut game, 13);
+        }
+        assert_eq!(game.vm().pc(), 0xe3f0, "the splash opens the main menu");
+        assert_eq!(local(&game, 9), 0, "the menu starts on new game");
+        frames.push(game.display().indexed_frame().to_vec());
+
+        press(&mut game, 22);
+        assert_eq!(local(&game, 9), 1, "right selects save game");
+        press(&mut game, 23);
+        assert_eq!(local(&game, 9), 0, "left returns to new game");
+        press(&mut game, 21);
+        assert_eq!(local(&game, 9), 2, "down selects load game");
+        press(&mut game, 13);
+        assert_eq!(game.vm().pc(), 0xe900, "load opens the slot list");
+        press(&mut game, 13);
+        assert_eq!(game.vm().pc(), 0x5b13, "an empty slot reports missing data");
+        assert!(
+            game.files_mut().take_dirty_files().is_empty(),
+            "an empty slot writes nothing"
+        );
+        frames.push(game.display().indexed_frame().to_vec());
+        press(&mut game, 13);
+        assert_eq!(game.vm().pc(), 0xe3f0, "the message returns to the menu");
+        assert_eq!(local(&game, 9), 2, "the menu keeps the load entry");
+
+        press(&mut game, 22);
+        assert_eq!(local(&game, 9), 3, "right selects the settings");
+        press(&mut game, 13);
+        assert_eq!(game.vm().pc(), 0xdb52, "enter opens the settings");
+        assert_eq!(local(&game, 5), 0, "the settings start on the first row");
+        press(&mut game, 22);
+        assert_eq!(local(&game, 5), 1, "right steps the row forward");
+        press(&mut game, 23);
+        assert_eq!(local(&game, 5), 0, "left steps the row back");
+        press(&mut game, 21);
+        assert_eq!(local(&game, 5), 1, "down steps the row forward");
+        press(&mut game, 20);
+        assert_eq!(local(&game, 5), 0, "up steps the row back");
+        press(&mut game, 23);
+        assert_eq!(local(&game, 5), 2, "left wraps to the last row");
+        press(&mut game, 21);
+        assert_eq!(local(&game, 5), 0, "down wraps to the first row");
+        press(&mut game, 22);
+        assert_eq!(local(&game, 5), 1, "right selects the speed row");
+        press(&mut game, 13);
+        assert_eq!(game.vm().pc(), 0xd98f, "enter opens the speed slider");
+        assert_eq!(local(&game, 5), 5, "the slider starts in the middle");
+        press(&mut game, 22);
+        assert_eq!(local(&game, 5), 6, "right speeds the slider up");
+        press(&mut game, 22);
+        assert_eq!(local(&game, 5), 7, "the slider reaches its top step");
+        frames.push(game.display().indexed_frame().to_vec());
+        press(&mut game, 27);
+        assert_eq!(game.vm().pc(), 0xdb52, "escape returns to the settings");
+        let configs = game.files_mut().take_dirty_files();
+        assert_eq!(configs.len(), 1, "leaving the slider writes the config");
+        assert!(
+            configs[0].0.to_lowercase().ends_with("richcfig.dat"),
+            "the config is written next to the resource that was read"
+        );
+        assert_eq!(configs[0].1.len(), 127, "the config keeps its fixed size");
+        assert_eq!(configs[0].1[126], 0x46, "the config stores the top speed");
+        press(&mut game, 27);
+        assert_eq!(game.vm().pc(), 0xe3f0, "escape returns to the menu");
+        assert_eq!(local(&game, 9), 3, "the menu keeps the settings entry");
+        frames.push(game.display().indexed_frame().to_vec());
+
+        press(&mut game, b'z');
+        press(&mut game, 23);
+        assert_eq!(local(&game, 9), 2, "left moves back to the load column");
+        press(&mut game, 21);
+        assert_eq!(local(&game, 9), 4, "down selects the leaderboard");
+        press(&mut game, 21);
+        assert_eq!(local(&game, 9), 6, "down selects the copyright notice");
+        press(&mut game, 13);
+        assert_eq!(game.vm().pc(), 0xde91, "enter opens the copyright notice");
+        for expected in [
+            0xdf1f, 0xdfa5, 0xe02a, 0xe0bd, 0xe14f, 0xe1e4, 0xe275, 0xe2e3, 0xe3f0,
+        ] {
+            press(&mut game, 13);
+            assert_eq!(
+                game.vm().pc(),
+                expected,
+                "enter advances the copyright notice"
+            );
+        }
+        assert_eq!(local(&game, 9), 6, "the notice keeps the copyright entry");
+        frames.push(game.display().indexed_frame().to_vec());
+
+        press(&mut game, b'z');
+        press(&mut game, 23);
+        assert_eq!(local(&game, 9), 5, "left selects the thanks page");
+        press(&mut game, 13);
+        assert_eq!(game.vm().pc(), 0xe5c4, "enter opens the thanks page");
+        for expected in [0xe658, 0xe6eb, 0xe73c, 0xe7c6, 0xe3f0] {
+            press(&mut game, 13);
+            assert_eq!(game.vm().pc(), expected, "enter advances the thanks page");
+        }
+        assert_eq!(local(&game, 9), 5, "the thanks page keeps its entry");
+        frames.push(game.display().indexed_frame().to_vec());
+
+        press(&mut game, b'z');
+        press(&mut game, 21);
+        assert_eq!(local(&game, 9), 7, "down selects the exit entry");
+        press(&mut game, 13);
+        assert_eq!(game.vm().pc(), 0xdccd, "enter opens the exit prompt");
+        press(&mut game, 13);
+        assert_eq!(game.vm().pc(), 0xdd61, "the first prompt confirms once");
+        press(&mut game, 13);
+        assert_eq!(game.vm().pc(), 0xdde8, "the second prompt confirms again");
+        game.input_mut().set_keys([13]);
+        let mut exit = None;
+        for _ in 0..120 {
+            if let FrameStatus::Halted(code) = game.run_frame().unwrap().status {
+                exit = Some(code);
+                break;
+            }
+        }
+        game.input_mut().set_keys([]);
+        assert_eq!(exit, Some(0), "the final confirm halts normally");
+        assert_eq!(game.vm().pc(), 0xddfc, "the exit halts from its last page");
+        frames.push(game.display().indexed_frame().to_vec());
+        assert!(
+            game.files_mut().take_dirty_files().is_empty(),
+            "the exit writes nothing"
+        );
+        all_frames.push(frames);
+        all_configs.push(configs);
+    }
+
+    assert_eq!(all_frames[0].len(), all_frames[1].len());
+    for (index, (packaged, loose)) in all_frames[0].iter().zip(&all_frames[1]).enumerate() {
+        assert_eq!(
+            packaged, loose,
+            "both builds render the same frame at step {index}"
+        );
+    }
+    assert_eq!(
+        all_configs[0][0].1.len(),
+        all_configs[1][0].1.len(),
+        "both builds write the same config size"
+    );
+    let packaged = &all_configs[0][0].1;
+    let loose = &all_configs[1][0].1;
+    assert_eq!(
+        packaged[126], 0x46,
+        "the packaged build stores the top speed"
+    );
+    assert_eq!(loose[126], 0x46, "the loose build stores the top speed");
+    // The loose build ships a config with a zero first byte; the packaged build
+    // starts from a missing file and leaves that byte at the default 0xff.
+    let differing: Vec<usize> = packaged
+        .iter()
+        .zip(loose)
+        .enumerate()
+        .filter(|(_, (left, right))| left != right)
+        .map(|(index, _)| index)
+        .collect();
+    assert_eq!(
+        differing,
+        vec![0],
+        "only the missing-file default differs in the config"
+    );
+}
+
+#[test]
+#[ignore = "requires the local game corpus via LAVAX_GAME_ROOT"]
+fn wawa_monopoly_package_rolls_saves_and_loads() {
+    let builds = [
+        "LAVA1 蛙蛙大富翁/蛙蛙大富翁打包.pac",
+        "LAVA1 蛙蛙大富翁/非pac/蛙蛙大富翁.lav",
+    ];
+    let mut all_frames = Vec::new();
+    let mut all_saves = Vec::new();
+    for path in builds {
+        let mut game = load(path);
+        let word = |game: &Emulator, address: usize| {
+            u16::from_le_bytes(game.vm().memory()[address..address + 2].try_into().unwrap())
+        };
+        let dword = |game: &Emulator, address: usize| {
+            u32::from_le_bytes(game.vm().memory()[address..address + 4].try_into().unwrap())
+        };
+        let local = |game: &Emulator, offset: usize| {
+            game.vm().memory()[game.vm().local_bp() as usize + offset]
+        };
+        let player = |game: &Emulator| (word(game, 0x590c), word(game, 0x590e));
+
+        advance(&mut game, 300);
+        assert_eq!(game.vm().pc(), 0x13fb9, "the splash waits for a key");
+        for _ in 0..4 {
+            press(&mut game, 13);
+        }
+        assert_eq!(game.vm().pc(), 0xe3f0, "the splash opens the main menu");
+        let mut frames = vec![game.display().indexed_frame().to_vec()];
+
+        press(&mut game, 13);
+        assert_eq!(game.vm().pc(), 0xd29c, "new game opens the map list");
+        press(&mut game, 21);
+        assert_eq!(local(&game, 7), 1);
+        press(&mut game, 20);
+        assert_eq!(local(&game, 7), 0);
+        press(&mut game, 14);
+        assert_eq!(local(&game, 7), 4);
+        assert_eq!(local(&game, 9), 4, "page down jumps a whole page");
+        press(&mut game, 19);
+        assert_eq!(local(&game, 7), 0);
+        assert_eq!(local(&game, 9), 0, "page up returns to the first page");
+        press(&mut game, 19);
+        assert_eq!(local(&game, 7), 0, "page up clamps on the first page");
+        frames.push(game.display().indexed_frame().to_vec());
+
+        press(&mut game, 13);
+        assert_eq!(game.vm().pc(), 0x5321, "enter opens the map preview");
+        press(&mut game, 13);
+        assert_eq!(
+            game.vm().pc(),
+            0x50fb,
+            "the preview asks about player count"
+        );
+        press(&mut game, b'n');
+        assert_eq!(game.vm().pc(), 0x11384, "declining starts the board");
+        assert_eq!(
+            player(&game),
+            (15, 10),
+            "the first player spawns on the start"
+        );
+        assert_eq!(dword(&game, 0x5902), 60000, "the first player keeps 60000");
+        frames.push(game.display().indexed_frame().to_vec());
+
+        press(&mut game, 13);
+        assert_eq!(game.vm().pc(), 0x363b, "enter rolls the dice");
+        advance(&mut game, 90);
+        assert_eq!(game.vm().pc(), 0x815b, "the roll lands on a tile prompt");
+        press(&mut game, b'n');
+        advance(&mut game, 200);
+        assert_eq!(game.vm().pc(), 0x11384, "declining returns to the board");
+        assert_eq!(player(&game), (14, 11), "the first roll moves the player");
+        assert_eq!(
+            dword(&game, 0x5902),
+            60000,
+            "the unowned tile costs nothing"
+        );
+        frames.push(game.display().indexed_frame().to_vec());
+
+        press(&mut game, 25);
+        assert_eq!(game.vm().pc(), 0xcb77, "f5 opens the in-game menu");
+        for _ in 0..4 {
+            press(&mut game, 14);
+            advance(&mut game, 60);
+        }
+        assert_eq!(game.vm().pc(), 0xe3f0, "paging reaches the main menu");
+        press(&mut game, 22);
+        assert_eq!(local(&game, 9), 1);
+        press(&mut game, 13);
+        assert_eq!(game.vm().pc(), 0xe900, "save opens the slot list");
+        press(&mut game, 13);
+        assert_eq!(game.vm().pc(), 0xe3f0, "saving returns to the menu");
+        let saves = game.files_mut().take_dirty_files();
+        assert_eq!(saves.len(), 1, "saving writes one file");
+        assert_eq!(saves[0].0, "/lavadata/richsav1.dat");
+        assert_eq!(saves[0].1.len(), 2685, "the save keeps its fixed size");
+        let bytes = &saves[0].1;
+        assert_eq!(
+            u32::from_le_bytes(bytes[1549..1553].try_into().unwrap()),
+            60000,
+            "the save stores the money"
+        );
+        assert_eq!(
+            u32::from_le_bytes(bytes[1561..1565].try_into().unwrap()),
+            14,
+            "the save stores the column"
+        );
+        assert_eq!(
+            u32::from_le_bytes(bytes[1565..1569].try_into().unwrap()),
+            11,
+            "the save stores the row"
+        );
+        frames.push(game.display().indexed_frame().to_vec());
+
+        press(&mut game, 27);
+        assert_eq!(game.vm().pc(), 0x11384, "escape returns to the board");
+        assert_eq!(player(&game), (14, 11), "the board keeps the position");
+
+        press(&mut game, 25);
+        for _ in 0..4 {
+            press(&mut game, 14);
+            advance(&mut game, 60);
+        }
+        assert_eq!(game.vm().pc(), 0xe3f0, "paging reaches the main menu again");
+        press(&mut game, 21);
+        assert_eq!(local(&game, 9), 2);
+        press(&mut game, 13);
+        assert_eq!(game.vm().pc(), 0xe900, "load opens the slot list");
+        press(&mut game, 13);
+        assert_eq!(game.vm().pc(), 0x61ae, "the slot reports a successful load");
+        press(&mut game, 13);
+        assert_eq!(game.vm().pc(), 0x11384, "loading returns to the board");
+        assert_eq!(player(&game), (14, 11), "loading restores the position");
+        assert_eq!(dword(&game, 0x5902), 60000, "loading restores the money");
+        frames.push(game.display().indexed_frame().to_vec());
+
+        press(&mut game, 25);
+        for _ in 0..4 {
+            press(&mut game, 14);
+            advance(&mut game, 60);
+        }
+        press(&mut game, 21);
+        press(&mut game, 13);
+        press(&mut game, 21);
+        press(&mut game, 13);
+        assert_eq!(game.vm().pc(), 0x5b13, "a second slot reports missing data");
+        assert!(
+            game.files_mut().take_dirty_files().is_empty(),
+            "reading an empty slot writes nothing"
+        );
+        press(&mut game, 13);
+        assert_eq!(game.vm().pc(), 0xe3f0, "the message returns to the menu");
+        frames.push(game.display().indexed_frame().to_vec());
+
+        all_frames.push(frames);
+        all_saves.push(saves);
+    }
+
+    assert_eq!(all_frames[0].len(), all_frames[1].len());
+    for (index, (packaged, loose)) in all_frames[0].iter().zip(&all_frames[1]).enumerate() {
+        assert_eq!(
+            packaged, loose,
+            "both builds render the same frame at step {index}"
+        );
+    }
+    assert_eq!(
+        all_saves[0][0].0, all_saves[1][0].0,
+        "both builds write the same save path"
+    );
+    let packaged = &all_saves[0][0].1;
+    let loose = &all_saves[1][0].1;
+    assert_eq!(packaged.len(), loose.len(), "both saves keep the same size");
+    // The loose build ships a RichCfig.dat that the packaged build lacks, so the
+    // settings byte shadows one saved field even though the runtime steps match.
+    let differing: Vec<usize> = packaged
+        .iter()
+        .zip(loose)
+        .enumerate()
+        .filter(|(_, (left, right))| left != right)
+        .map(|(index, _)| index)
+        .collect();
+    assert_eq!(
+        differing,
+        (2317..2321).collect::<Vec<_>>(),
+        "only the config-derived field differs"
+    );
+}
+
+#[test]
+#[ignore = "requires the local game corpus via LAVAX_GAME_ROOT"]
+fn wawa_monopoly_package_adjusts_players_before_the_first_roll() {
+    let builds = [
+        "LAVA1 蛙蛙大富翁/蛙蛙大富翁打包.pac",
+        "LAVA1 蛙蛙大富翁/非pac/蛙蛙大富翁.lav",
+    ];
+    let mut all_frames = Vec::new();
+    for path in builds {
+        let mut game = load(path);
+        let word = |game: &Emulator, address: usize| {
+            u16::from_le_bytes(game.vm().memory()[address..address + 2].try_into().unwrap())
+        };
+        let row = |game: &Emulator| game.vm().memory()[game.vm().local_bp() as usize + 7];
+
+        advance(&mut game, 300);
+        for _ in 0..4 {
+            press(&mut game, 13);
+        }
+        assert_eq!(game.vm().pc(), 0xe3f0, "the splash opens the main menu");
+        let mut frames = vec![game.display().indexed_frame().to_vec()];
+        press(&mut game, 13);
+        press(&mut game, 13);
+        press(&mut game, 13);
+        assert_eq!(
+            game.vm().pc(),
+            0x50fb,
+            "the preview asks about player count"
+        );
+        press(&mut game, b'y');
+        assert_eq!(game.vm().pc(), 0x4f36, "yes opens the player setup");
+        assert_eq!(row(&game), 0, "the setup starts on the first player");
+
+        press(&mut game, 22);
+        assert_eq!(word(&game, 0x5978), 0, "the human player cannot be toggled");
+        press(&mut game, 23);
+        assert_eq!(word(&game, 0x5978), 0, "left leaves the human player alone");
+        press(&mut game, 21);
+        assert_eq!(row(&game), 1, "down selects the second player");
+        press(&mut game, 22);
+        assert_eq!(
+            word(&game, 0x59fc),
+            1,
+            "right makes the second player human"
+        );
+        press(&mut game, 22);
+        assert_eq!(word(&game, 0x59fc), 1, "right clamps at human");
+        press(&mut game, 23);
+        assert_eq!(
+            word(&game, 0x59fc),
+            0,
+            "left returns the second player to computer"
+        );
+        press(&mut game, 21);
+        assert_eq!(row(&game), 2, "down selects the third player");
+        press(&mut game, 22);
+        assert_eq!(word(&game, 0x5a80), 1, "right makes the third player human");
+        press(&mut game, 23);
+        assert_eq!(
+            word(&game, 0x5a80),
+            0,
+            "left returns the third player to computer"
+        );
+        press(&mut game, 21);
+        assert_eq!(row(&game), 0, "down wraps to the first player");
+        press(&mut game, 20);
+        assert_eq!(row(&game), 2, "up wraps to the third player");
+        frames.push(game.display().indexed_frame().to_vec());
+
+        press(&mut game, 13);
+        assert_eq!(game.vm().pc(), 0x363b, "enter starts play and rolls");
+        advance(&mut game, 90);
+        assert_eq!(game.vm().pc(), 0x815b, "the opening roll lands on a tile");
+        assert_eq!(
+            (word(&game, 0x590c), word(&game, 0x590e)),
+            (14, 11),
+            "the opening roll moves the first player"
+        );
+        assert_eq!(
+            word(&game, 0x5902),
+            0xea60,
+            "the first player keeps the starting deposit"
+        );
+        frames.push(game.display().indexed_frame().to_vec());
+        all_frames.push(frames);
+    }
+
+    assert_eq!(all_frames[0].len(), all_frames[1].len());
+    for (index, (packaged, loose)) in all_frames[0].iter().zip(&all_frames[1]).enumerate() {
+        assert_eq!(
+            packaged, loose,
+            "both builds render the same frame at step {index}"
+        );
+    }
+}

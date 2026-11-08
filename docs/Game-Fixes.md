@@ -3994,3 +3994,47 @@ without an execution error alone does not establish playability.
 - Not covered: the settings screen, help text contents, recording and replay,
   all later stages, death and win animations, and the editor auto/full-screen
   modes.
+
+## Wawa Tycoon (LAVA1 蛙蛙大富翁)
+
+- Content: `蛙蛙大富翁打包.pac` with the program at `LAVA/蛙蛙大富翁.lav`
+  and `LavaData/RichMap.dat` (94830 bytes) and `LavaData/RichPic.dat`
+  (16036 bytes); `非pac/蛙蛙大富翁.lav` with `RichMap.dat`, `RichPic.dat` and
+  `RichCfig.dat` (127 bytes). The unpacked config seeds the settings byte that
+  the packaged build starts with at its missing-file default.
+- Three regression workflows drive both builds through identical input and
+  compare every captured frame. The splash reaches the menu at `0xE3F0` after
+  four Enters; the eight entries form a two-column grid at local `bp+9`, with
+  Left/Right stepping by one and Up/Down jumping by two, wrapping at both ends.
+- `读取游戏` opens the four-slot list at `0xE900`; an empty slot reports
+  `没有存档数据` at `0x5B13` and returns to the menu. `系统设定` opens
+  `0xDB52`: the row counter is local `bp+5`, rows wrap with Left/Down and
+  Up/Right, and Enter on the speed row opens the slider at `0xD98F` with the
+  value starting at 5. Escape writes `/lavadata/richcfig.dat` (or
+  `/richcfig.dat` in the unpacked tree) at 127 bytes with the top step `0x46`
+  in the last byte.
+- The copyright notice pages at `0xDE91` through `0xE2E3` and the thanks
+  screens at `0xE5C4` through `0xE7C6` each advance with Enter. The exit entry
+  confirms at `0xDCCD`, `0xDD61` and `0xDDE8` and halts with code 0 at
+  `0xDDFC`.
+- `新游戏` lists maps at `0xD29C`; Down/Up move one row and the page keys jump
+  whole pages with clamping. Enter opens the preview at `0x5321` and then the
+  player-count prompt at `0x50FB`. Answering `n` starts the board at `0x11384`
+  with the first player at `(15, 10)` and a 60000 deposit (structs begin at
+  `0x58FE`, 132 bytes apart: deposit at +0, money at +4, human flag at +0xC,
+  column at +0xE and row at +0x10).
+- Enter rolls the dice through `0x363B` and lands on the tile prompt at
+  `0x815B`; answering `n` returns to the board after the move (`(14, 11)`).
+  F5 opens the in-game menu at `0xCB77`; each page key with a settle interval
+  advances `0xEB29`, `0xEB29`, `0xED0C` and back to the main menu at `0xE3F0`.
+- Saving from the in-game menu writes `/lavadata/richsav1.dat` (2685 bytes)
+  with the money at 1549 and the column/row at 1561/1565. Escape returns to
+  the board, and loading the record through `0xE900` and `0x61AE` restores the
+  position and deposit; a second slot still reports missing data.
+- Answering `y` at the player-count prompt opens the setup at `0x4F36`. The
+  human player's mode cannot be toggled; the two computer players toggle at
+  struct offset +0x7A with Right setting 1 and Left clearing it. Rows wrap in
+  both directions, and Enter starts play with an opening roll.
+- Not covered: the leaderboard contents, later turns and property purchases,
+  bankruptcy and win conditions, the four save slots beyond the first, and
+  the board's event text and animations.
