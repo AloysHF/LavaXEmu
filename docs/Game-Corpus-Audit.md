@@ -88,9 +88,10 @@ do not satisfy this status.
 - Super Dancer checked on 2026-11-08: one dedicated release workflow waits on the 160x80 boot warning, enters the four-entry main menu and clamps it at the top, opens the ranking page and restores the identical menu frame, walks the settings grid in both directions, visits the key configuration page, adjusts the delay slider from 0 to 1 and back and the speed slider from 1 to 2 and back, starts the rhythm round, scores eight COOL hits with a fixed tap schedule, then two GOOD hits and one BAD hit while three misses accumulate, ends the round after seven misses at the game-over summary with 8/2/1/7 counters, enters a leaderboard name to return to the identical main-menu frame, uses the save-file entry to confirm and write the 201-byte `/lavadata/cjwz.sav`, and exits through the credits to a halt with code 0.
 - Lianliankan checked on 2026-11-08: one dedicated release workflow covers the loose, packaged and LAVA2 builds. It waits on the logo, opens the four-entry menu with its wrap in both directions, pages the seven help screens, opens the ranking and returns, walks the settings level preview to its clamped top and back to the first level, starts learning mode and wraps the board cursor at all four edges, matches two adjacent equal pairs found in the live board map and verifies the cleared cells, the remaining counter dropping to 94 and the score rising to 2, cancels and confirms the quit dialog, shows the credits and exits with code 0. A fresh session starts challenge mode, matches one pair, quits to the hero table, enters a name and writes the 50-byte `/lavadata/llkhero.dat` with the name and challenge score at their fixed offsets. A second workflow confirms the stage-clear and finish animations exit with code 0 on a key press.
 - Maze Journey checked on 2026-11-08: one dedicated release workflow waits on the BoBo Studio title, enters the character selection screen, starts the maze with the player at x=5 facing down, verifies that all four arrow keys turn the player without moving from the start cell, and returns to the title on Escape without writing files.
-- 199 dedicated release workflows passed in this audit.
-- 281 of 324 entry points were loaded by those successful workflows.
-- 43 entry points still need dedicated workflow verification.
+- Ace Attorney checked on 2026-11-08: one dedicated release workflow waits on the title logo, pages the intro into the defendant-room dialogue, inspects the attorney badge with `r`, closes the overlay with Enter and restores the identical dialogue frame, verifies five successive dialogue call sites and changing frames, reaches the courtroom after 65 dialogue advances, clamps the three-answer selector, retries a wrong defendant name and proceeds with the correct answer without writing files. Later testimony, evidence presentation and the ending remain unverified.
+- 200 dedicated release workflows passed in this audit.
+- 282 of 324 entry points were loaded by those successful workflows.
+- 42 entry points still need dedicated workflow verification.
 - The historical [startup gallery](Game-Compatibility.md) is a separate check
   and must not be interpreted as this workflow audit.
 
@@ -393,7 +394,7 @@ an optional screenshot directory. Keep each test's logs and captures separate.
 | 279 | `LAVA1 连连看/过关动画/过关画面.lav` | Ending animation | [Workflow passed: `lianliankan_stage_and_finish_animations_exit_on_key`](../crates/lavaxemu/tests/game_compatibility.rs#L27475) |
 | 280 | `LAVA1 连连看/过关动画/通关动画.lav` | Ending animation | [Workflow passed: `lianliankan_stage_and_finish_animations_exit_on_key`](../crates/lavaxemu/tests/game_compatibility.rs#L27475) |
 | 281 | `LAVA1 迷宫之旅/maze2.lav` | Game / game package | [Workflow passed: `maze_journey_title_character_maze_facing_and_escape`](../crates/lavaxemu/tests/game_compatibility.rs#L27495) |
-| 282 | `LAVA1 逆转裁判/逆转裁判.lav` | Game / game package | Pending |
+| 282 | `LAVA1 逆转裁判/逆转裁判.lav` | Game / game package | [Workflow passed: `ace_attorney_dialogue_badge_and_courtroom_answers`](../crates/lavaxemu/tests/game_compatibility.rs#L27547) |
 | 283 | `LAVA1 钻石方块1.1/钻石方块灰.lav` | Game / game package | Pending |
 | 284 | `LAVA1 钻石方块1.1/钻石方块黑.lav` | Game / game package | Pending |
 | 285 | `LAVA1 钻石棋/钻石棋.lav` | Game / game package | Pending |

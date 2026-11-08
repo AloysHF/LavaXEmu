@@ -27541,3 +27541,126 @@ fn maze_journey_title_character_maze_facing_and_escape() {
         "the game writes no files"
     );
 }
+
+#[test]
+#[ignore = "requires the local game corpus via LAVAX_GAME_ROOT"]
+fn ace_attorney_dialogue_badge_and_courtroom_answers() {
+    let mut game = load("LAVA1 逆转裁判/逆转裁判.lav");
+    advance(&mut game, 700);
+    assert_eq!(wait_for_input(&mut game), 0x1384, "the title waits");
+
+    let files = game.files_mut().files();
+    assert_eq!(files.len(), 1);
+    assert_eq!(files[0].path, "/judgeimg.dat");
+    assert_eq!(files[0].size, 31000);
+    assert!(!files[0].dirty);
+
+    let title = game.display().indexed_frame().to_vec();
+    assert!(title.iter().any(|&pixel| pixel != title[0]));
+
+    press(&mut game, 13);
+    advance(&mut game, 700);
+    let first_intro = game.display().indexed_frame().to_vec();
+    assert_ne!(title, first_intro, "Enter starts the intro");
+
+    press(&mut game, 13);
+    advance(&mut game, 700);
+    let second_intro = game.display().indexed_frame().to_vec();
+    assert_ne!(first_intro, second_intro, "Enter advances the intro card");
+
+    press(&mut game, 13);
+    advance(&mut game, 400);
+    assert_eq!(game.vm().pc(), 0x1030, "the defendant room dialogue waits");
+    assert_eq!(
+        game.run_frame().unwrap().status,
+        FrameStatus::WaitingForInput
+    );
+    let dialogue = game.display().indexed_frame().to_vec();
+    assert_ne!(second_intro, dialogue, "Enter reaches the dialogue");
+
+    press(&mut game, b'r');
+    advance(&mut game, 120);
+    assert_eq!(game.vm().pc(), 0xfb6, "r inspects the attorney badge");
+    assert_eq!(
+        game.run_frame().unwrap().status,
+        FrameStatus::WaitingForInput
+    );
+    let badge = game.display().indexed_frame().to_vec();
+    assert_ne!(dialogue, badge, "the badge overlay opens");
+
+    press(&mut game, 13);
+    advance(&mut game, 120);
+    assert_eq!(game.vm().pc(), 0x1030, "Enter closes the badge overlay");
+    assert_eq!(
+        game.display().indexed_frame(),
+        dialogue.as_slice(),
+        "the dialogue is restored"
+    );
+
+    for return_pc in [0x1670u16, 0x169b, 0x16d1, 0x1703, 0x1751] {
+        let before = game.display().indexed_frame().to_vec();
+        press(&mut game, 13);
+        assert_eq!(game.vm().pc(), 0x1030, "the shared dialogue wait resumes");
+        let bp = game.vm().local_bp() as usize;
+        assert_eq!(
+            &game.vm().memory()[bp..bp + 2],
+            &return_pc.to_le_bytes(),
+            "Enter advances to the next dialogue call site"
+        );
+        assert_ne!(
+            before,
+            game.display().indexed_frame(),
+            "the dialogue changes"
+        );
+    }
+    for _ in 0..60 {
+        press(&mut game, 13);
+    }
+    assert_eq!(
+        wait_for_input(&mut game),
+        0x10b7,
+        "the court asks the defendant's name"
+    );
+    let selection = game.vm().local_bp() as usize + 21;
+    assert_eq!(game.vm().memory()[selection], 1);
+    let question = game.display().indexed_frame().to_vec();
+    for (key, expected) in [(20, 1), (21, 2), (21, 3), (21, 3), (20, 2), (20, 1)] {
+        press(&mut game, key);
+        assert_eq!(game.vm().pc(), 0x10b7);
+        assert_eq!(
+            game.vm().memory()[selection],
+            expected,
+            "the answer cursor clamps"
+        );
+    }
+    assert_eq!(game.display().indexed_frame(), question.as_slice());
+
+    press(&mut game, 13);
+    assert_eq!(
+        &game.vm().memory()[0x64db..0x64de],
+        &[0x17, 0x25, 0],
+        "the wrong name opens the correction"
+    );
+    for _ in 0..6 {
+        press(&mut game, 13);
+    }
+    assert_eq!(
+        wait_for_input(&mut game),
+        0x10b7,
+        "the question can be retried"
+    );
+    assert_eq!(game.vm().memory()[selection], 1);
+    press(&mut game, 21);
+    assert_eq!(game.vm().memory()[selection], 2);
+    press(&mut game, 13);
+    assert_eq!(game.vm().pc(), 0x1030);
+    assert_eq!(
+        &game.vm().memory()[0x64db..0x64de],
+        &[0x35, 0x26, 0],
+        "the correct defendant advances the trial"
+    );
+    assert!(
+        game.files_mut().take_dirty_files().is_empty(),
+        "the game writes no files"
+    );
+}
