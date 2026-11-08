@@ -77,9 +77,10 @@ do not satisfy this status.
 - Wawa Circus checked on 2026-11-08: one dedicated release workflow leaves the splash for the six-entry menu, clamps the two-column cursor, steps the speed slider to its top value and back without writing files, pages the three-entry story with Enter, opens and closes the empty ranking screen, wraps the four-slot diary cursor and reports the empty slot, switches the three shows with clamped left/right, starts the second show at its high pad, fails the third show into the result routine, measures the first show jump arc and right scroll, saves a diary record with the scroll and timer at fixed offsets, loses one life to the idle lion and resumes the next show from the preparation screen, replays a fixed 109-key schedule through the whole show without a hit into the result screen, opens the score board, restores the lives, and halts with code 0 from the credits.
 - Roach Adventure checked on 2026-11-08: one dedicated release workflow leaves the title and animated menu for the ten-stage level select, walks and clamps the stage cursor with all four arrows, starts the first stage with five lives, the map's player/chaser markers and exit cell, verifies the roach's facing and one-cell steps with walls blocking right and left, watches the chaser home in on the idle roach, and loses the first life as the chaser restarts on its marker cell without writing files.
 - Roach Adventure Platinum checked on 2026-11-08: one dedicated release workflow leaves the title and its long animated menu for the ten-stage level select, walks and clamps the stage cursor with all four arrows, starts the first stage with five lives, the map marker rows/columns, the exit cell and two extra markers, verifies the walls blocking up/down/left while right moves the roach four pixels, watches the chaser close in on the idle roach, and loses the first life as the chaser restarts on its marker cell without writing files.
-- 188 dedicated release workflows passed in this audit.
-- 263 of 324 entry points were loaded by those successful workflows.
-- 61 entry points still need dedicated workflow verification.
+- Roach Adventure Compact checked on 2026-11-08: one dedicated release workflow walks the four-entry title grid without wrapping, opens the ten-stage level select, clamps the stage cursor with left and right, verifies that starting a stage without the game's renamed map data reports the missing file and leads to the credits page, then checks the two key presses that close the help page and escape returning from the credits while the quit entry exits with code 0.
+- 189 dedicated release workflows passed in this audit.
+- 264 of 324 entry points were loaded by those successful workflows.
+- 60 entry points still need dedicated workflow verification.
 - The historical [startup gallery](Game-Compatibility.md) is a separate check
   and must not be interpreted as this workflow audit.
 
@@ -362,7 +363,7 @@ an optional screenshot directory. Keep each test's logs and captures separate.
 | 259 | `LAVA1 蜀山群侠传/蜀山群侠传.lav` | Game / game package | [Workflow passed: `shushan_registers_a_character_and_enters_the_game`](../crates/lavaxemu/tests/game_compatibility.rs#L976) |
 | 260 | `LAVA1 蟑螂历险记/测试版/蟑螂历险记 V1.0.lav` | Game / game package | [Workflow passed: `roach_adventure_runs_menus_levels_and_chase`](../crates/lavaxemu/tests/game_compatibility.rs#L25023) |
 | 261 | `LAVA1 蟑螂历险记/白金版/蟑螂历险记V3.0.lav` | Game / game package | [Workflow passed: `roach_adventure_platinum_runs_levels_and_chase`](../crates/lavaxemu/tests/game_compatibility.rs#L25186) |
-| 262 | `LAVA1 蟑螂历险记/精简版/蟑螂历险记V2.0.lav` | Game / game package | Pending |
+| 262 | `LAVA1 蟑螂历险记/精简版/蟑螂历险记V2.0.lav` | Game / game package | [Workflow passed: `roach_adventure_compact_menus_help_and_missing_map`](../crates/lavaxemu/tests/game_compatibility.rs#L25346) |
 | 263 | `LAVA1 蟑螂历险记/终结完美版/蟑螂历险记V3.2.lav` | Game / game package | Pending |
 | 264 | `LAVA1 蟑螂历险记3.2/蟑螂历险记V3.2.lav` | Game / game package | Pending |
 | 265 | `LAVA1 衰人大战（很小的游戏）/衰.lav` | Game / game package | Pending |

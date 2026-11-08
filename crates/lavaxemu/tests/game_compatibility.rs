@@ -25340,3 +25340,130 @@ fn roach_adventure_platinum_runs_levels_and_chase() {
     assert_eq!(word(&game, 0x4761), 32, "the roach keeps its start cell");
     assert_eq!(byte(&game, 0x47c7), 0, "the stage stays selected");
 }
+
+#[test]
+#[ignore = "requires the local game corpus via LAVAX_GAME_ROOT"]
+fn roach_adventure_compact_menus_help_and_missing_map() {
+    let path = "LAVA1 蟑螂历险记/精简版/蟑螂历险记V2.0.lav";
+    let byte = |game: &Emulator, address: usize| game.vm().memory()[address];
+    let local =
+        |game: &Emulator, index: usize| game.vm().memory()[game.vm().local_bp() as usize + index];
+    let open_title = || {
+        let mut game = load(path);
+        advance(&mut game, 120);
+        assert!(
+            matches!(game.vm().pc(), 0x8df | 0x8e2),
+            "the title waits in its delay loop"
+        );
+        assert_eq!(byte(&game, 0x23fb), 1, "the menu starts on start game");
+        game
+    };
+
+    let mut game = open_title();
+    press(&mut game, 22);
+    assert_eq!(byte(&game, 0x23fb), 2, "right selects hotline help");
+    press(&mut game, 22);
+    assert_eq!(byte(&game, 0x23fb), 2, "the second column ignores right");
+    press(&mut game, 21);
+    assert_eq!(byte(&game, 0x23fb), 4, "down selects version info");
+    press(&mut game, 20);
+    assert_eq!(byte(&game, 0x23fb), 2, "up returns to hotline help");
+    press(&mut game, 23);
+    assert_eq!(byte(&game, 0x23fb), 1, "left returns to start game");
+    press(&mut game, 21);
+    assert_eq!(byte(&game, 0x23fb), 3, "down selects quit");
+    press(&mut game, 23);
+    assert_eq!(byte(&game, 0x23fb), 3, "the first column ignores left");
+    press(&mut game, 20);
+    assert_eq!(byte(&game, 0x23fb), 1, "up returns to start game");
+
+    let mut game = open_title();
+    press(&mut game, 13);
+    advance(&mut game, 700);
+    assert!(
+        matches!(game.vm().pc(), 0xc7d | 0xc80),
+        "start game opens the level select"
+    );
+    assert_eq!(local(&game, 5), 1, "the level select starts on stage one");
+    press(&mut game, 22);
+    assert_eq!(local(&game, 5), 2, "right advances one stage");
+    press(&mut game, 23);
+    assert_eq!(local(&game, 5), 1, "left returns one stage");
+    for _ in 0..12 {
+        press(&mut game, 22);
+    }
+    assert_eq!(local(&game, 5), 10, "the level select stops at stage ten");
+    for _ in 0..9 {
+        press(&mut game, 23);
+    }
+    assert_eq!(local(&game, 5), 1, "the level select stops at stage one");
+    assert!(
+        game.files_mut().take_dirty_files().is_empty(),
+        "the level select writes no files"
+    );
+
+    press(&mut game, 13);
+    advance(&mut game, 60);
+    assert_eq!(
+        game.vm().pc(),
+        0xd2b,
+        "the stage reports that the renamed map file is missing"
+    );
+    press(&mut game, 13);
+    advance(&mut game, 600);
+    assert!(
+        matches!(game.vm().pc(), 0x5a4 | 0x5a7),
+        "the missing map page leads to the credits page"
+    );
+
+    let mut game = open_title();
+    press(&mut game, 22);
+    press(&mut game, 13);
+    advance(&mut game, 1200);
+    assert_eq!(game.vm().pc(), 0x297, "the help page waits for a key");
+    press(&mut game, 13);
+    assert_eq!(game.vm().pc(), 0x299, "the help page asks for a second key");
+    press(&mut game, 13);
+    advance(&mut game, 1500);
+    assert!(
+        matches!(game.vm().pc(), 0x8df | 0x8e2),
+        "the help returns to the title"
+    );
+    assert_eq!(byte(&game, 0x23fb), 1, "the title resets the menu");
+
+    let mut game = open_title();
+    press(&mut game, 21);
+    press(&mut game, 22);
+    press(&mut game, 13);
+    advance(&mut game, 1200);
+    assert!(
+        matches!(game.vm().pc(), 0x5a4 | 0x5a7),
+        "version info opens the credits page"
+    );
+    press(&mut game, 27);
+    advance(&mut game, 1500);
+    assert!(
+        matches!(game.vm().pc(), 0x8df | 0x8e2),
+        "escape returns from the credits to the title"
+    );
+
+    let mut game = open_title();
+    press(&mut game, 21);
+    press(&mut game, 13);
+    advance(&mut game, 1200);
+    assert!(
+        matches!(game.vm().pc(), 0x5a4 | 0x5a7),
+        "quit opens the credits page"
+    );
+    press(&mut game, 27);
+    let mut frames = 0;
+    let mut halted = None;
+    while frames < 1200 {
+        if let FrameStatus::Halted(code) = game.run_frame().unwrap().status {
+            halted = Some(code);
+            break;
+        }
+        frames += 1;
+    }
+    assert_eq!(halted, Some(0), "escape exits from the quit credits");
+}

@@ -4125,3 +4125,26 @@ without an execution error alone does not establish playability.
 - Not covered: the extra marker-33 cells, the mazes beyond the first stage,
   the exit and stage-advance path, the game-over screens after the last life
   and the sound.
+
+## Roach Adventure Compact V2.0 (LAVA1 蟑螂历险记/精简版/蟑螂历险记V2.0.lav)
+
+- Content: `蟑螂历险记V2.0.lav` plus two interchangeable map files. The
+  game's own installation note requires renaming one of them to
+  `蟑螂历险记.dat` under `LavaData`; the corpus keeps the original
+  parenthesized names, so the game reports `数据丢失` when a stage starts.
+- The title waits in a delay loop that alternates between `0x8DF` and `0x8E2`
+  and keeps the four-entry selection in `0x23FB`. The menu is a 2x2 grid:
+  Right moves 1→2, Down moves 1→3, Left moves 2→1, Up moves 3→1, and the
+  second column/row mirrors those moves without wrapping.
+- Start game opens the ten-stage level select at `0xC7D`/`0xC80` after its
+  animation. The cursor lives in the frame local at index 5 (local base
+  `0x2416`): Right and Left step it and clamp between 1 and 10.
+- Enter on a stage tries to load `/LavaData/蟑螂历险记.dat`, then shows the
+  missing-file page at `0xD2B`; any key leads to the credits page at
+  `0x5A4`/`0x5A7`.
+- Hotline help opens at `0x297` after its typewriter animation and needs two
+  key presses (`0x297`→`0x299`→title). Version info opens the same credits
+  page from menu entry 4, where Escape returns to the title; the quit entry
+  (3) opens the credits page and Escape exits with code 0.
+- Not covered: the stages themselves, because no map file with the required
+  name is present; stage clear, lives and the chaser are untested here.
