@@ -28225,3 +28225,278 @@ fn diamond_chess_splash_menu_settings_board_jumps_and_exit() {
         "the game writes no files"
     );
 }
+
+#[test]
+#[ignore = "requires the local game corpus via LAVAX_GAME_ROOT"]
+fn snowman_legend_splash_menu_settings_gameplay_and_exit() {
+    for (path, expected_files) in [
+        (
+            "LAVA1 雪人传奇/雪人传奇.pac",
+            [
+                ("/lava/雪人传奇.lav", 21223usize),
+                ("/lavadata/snowpic.dat", 4249),
+                ("/非pac/snowpic.dat", 4249),
+                ("/非pac/雪人传奇.lav", 21223),
+            ]
+            .as_slice(),
+        ),
+        (
+            "LAVA1 雪人传奇/非pac/雪人传奇.lav",
+            [("/lava/雪人传奇.lav", 21223usize), ("/snowpic.dat", 4249)].as_slice(),
+        ),
+    ] {
+        let mut game = load(path);
+        let frame = |game: &Emulator| game.display().indexed_frame().to_vec();
+        advance(&mut game, 300);
+        assert_eq!(game.vm().pc(), 0x697, "{path} waits on the splash screen");
+        let splash = frame(&game);
+        assert!(
+            splash.iter().any(|&pixel| pixel != splash[0]),
+            "{path} renders the splash screen"
+        );
+
+        let files = game.files_mut().files();
+        assert_eq!(
+            files.len(),
+            expected_files.len(),
+            "{path} mounts its data companions"
+        );
+        for (index, (expected_path, expected_size)) in expected_files.iter().enumerate() {
+            assert_eq!(
+                files[index].path, *expected_path,
+                "{path} companion {index}"
+            );
+            assert_eq!(
+                files[index].size, *expected_size,
+                "{path} size of {expected_path}"
+            );
+            assert!(
+                !files[index].dirty,
+                "{path} mounts {expected_path} read-only"
+            );
+        }
+
+        press(&mut game, 13);
+        assert_eq!(game.vm().pc(), 0xa09, "{path} Enter opens the main menu");
+        assert_eq!(
+            game.vm().memory()[0x6406],
+            0x25,
+            "{path} starts on the first item"
+        );
+        let menu = frame(&game);
+        assert!(
+            menu.iter().any(|&pixel| pixel != menu[0]),
+            "{path} renders the menu"
+        );
+        for _ in 0..3 {
+            press(&mut game, 23);
+        }
+        assert_eq!(
+            game.vm().memory()[0x6406],
+            0x25,
+            "{path} Left stops on the first item"
+        );
+        for expected in [0x37u8, 0x49, 0x5b, 0x6d] {
+            press(&mut game, 22);
+            assert_eq!(
+                game.vm().memory()[0x6406],
+                expected,
+                "{path} Right moves through the menu"
+            );
+        }
+        press(&mut game, 22);
+        assert_eq!(
+            game.vm().memory()[0x6406],
+            0x6d,
+            "{path} Right stops on the last item"
+        );
+        for expected in [0x5bu8, 0x49, 0x37] {
+            press(&mut game, 23);
+            assert_eq!(game.vm().memory()[0x6406], expected);
+        }
+
+        press(&mut game, 13);
+        assert_eq!(game.vm().pc(), 0x4c53, "{path} Enter opens the settings");
+        let settings = frame(&game);
+        assert_ne!(settings, menu, "{path} the settings replace the menu");
+        assert_eq!(
+            game.vm().memory()[0x6408],
+            0x16,
+            "the monster row is active"
+        );
+        assert_eq!(
+            game.vm().memory()[0x6448],
+            3,
+            "the monster count starts at 3"
+        );
+        assert_eq!(game.vm().memory()[0x640a], 1, "the difficulty starts easy");
+        assert_eq!(game.vm().memory()[0x5347], 6, "the speed starts at 6");
+        press(&mut game, 22);
+        assert_eq!(game.vm().memory()[0x6448], 1, "Right wraps 3 back to 1");
+        press(&mut game, 23);
+        assert_eq!(game.vm().memory()[0x6448], 3, "Left wraps 1 back to 3");
+        press(&mut game, 23);
+        assert_eq!(game.vm().memory()[0x6448], 2, "Left counts down");
+        press(&mut game, 23);
+        assert_eq!(game.vm().memory()[0x6448], 1, "Left reaches 1");
+        press(&mut game, 21);
+        assert_eq!(
+            game.vm().memory()[0x6408],
+            0x24,
+            "Down selects the difficulty row"
+        );
+        press(&mut game, 22);
+        assert_eq!(game.vm().memory()[0x640a], 2, "Right selects hard");
+        let hard = frame(&game);
+        assert_ne!(settings, hard, "the difficulty highlight moves");
+        press(&mut game, 23);
+        assert_eq!(game.vm().memory()[0x640a], 1, "Left selects easy");
+        press(&mut game, 21);
+        assert_eq!(
+            game.vm().memory()[0x6408],
+            0x32,
+            "Down selects the speed row"
+        );
+        press(&mut game, 23);
+        assert_eq!(game.vm().memory()[0x5347], 9, "Left raises the speed");
+        press(&mut game, 22);
+        assert_eq!(
+            game.vm().memory()[0x5347],
+            6,
+            "Right returns to the default"
+        );
+        press(&mut game, 21);
+        assert_eq!(
+            game.vm().memory()[0x6408],
+            0x32,
+            "Down stops on the speed row"
+        );
+        press(&mut game, 20);
+        assert_eq!(game.vm().memory()[0x6408], 0x24);
+        press(&mut game, 20);
+        assert_eq!(game.vm().memory()[0x6408], 0x16);
+        press(&mut game, 20);
+        assert_eq!(
+            game.vm().memory()[0x6408],
+            0x16,
+            "Up stops on the monster row"
+        );
+
+        press(&mut game, 27);
+        assert_eq!(game.vm().pc(), 0xa09, "Escape returns to the menu");
+        assert_eq!(
+            game.vm().memory()[0x6406],
+            0x25,
+            "the menu resets to the first item"
+        );
+        press(&mut game, 22);
+        press(&mut game, 22);
+        press(&mut game, 13);
+        assert_eq!(game.vm().pc(), 0x45cb, "Enter opens the help page");
+        let help = frame(&game);
+        assert!(
+            help.iter().any(|&pixel| pixel != help[0]),
+            "the help page renders"
+        );
+        press(&mut game, 27);
+        assert_eq!(game.vm().pc(), 0xa09);
+        assert_eq!(game.vm().memory()[0x6406], 0x25);
+        for _ in 0..3 {
+            press(&mut game, 22);
+        }
+        press(&mut game, 13);
+        assert_eq!(game.vm().pc(), 0x4b50, "Enter opens the about page");
+        let about = frame(&game);
+        assert_ne!(about, help, "each information page has its own layout");
+        press(&mut game, 27);
+        assert_eq!(game.vm().pc(), 0xa09);
+
+        press(&mut game, 13);
+        assert_eq!(game.vm().pc(), 0x4f3c, "Enter opens the level prompt");
+        assert_eq!(
+            game.vm().memory()[0x6406],
+            0x25,
+            "the prompt positions its own cursor"
+        );
+        let prompt = frame(&game);
+        assert!(
+            prompt.iter().any(|&pixel| pixel != prompt[0]),
+            "the level prompt renders"
+        );
+        for key in [22u8, 20, 21, 23] {
+            press(&mut game, key);
+            assert_eq!(game.vm().pc(), 0x4f3c, "the level prompt ignores key {key}");
+            assert_eq!(game.vm().memory()[0x6406], 0x25);
+        }
+        press(&mut game, 27);
+        assert_eq!(game.vm().pc(), 0xa09, "Escape closes the level prompt");
+
+        press(&mut game, 13);
+        assert_eq!(game.vm().pc(), 0x4f3c);
+        press(&mut game, 13);
+        assert_eq!(game.vm().pc(), 0xf26, "Enter starts the level");
+        advance(&mut game, 661);
+        assert_eq!(game.vm().local_bp(), 0x2503);
+        let player = |game: &Emulator| {
+            let base = game.vm().local_bp() as usize;
+            (game.vm().memory()[base + 5], game.vm().memory()[base + 7])
+        };
+        assert_eq!(player(&game), (20, 65), "the player starts at the spawn");
+        let level = frame(&game);
+        assert!(
+            level.iter().any(|&pixel| pixel != level[0]),
+            "the level renders"
+        );
+
+        hold(&mut game, 22, 20);
+        assert_eq!(player(&game), (30, 65), "Right moves the player right");
+        hold(&mut game, 22, 20);
+        assert_eq!(player(&game), (40, 65), "Right keeps moving the player");
+        hold(&mut game, 23, 20);
+        assert_eq!(player(&game), (30, 65), "Left moves the player left");
+        hold(&mut game, 23, 20);
+        assert_eq!(player(&game), (20, 65), "Left keeps moving the player");
+        hold(&mut game, 20, 20);
+        assert_eq!(player(&game), (20, 65), "Up does not move the player");
+        hold(&mut game, 21, 20);
+        assert_eq!(player(&game), (20, 65), "Down does not move the player");
+
+        hold(&mut game, 27, 10);
+        assert_eq!(
+            game.vm().pc(),
+            0xa09,
+            "a held Escape press returns to the menu"
+        );
+        assert_eq!(game.vm().memory()[0x6406], 0x25);
+
+        press(&mut game, 13);
+        press(&mut game, 13);
+        assert_eq!(game.vm().pc(), 0xf26);
+        advance(&mut game, 661);
+        assert_eq!(
+            player(&game),
+            (20, 65),
+            "restarting the level resets the player"
+        );
+
+        hold(&mut game, 27, 10);
+        assert_eq!(game.vm().pc(), 0xa09);
+        for _ in 0..4 {
+            press(&mut game, 22);
+        }
+        assert_eq!(game.vm().memory()[0x6406], 0x6d);
+        let mut halted = None;
+        game.input_mut().set_keys([13]);
+        for _ in 0..600 {
+            if let FrameStatus::Halted(code) = game.run_frame().unwrap().status {
+                halted = Some((game.vm().pc(), code));
+                break;
+            }
+        }
+        assert_eq!(halted, Some((0x52e7, 0)), "{path} exits cleanly");
+        assert!(
+            game.files_mut().take_dirty_files().is_empty(),
+            "{path} writes no files"
+        );
+    }
+}
