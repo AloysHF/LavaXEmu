@@ -27136,3 +27136,356 @@ fn super_dancer_runs_menus_settings_rhythm_round_and_creates_save() {
     assert!(halted, "{path} exits cleanly");
     assert_eq!(game.vm().pc(), 0x1a12);
 }
+
+fn halt_with_key(game: &mut Emulator, key: u8) -> (usize, i32) {
+    game.input_mut().release_all();
+    for frame in 0..600 {
+        game.input_mut().set_keys((frame < 3).then_some(key));
+        if let FrameStatus::Halted(code) = game.run_frame().unwrap().status {
+            return (game.vm().pc(), code);
+        }
+    }
+    panic!("the program did not exit");
+}
+
+fn wait_for_input(game: &mut Emulator) -> usize {
+    for _ in 0..600 {
+        let status = game.run_frame().unwrap().status;
+        if status == FrameStatus::WaitingForInput {
+            return game.vm().pc();
+        }
+        assert!(
+            !matches!(status, FrameStatus::Halted(_)),
+            "the program exited while waiting for input"
+        );
+    }
+    panic!("the program never waited for input");
+}
+
+struct LianliankanBuild {
+    path: &'static str,
+    logo_pc: usize,
+    menu_pc: usize,
+    mode_pc: usize,
+    board_pc: usize,
+    settings_pc: usize,
+    help_pcs: [usize; 7],
+    ranking_pc: usize,
+    quit_pc: usize,
+    result_pc: usize,
+    credits_pc: usize,
+    exit_pc: usize,
+    map_base: usize,
+    cursor_x: usize,
+    cursor_y: usize,
+    remaining: usize,
+    score: usize,
+}
+
+const LIANLIANKAN_LAVA1: LianliankanBuild = LianliankanBuild {
+    path: "LAVA1 连连看/未打包的文件/连连看.lav",
+    logo_pc: 0x12f3,
+    menu_pc: 0x1861,
+    mode_pc: 0x45cb,
+    board_pc: 0x1c48,
+    settings_pc: 0x345f,
+    help_pcs: [0x39bd, 0x3a86, 0x3b76, 0x3c69, 0x3d6e, 0x3e61, 0x3f44],
+    ranking_pc: 0x13af,
+    quit_pc: 0x4a72,
+    result_pc: 0x15c2,
+    credits_pc: 0x122b,
+    exit_pc: 0x1876,
+    map_base: 0x3159,
+    cursor_x: 0x31d8,
+    cursor_y: 0x31d9,
+    remaining: 0x31de,
+    score: 0x3278,
+};
+
+const LIANLIANKAN_PAC: LianliankanBuild = LianliankanBuild {
+    path: "LAVA1 连连看/打包的文件/连连看.pac",
+    ..LIANLIANKAN_LAVA1
+};
+
+const LIANLIANKAN_LAVA2: LianliankanBuild = LianliankanBuild {
+    path: "LAVA1 连连看/专供LAVA2机/连连看.lav",
+    logo_pc: 0x12a8,
+    menu_pc: 0x1816,
+    mode_pc: 0x44f5,
+    board_pc: 0x1bfd,
+    settings_pc: 0x3388,
+    help_pcs: [0x38e6, 0x39b0, 0x3aa0, 0x3b93, 0x3c98, 0x3d8b, 0x3e6e],
+    ranking_pc: 0x1364,
+    quit_pc: 0x498c,
+    result_pc: 0x1577,
+    credits_pc: 0x11e0,
+    exit_pc: 0x182b,
+    map_base: 0x3113,
+    cursor_x: 0x3192,
+    cursor_y: 0x3193,
+    remaining: 0x3198,
+    score: 0x3232,
+};
+
+fn lianliankan_cell(game: &Emulator, build: &LianliankanBuild, column: usize, row: usize) -> u8 {
+    game.vm().memory()[build.map_base + (row - 1) * 16 + (column - 1)]
+}
+
+fn lianliankan_pair(game: &Emulator, build: &LianliankanBuild) -> ((usize, usize), (usize, usize)) {
+    for row in 1..=7 {
+        for column in 1..=13 {
+            let value = lianliankan_cell(game, build, column, row);
+            if value != 0 && value == lianliankan_cell(game, build, column + 1, row) {
+                return ((column, row), (column + 1, row));
+            }
+        }
+    }
+    for row in 1..=6 {
+        for column in 1..=14 {
+            let value = lianliankan_cell(game, build, column, row);
+            if value != 0 && value == lianliankan_cell(game, build, column, row + 1) {
+                return ((column, row), (column, row + 1));
+            }
+        }
+    }
+    panic!("the board has no adjacent pair");
+}
+
+fn lianliankan_move_to(game: &mut Emulator, build: &LianliankanBuild, column: usize, row: usize) {
+    while game.vm().memory()[build.cursor_x] as usize != column {
+        press(game, 22);
+    }
+    while game.vm().memory()[build.cursor_y] as usize != row {
+        press(game, 21);
+    }
+}
+
+fn lianliankan_match(
+    game: &mut Emulator,
+    build: &LianliankanBuild,
+    pair: ((usize, usize), (usize, usize)),
+) {
+    lianliankan_move_to(game, build, pair.0.0, pair.0.1);
+    press(game, 13);
+    lianliankan_move_to(game, build, pair.1.0, pair.1.1);
+    press(game, 13);
+    advance(game, 120);
+    assert_eq!(game.vm().pc(), build.board_pc, "the match animation ends");
+    assert_eq!(lianliankan_cell(game, build, pair.0.0, pair.0.1), 0);
+    assert_eq!(lianliankan_cell(game, build, pair.1.0, pair.1.1), 0);
+}
+
+#[test]
+#[ignore = "requires the local game corpus via LAVAX_GAME_ROOT"]
+fn lianliankan_loose_packaged_and_lava2_builds_play_and_save() {
+    for build in [&LIANLIANKAN_LAVA1, &LIANLIANKAN_PAC, &LIANLIANKAN_LAVA2] {
+        let path = build.path;
+        let mut game = load(path);
+        advance(&mut game, 700);
+        assert_eq!(game.vm().pc(), build.logo_pc, "{path} shows the logo");
+
+        press(&mut game, 13);
+        assert_eq!(game.vm().pc(), build.menu_pc, "{path} opens the main menu");
+        assert_eq!(
+            game.vm().memory()[0x1b10],
+            32,
+            "{path} starts on the first entry"
+        );
+
+        let saved = game.files_mut().take_dirty_files();
+        assert_eq!(saved.len(), 1, "{path} seeds the hero table");
+        assert_eq!(saved[0].0, "/lavadata/llkhero.dat");
+        assert_eq!(saved[0].1.len(), 50);
+        for record in saved[0].1.chunks(6).take(5) {
+            assert_eq!(
+                record, b"mbx\0\0\0",
+                "{path} writes five placeholder scores"
+            );
+        }
+        assert!(saved[0].1[30..].iter().all(|&byte| byte == 0));
+
+        press(&mut game, 21);
+        assert_eq!(game.vm().memory()[0x1b10], 44);
+        press(&mut game, 21);
+        press(&mut game, 21);
+        press(&mut game, 21);
+        assert_eq!(
+            game.vm().memory()[0x1b10],
+            32,
+            "{path} wraps the menu cursor downwards"
+        );
+        press(&mut game, 20);
+        assert_eq!(
+            game.vm().memory()[0x1b10],
+            68,
+            "{path} wraps the menu cursor upwards"
+        );
+        press(&mut game, 20);
+        assert_eq!(game.vm().memory()[0x1b10], 56);
+
+        press(&mut game, 13);
+        assert_eq!(game.vm().pc(), build.help_pcs[0], "{path} opens the rules");
+        for page in 1..7 {
+            press(&mut game, 13);
+            assert_eq!(
+                game.vm().pc(),
+                build.help_pcs[page],
+                "{path} pages through the rules"
+            );
+        }
+        press(&mut game, 27);
+        assert_eq!(game.vm().pc(), build.menu_pc);
+        assert_eq!(game.vm().memory()[0x1b10], 32);
+
+        press(&mut game, 21);
+        press(&mut game, 21);
+        press(&mut game, 21);
+        press(&mut game, 13);
+        assert_eq!(game.vm().pc(), build.ranking_pc, "{path} opens the ranking");
+        press(&mut game, 13);
+        assert_eq!(game.vm().pc(), build.menu_pc, "{path} leaves the ranking");
+
+        press(&mut game, 21);
+        press(&mut game, 13);
+        assert_eq!(
+            game.vm().pc(),
+            build.settings_pc,
+            "{path} opens the settings"
+        );
+        let level_one = game.display().indexed_frame().to_vec();
+        press(&mut game, 22);
+        let level_two = game.display().indexed_frame().to_vec();
+        assert_ne!(level_two, level_one, "{path} changes the preview on right");
+        press(&mut game, 23);
+        assert_eq!(
+            game.display().indexed_frame(),
+            level_one.as_slice(),
+            "{path} restores the preview on left"
+        );
+        for _ in 0..8 {
+            press(&mut game, 22);
+        }
+        let clamped = game.display().indexed_frame().to_vec();
+        press(&mut game, 22);
+        assert_eq!(
+            game.display().indexed_frame(),
+            clamped.as_slice(),
+            "{path} clamps the level at seven"
+        );
+        for _ in 0..8 {
+            press(&mut game, 23);
+        }
+        assert_eq!(
+            game.display().indexed_frame(),
+            level_one.as_slice(),
+            "{path} returns to the first level"
+        );
+        press(&mut game, 27);
+        assert_eq!(game.vm().pc(), build.menu_pc);
+
+        press(&mut game, 13);
+        assert_eq!(game.vm().pc(), build.mode_pc, "{path} asks for a mode");
+        press(&mut game, b'b');
+        assert_eq!(
+            game.vm().pc(),
+            build.board_pc,
+            "{path} starts learning mode"
+        );
+
+        assert_eq!(game.vm().memory()[build.cursor_x], 1);
+        assert_eq!(game.vm().memory()[build.cursor_y], 1);
+        press(&mut game, 23);
+        assert_eq!(game.vm().memory()[build.cursor_x], 14);
+        press(&mut game, 22);
+        assert_eq!(game.vm().memory()[build.cursor_x], 1);
+        press(&mut game, 20);
+        assert_eq!(game.vm().memory()[build.cursor_y], 7);
+        press(&mut game, 21);
+        assert_eq!(game.vm().memory()[build.cursor_y], 1);
+
+        let first = lianliankan_pair(&game, build);
+        lianliankan_match(&mut game, build, first);
+        assert_eq!(game.vm().memory()[build.remaining], 96);
+        assert_eq!(game.vm().memory()[build.score], 1);
+
+        let second = lianliankan_pair(&game, build);
+        lianliankan_match(&mut game, build, second);
+        assert_eq!(game.vm().memory()[build.remaining], 94);
+        assert_eq!(game.vm().memory()[build.score], 2);
+
+        press(&mut game, 27);
+        assert_eq!(game.vm().pc(), build.quit_pc, "{path} asks to quit");
+        press(&mut game, b'n');
+        assert_eq!(game.vm().pc(), build.board_pc);
+        press(&mut game, 27);
+        press(&mut game, b'y');
+        assert_eq!(game.vm().pc(), build.menu_pc, "{path} quits to the menu");
+        assert!(
+            game.files_mut().take_dirty_files().is_empty(),
+            "{path} writes nothing when leaving learning mode"
+        );
+
+        press(&mut game, 27);
+        assert_eq!(game.vm().pc(), build.credits_pc, "{path} shows the credits");
+        let (pc, code) = halt_with_key(&mut game, 13);
+        assert_eq!((pc, code), (build.exit_pc, 0), "{path} exits cleanly");
+
+        let mut game = load(path);
+        advance(&mut game, 700);
+        press(&mut game, 13);
+        game.files_mut().take_dirty_files();
+        press(&mut game, 13);
+        press(&mut game, b'n');
+        assert_eq!(
+            game.vm().pc(),
+            build.board_pc,
+            "{path} starts challenge mode"
+        );
+
+        let pair = lianliankan_pair(&game, build);
+        lianliankan_match(&mut game, build, pair);
+        assert_eq!(game.vm().memory()[build.score], 1);
+
+        press(&mut game, 27);
+        press(&mut game, b'y');
+        assert_eq!(
+            game.vm().pc(),
+            build.result_pc,
+            "{path} offers the hero table after a challenge run"
+        );
+        press(&mut game, b'A');
+        press(&mut game, 13);
+        assert_eq!(game.vm().pc(), build.menu_pc);
+
+        let saved = game.files_mut().take_dirty_files();
+        assert_eq!(saved.len(), 1);
+        assert_eq!(saved[0].0, "/lavadata/llkhero.dat");
+        assert_eq!(&saved[0].1[..6], b"A     ", "{path} stores the name");
+        assert_eq!(saved[0].1[30], 1, "{path} stores the challenge score");
+
+        press(&mut game, 27);
+        assert_eq!(game.vm().pc(), build.credits_pc);
+        let (pc, code) = halt_with_key(&mut game, 13);
+        assert_eq!((pc, code), (build.exit_pc, 0));
+    }
+}
+
+#[test]
+#[ignore = "requires the local game corpus via LAVAX_GAME_ROOT"]
+fn lianliankan_stage_and_finish_animations_exit_on_key() {
+    let mut game = load("LAVA1 连连看/过关动画/过关画面.lav");
+    assert_eq!(wait_for_input(&mut game), 0x8f4);
+    let (pc, code) = halt_with_key(&mut game, 13);
+    assert_eq!((pc, code), (0x8f6, 0), "the stage animation exits cleanly");
+
+    let mut game = load("LAVA1 连连看/过关动画/通关动画.lav");
+    for _ in 0..300 {
+        let status = game.run_frame().unwrap().status;
+        assert!(
+            !matches!(status, FrameStatus::Halted(_)),
+            "the finish animation loops until a key is pressed"
+        );
+    }
+    let (pc, code) = halt_with_key(&mut game, 13);
+    assert_eq!((pc, code), (0x704, 0), "the finish animation exits cleanly");
+}

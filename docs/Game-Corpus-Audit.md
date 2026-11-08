@@ -86,9 +86,10 @@ do not satisfy this status.
 - Snake Bob checked on 2026-11-08: one dedicated release workflow waits on the static 第0关 title, starts the board with the snake at 3,2 and food at 16,18, verifies the snake rests until a direction is pressed, steers right and down one cell per tap into two foods with deterministic respawns at 37,26 and 51,5 while the body grows from five to seven segments, confirms that food scores one step after the head arrives, that the opposite direction is ignored, and that running into the bottom wall shows the 第0关 game over line and exits with code 0 on a key without writing files.
 - Super Robot Wars checked on 2026-11-08: one dedicated release workflow covers the packaged and unpacked entries with identical results. It verifies the 12696-byte boot save file with its eleven fixed marker bytes, walks the four-entry title menu through the scrolling window and back to the first entry, opens the two empty load slots and cancels back to the identical title frame with a reset selection, enters New Game and reaches the scrolling intro's first dialogue scene, advances the script pointer through three records, pages the intro into the 160x80 map with the cursor at 5,2, moves the cursor right and restores the frame moving left, opens the unit menu and moves its cursor, and clamps the map cursor at columns 1 and 8 and rows 1 and 3 without writing files after the boot save.
 - Super Dancer checked on 2026-11-08: one dedicated release workflow waits on the 160x80 boot warning, enters the four-entry main menu and clamps it at the top, opens the ranking page and restores the identical menu frame, walks the settings grid in both directions, visits the key configuration page, adjusts the delay slider from 0 to 1 and back and the speed slider from 1 to 2 and back, starts the rhythm round, scores eight COOL hits with a fixed tap schedule, then two GOOD hits and one BAD hit while three misses accumulate, ends the round after seven misses at the game-over summary with 8/2/1/7 counters, enters a leaderboard name to return to the identical main-menu frame, uses the save-file entry to confirm and write the 201-byte `/lavadata/cjwz.sav`, and exits through the credits to a halt with code 0.
-- 197 dedicated release workflows passed in this audit.
-- 275 of 324 entry points were loaded by those successful workflows.
-- 49 entry points still need dedicated workflow verification.
+- Lianliankan checked on 2026-11-08: one dedicated release workflow covers the loose, packaged and LAVA2 builds. It waits on the logo, opens the four-entry menu with its wrap in both directions, pages the seven help screens, opens the ranking and returns, walks the settings level preview to its clamped top and back to the first level, starts learning mode and wraps the board cursor at all four edges, matches two adjacent equal pairs found in the live board map and verifies the cleared cells, the remaining counter dropping to 94 and the score rising to 2, cancels and confirms the quit dialog, shows the credits and exits with code 0. A fresh session starts challenge mode, matches one pair, quits to the hero table, enters a name and writes the 50-byte `/lavadata/llkhero.dat` with the name and challenge score at their fixed offsets. A second workflow confirms the stage-clear and finish animations exit with code 0 on a key press.
+- 198 dedicated release workflows passed in this audit.
+- 280 of 324 entry points were loaded by those successful workflows.
+- 44 entry points still need dedicated workflow verification.
 - The historical [startup gallery](Game-Compatibility.md) is a separate check
   and must not be interpreted as this workflow audit.
 
@@ -385,11 +386,11 @@ an optional screenshot directory. Keep each test's logs and captures separate.
 | 273 | `LAVA1 超级机器人大战/Setup/SRW.lav` | Installer | [Workflow passed: `super_robot_wars_installs_resources_and_accepts_map_input`](../crates/lavaxemu/tests/game_compatibility.rs#L751) |
 | 274 | `LAVA1 超级机器人大战/Setup/SRWDate.lav` | Installer | [Workflow passed: `super_robot_wars_installs_resources_and_accepts_map_input`](../crates/lavaxemu/tests/game_compatibility.rs#L751) |
 | 275 | `LAVA1 超级舞者/超级舞者.lav` | Game / game package | [Workflow passed: `super_dancer_runs_menus_settings_rhythm_round_and_creates_save`](../crates/lavaxemu/tests/game_compatibility.rs#L26908) |
-| 276 | `LAVA1 连连看/专供LAVA2机/连连看.lav` | Game / game package | Pending |
-| 277 | `LAVA1 连连看/打包的文件/连连看.pac` | Game / game package | Pending |
-| 278 | `LAVA1 连连看/未打包的文件/连连看.lav` | Game / game package | Pending |
-| 279 | `LAVA1 连连看/过关动画/过关画面.lav` | Ending animation | Pending |
-| 280 | `LAVA1 连连看/过关动画/通关动画.lav` | Ending animation | Pending |
+| 276 | `LAVA1 连连看/专供LAVA2机/连连看.lav` | Game / game package | [Workflow passed: `lianliankan_loose_packaged_and_lava2_builds_play_and_save`](../crates/lavaxemu/tests/game_compatibility.rs#L27280) |
+| 277 | `LAVA1 连连看/打包的文件/连连看.pac` | Game / game package | [Workflow passed: `lianliankan_loose_packaged_and_lava2_builds_play_and_save`](../crates/lavaxemu/tests/game_compatibility.rs#L27280) |
+| 278 | `LAVA1 连连看/未打包的文件/连连看.lav` | Game / game package | [Workflow passed: `lianliankan_loose_packaged_and_lava2_builds_play_and_save`](../crates/lavaxemu/tests/game_compatibility.rs#L27280) |
+| 279 | `LAVA1 连连看/过关动画/过关画面.lav` | Ending animation | [Workflow passed: `lianliankan_stage_and_finish_animations_exit_on_key`](../crates/lavaxemu/tests/game_compatibility.rs#L27475) |
+| 280 | `LAVA1 连连看/过关动画/通关动画.lav` | Ending animation | [Workflow passed: `lianliankan_stage_and_finish_animations_exit_on_key`](../crates/lavaxemu/tests/game_compatibility.rs#L27475) |
 | 281 | `LAVA1 迷宫之旅/maze2.lav` | Game / game package | Pending |
 | 282 | `LAVA1 逆转裁判/逆转裁判.lav` | Game / game package | Pending |
 | 283 | `LAVA1 钻石方块1.1/钻石方块灰.lav` | Game / game package | Pending |
