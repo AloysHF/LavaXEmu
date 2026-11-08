@@ -27982,3 +27982,246 @@ fn diamond_blocks_builds_cover_boot_menus_play_pause_clock_and_exit() {
         assert_eq!(&written[0].1[96..], &[0x17, 0x16, 0x15, 0x14, 0x0d]);
     }
 }
+
+#[test]
+#[ignore = "requires the local game corpus via LAVAX_GAME_ROOT"]
+fn diamond_chess_splash_menu_settings_board_jumps_and_exit() {
+    let mut game = load("LAVA1 钻石棋/钻石棋.lav");
+    advance(&mut game, 300);
+    assert_eq!(game.vm().pc(), 0x12aa, "the splash screen waits");
+    let frame = |game: &Emulator| game.display().indexed_frame().to_vec();
+    let splash = frame(&game);
+    assert!(
+        splash.iter().any(|&pixel| pixel != splash[0]),
+        "the splash screen renders"
+    );
+    assert!(
+        game.files_mut().files().is_empty(),
+        "the game needs no data files"
+    );
+
+    press(&mut game, 13);
+    assert_eq!(game.vm().pc(), 0x1316, "Enter opens the main menu");
+    assert_eq!(game.vm().memory()[0x1b08], 0x1c);
+    press(&mut game, 20);
+    assert_eq!(
+        game.vm().memory()[0x1b08],
+        0x1c,
+        "Up stops on the first menu item"
+    );
+    press(&mut game, 21);
+    assert_eq!(game.vm().memory()[0x1b08], 0x29);
+    press(&mut game, 21);
+    assert_eq!(game.vm().memory()[0x1b08], 0x36);
+    press(&mut game, 21);
+    assert_eq!(
+        game.vm().memory()[0x1b08],
+        0x36,
+        "Down stops on the last menu item"
+    );
+
+    press(&mut game, 20);
+    assert_eq!(game.vm().memory()[0x1b08], 0x29);
+    press(&mut game, 13);
+    assert_eq!(game.vm().pc(), 0x140d, "Enter opens the game settings");
+    let settings = frame(&game);
+    assert!(settings.iter().any(|&pixel| pixel != settings[0]));
+    assert_eq!(game.vm().memory()[0x2001], 1, "the level starts at one");
+    assert_eq!(
+        game.vm().memory()[0x2000],
+        0,
+        "the step limit starts unlimited"
+    );
+    press(&mut game, 22);
+    assert_eq!(game.vm().memory()[0x2001], 2, "Right raises the level");
+    press(&mut game, 23);
+    assert_eq!(game.vm().memory()[0x2001], 1, "Left lowers the level");
+    press(&mut game, 21);
+    assert_eq!(
+        game.vm().memory()[0x3009],
+        1,
+        "Down selects the step limit row"
+    );
+    press(&mut game, 22);
+    assert_eq!(
+        game.vm().memory()[0x2000],
+        1,
+        "Right enables the step limit"
+    );
+    press(&mut game, 22);
+    assert_eq!(game.vm().memory()[0x2000], 0, "Right toggles back");
+    press(&mut game, 20);
+    assert_eq!(game.vm().memory()[0x3009], 0, "Up selects the level row");
+    press(&mut game, 22);
+    assert_eq!(game.vm().memory()[0x2001], 2);
+    press(&mut game, 13);
+    assert_eq!(game.vm().pc(), 0x2395, "Enter starts the selected level");
+    assert_eq!(game.vm().memory()[0x2001], 2, "the chosen level is played");
+    assert_eq!(
+        game.vm().memory()[0x206d],
+        9,
+        "level 2 starts with nine pieces"
+    );
+    let level_two = frame(&game);
+    assert!(level_two.iter().any(|&pixel| pixel != level_two[0]));
+
+    press(&mut game, 27);
+    assert_eq!(
+        game.vm().pc(),
+        0x1cc6,
+        "Escape asks before leaving the game"
+    );
+    press(&mut game, 110);
+    assert_eq!(game.vm().pc(), 0x2395, "n returns to the board");
+    press(&mut game, 27);
+    assert_eq!(game.vm().pc(), 0x1cc6);
+    press(&mut game, 121);
+    assert_eq!(game.vm().pc(), 0x1316, "y returns to the menu");
+    assert_eq!(
+        game.vm().memory()[0x1b08],
+        0x1c,
+        "the menu resets to the first item"
+    );
+
+    press(&mut game, 13);
+    assert_eq!(game.vm().pc(), 0x2395, "Enter starts level 1 from the menu");
+    assert_eq!(game.vm().memory()[0x2001], 1, "the menu start uses level 1");
+    assert_eq!(
+        game.vm().memory()[0x206d],
+        6,
+        "level 1 starts with six pieces"
+    );
+    let level_one = frame(&game);
+    assert_ne!(
+        level_two, level_one,
+        "each level draws its own starting board"
+    );
+
+    for cell in [0x2018usize, 0x2020, 0x2021, 0x2022, 0x202a, 0x2033] {
+        assert_eq!(
+            game.vm().memory()[cell],
+            2,
+            "level 1 places a piece at {cell:#x}"
+        );
+    }
+    assert_eq!(game.vm().memory()[0x200f], 1, "(4,1) is an empty hole");
+    assert_eq!(game.vm().memory()[0x203c], 1, "(4,6) is an empty hole");
+    assert_eq!(
+        (game.vm().memory()[0x2069], game.vm().memory()[0x206a]),
+        (4, 4),
+        "the cursor starts at the center"
+    );
+
+    for expected in [5u8, 6, 7, 7] {
+        press(&mut game, 22);
+        assert_eq!(
+            game.vm().memory()[0x2069],
+            expected,
+            "Right moves the cursor"
+        );
+    }
+    for expected in [6u8, 5, 4] {
+        press(&mut game, 23);
+        assert_eq!(
+            game.vm().memory()[0x2069],
+            expected,
+            "Left moves the cursor"
+        );
+    }
+    for expected in [5u8, 6, 7, 7] {
+        press(&mut game, 21);
+        assert_eq!(
+            game.vm().memory()[0x206a],
+            expected,
+            "Down moves the cursor"
+        );
+    }
+    for expected in [6u8, 5, 4] {
+        press(&mut game, 20);
+        assert_eq!(game.vm().memory()[0x206a], expected, "Up moves the cursor");
+    }
+
+    press(&mut game, 13);
+    assert_eq!(
+        game.vm().memory()[0x2067],
+        1,
+        "Enter selects the center piece"
+    );
+    assert_eq!(
+        (game.vm().memory()[0x206b], game.vm().memory()[0x206c]),
+        (4, 4)
+    );
+    press(&mut game, 20);
+    assert_eq!(game.vm().memory()[0x2068], 0, "Up is not a legal jump");
+    assert_eq!(game.vm().memory()[0x202a], 2, "the selected piece stays");
+    assert_eq!(
+        game.vm().memory()[0x2018],
+        2,
+        "the blocked destination stays"
+    );
+    assert_eq!(
+        (game.vm().memory()[0x2069], game.vm().memory()[0x206a]),
+        (4, 4)
+    );
+
+    press(&mut game, 21);
+    assert_eq!(game.vm().memory()[0x2068], 1, "Down previews a legal jump");
+    assert_eq!(
+        game.vm().memory()[0x203c],
+        2,
+        "the preview marks the destination"
+    );
+    assert_eq!(
+        (game.vm().memory()[0x2069], game.vm().memory()[0x206a]),
+        (4, 6),
+        "the cursor follows the jump"
+    );
+    assert_eq!(
+        game.vm().memory()[0x206d],
+        6,
+        "the preview keeps the piece count"
+    );
+    press(&mut game, 13);
+    assert_eq!(game.vm().memory()[0x206d], 5, "the jump removes one piece");
+    assert_eq!(game.vm().memory()[0x202a], 1, "the origin becomes empty");
+    assert_eq!(game.vm().memory()[0x2033], 1, "the jumped piece is removed");
+    assert_eq!(
+        game.vm().memory()[0x203c],
+        2,
+        "the piece lands on the destination"
+    );
+    assert_eq!(game.vm().memory()[0x2067], 0, "the selection clears");
+    assert_eq!(game.vm().memory()[0x2068], 0, "the pending jump clears");
+
+    press(&mut game, 27);
+    assert_eq!(game.vm().pc(), 0x1cc6);
+    press(&mut game, 121);
+    assert_eq!(game.vm().pc(), 0x1316);
+
+    press(&mut game, 21);
+    press(&mut game, 21);
+    assert_eq!(game.vm().memory()[0x1b08], 0x36);
+    press(&mut game, 13);
+    assert_eq!(game.vm().pc(), 0x1e88, "Enter opens the custom levels");
+    let custom = frame(&game);
+    assert!(custom.iter().any(|&pixel| pixel != custom[0]));
+    press(&mut game, 21);
+    assert_ne!(frame(&game), custom, "Down highlights another custom slot");
+    press(&mut game, 13);
+    assert_eq!(
+        game.vm().pc(),
+        0x20a3,
+        "an empty custom slot reports a missing file"
+    );
+    let missing = frame(&game);
+    assert!(missing.iter().any(|&pixel| pixel != missing[0]));
+    press(&mut game, 13);
+    assert_eq!(game.vm().pc(), 0x1316, "Enter dismisses the message");
+
+    let (pc, code) = halt_with_key(&mut game, 27);
+    assert_eq!((pc, code), (0x1327, 0), "Escape exits from the menu");
+    assert!(
+        game.files_mut().take_dirty_files().is_empty(),
+        "the game writes no files"
+    );
+}

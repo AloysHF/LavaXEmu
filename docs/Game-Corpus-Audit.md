@@ -90,9 +90,10 @@ do not satisfy this status.
 - Maze Journey checked on 2026-11-08: one dedicated release workflow waits on the BoBo Studio title, enters the character selection screen, starts the maze with the player at x=5 facing down, verifies that all four arrow keys turn the player without moving from the start cell, and returns to the title on Escape without writing files.
 - Ace Attorney checked on 2026-11-08: one dedicated release workflow waits on the title logo, pages the intro into the defendant-room dialogue, inspects the attorney badge with `r`, closes the overlay with Enter and restores the identical dialogue frame, verifies five successive dialogue call sites and changing frames, reaches the courtroom after 65 dialogue advances, clamps the three-answer selector, retries a wrong defendant name and proceeds with the correct answer without writing files. Later testimony, evidence presentation and the ending remain unverified.
 - Diamond Blocks checked on 2026-11-08: one dedicated release workflow covers the grey and black builds. It waits on the boot screen, passes the grey input-method warning into the four-entry menu, verifies the score save created at the menu with its five default records, default player name and fixed score tail, wraps the menu cursor in both directions, opens the three-row settings and the speed/height page, wraps the three difficulties and returns the cursor, starts the board with the piece in the center, moves it left and right and rotates and drops it, shows the Beijing-time clock from F1, pauses and resumes, cancels the pause-quit prompt with `n` and confirms it with `y`, cancels the exit prompt with `n`, exits cleanly through `y` and re-saves the five-record score table with the default name on exit.
-- 201 dedicated release workflows passed in this audit.
-- 284 of 324 entry points were loaded by those successful workflows.
-- 40 entry points still need dedicated workflow verification.
+- Diamond Chess checked on 2026-11-08: one dedicated release workflow waits on the splash page, opens the three-entry menu and clamps it at both ends, opens the settings page, raises and lowers the level and toggles the step limit through the row cursor, starts level 2 with its nine pieces and a distinct board frame, cancels the leave prompt with `n` and returns to the menu with `y`, starts level 1 from the menu with its six pieces at their fixed board addresses, walks the cursor to the clamped edges in both axes, rejects an upward jump from the center while keeping the selection, previews the downward jump onto its destination cell and confirms it while the origin and jumped cells clear and the piece count drops from six to five, opens the five-slot custom level list and its highlighted slot, reports the missing file for an empty slot and dismisses the message, and exits from the menu with code 0 without writing files.
+- 202 dedicated release workflows passed in this audit.
+- 285 of 324 entry points were loaded by those successful workflows.
+- 39 entry points still need dedicated workflow verification.
 - The historical [startup gallery](Game-Compatibility.md) is a separate check
   and must not be interpreted as this workflow audit.
 
@@ -398,7 +399,7 @@ an optional screenshot directory. Keep each test's logs and captures separate.
 | 282 | `LAVA1 逆转裁判/逆转裁判.lav` | Game / game package | [Workflow passed: `ace_attorney_dialogue_badge_and_courtroom_answers`](../crates/lavaxemu/tests/game_compatibility.rs#L27547) |
 | 283 | `LAVA1 钻石方块1.1/钻石方块灰.lav` | Game / game package | [Workflow passed: `diamond_blocks_builds_cover_boot_menus_play_pause_clock_and_exit`](../crates/lavaxemu/tests/game_compatibility.rs#L27733) |
 | 284 | `LAVA1 钻石方块1.1/钻石方块黑.lav` | Game / game package | [Workflow passed: `diamond_blocks_builds_cover_boot_menus_play_pause_clock_and_exit`](../crates/lavaxemu/tests/game_compatibility.rs#L27733) |
-| 285 | `LAVA1 钻石棋/钻石棋.lav` | Game / game package | Pending |
+| 285 | `LAVA1 钻石棋/钻石棋.lav` | Game / game package | [Workflow passed: `diamond_chess_splash_menu_settings_board_jumps_and_exit`](../crates/lavaxemu/tests/game_compatibility.rs#L27988) |
 | 286 | `LAVA1 雪人传奇/雪人传奇.pac` | Game / game package | Pending |
 | 287 | `LAVA1 雪人传奇/非pac/雪人传奇.lav` | Game / game package | Pending |
 | 288 | `LAVA1 零度恐慌/零度恐惧.lav` | Game / game package | Pending |
