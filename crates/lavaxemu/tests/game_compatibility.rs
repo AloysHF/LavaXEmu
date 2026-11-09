@@ -28916,3 +28916,112 @@ fn cs_blue_action_menu_missions_settings_and_raycaster_gameplay() {
         "Up walks the player forward"
     );
 }
+
+#[test]
+#[ignore = "requires the local game corpus via LAVAX_GAME_ROOT"]
+fn jianghu2_demo_monochrome_and_grayscale_menus_and_new_game() {
+    fn check_build(
+        relative: &str,
+        menu_pc: usize,
+        cursor: usize,
+        game_flag: usize,
+        game_stat: usize,
+    ) {
+        let byte = |game: &Emulator, address: usize| game.vm().memory()[address];
+        let mut game = load(relative);
+        advance(&mut game, 300);
+        assert_eq!(game.vm().pc(), menu_pc, "the three-entry title opens");
+        assert_eq!(
+            byte(&game, cursor),
+            1,
+            "the cursor starts on the first entry"
+        );
+        for _ in 0..5 {
+            press(&mut game, 21);
+        }
+        assert_eq!(byte(&game, cursor), 3, "Down clamps at the exit entry");
+        for _ in 0..5 {
+            press(&mut game, 20);
+        }
+        assert_eq!(byte(&game, cursor), 1, "Up clamps at the first entry");
+
+        let mut loader = game.clone();
+        press(&mut loader, 21);
+        press(&mut loader, 13);
+        advance(&mut loader, 60);
+        assert_eq!(
+            byte(&loader, cursor),
+            2,
+            "the failed load keeps the load entry"
+        );
+        assert_eq!(
+            loader.vm().pc(),
+            menu_pc,
+            "the failed load returns to the title"
+        );
+        assert_eq!(
+            byte(&loader, game_flag),
+            0,
+            "no adventure starts from a failed load"
+        );
+
+        let mut exit = game.clone();
+        press(&mut exit, 21);
+        press(&mut exit, 21);
+        exit.input_mut().set_keys([13]);
+        let mut halted = None;
+        for _ in 0..90 {
+            if let FrameStatus::Halted(code) = exit.run_frame().unwrap().status {
+                halted = Some(code);
+                break;
+            }
+        }
+        assert_eq!(halted, Some(0), "the exit entry halts cleanly");
+
+        press(&mut game, 13);
+        advance(&mut game, 150);
+        assert_ne!(
+            game.vm().pc(),
+            menu_pc,
+            "new game opens the character select"
+        );
+        assert_eq!(
+            byte(&game, game_flag),
+            1,
+            "new game activates the session flag"
+        );
+        let select_pc = game.vm().pc();
+        press(&mut game, 13);
+        advance(&mut game, 200);
+        assert_ne!(
+            game.vm().pc(),
+            select_pc,
+            "choosing a character leaves the select"
+        );
+        assert_eq!(
+            byte(&game, game_flag),
+            1,
+            "the adventure keeps the session flag"
+        );
+        assert_eq!(
+            byte(&game, game_stat),
+            100,
+            "the hero starts with full stats"
+        );
+    }
+
+    check_build(
+        "LAVA1 LAVA2 江湖2_demo/world2.lav",
+        0x372,
+        0x5c16,
+        0x4307,
+        0x4303,
+    );
+    check_build(
+        "LAVA1 LAVA2 江湖2_demo/world2_16.lav",
+        0x382,
+        0x5f48,
+        0x4309,
+        0x4305,
+    );
+}
