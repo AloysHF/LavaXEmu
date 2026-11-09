@@ -28672,3 +28672,137 @@ fn zero_panic_menu_difficulty_password_and_win() {
         "{path} writes no files"
     );
 }
+
+#[test]
+#[ignore = "requires the local game corpus via LAVAX_GAME_ROOT"]
+fn crazy_ball_editor_saves_a_pack_that_scores_bricks_and_loses_balls() {
+    let byte = |game: &Emulator, address: usize| game.vm().memory()[address];
+    let word = |game: &Emulator, address: usize| {
+        u16::from_le_bytes([game.vm().memory()[address], game.vm().memory()[address + 1]])
+    };
+
+    let mut editor = load("LAVA1 Crazy_ball/mapedit.lav");
+    advance(&mut editor, 120);
+    assert_eq!(editor.vm().pc(), 0x99d, "the editor opens on stage 1");
+    press(&mut editor, b'm');
+    press(&mut editor, 21);
+    press(&mut editor, b'n');
+    press(&mut editor, 21);
+    press(&mut editor, b'b');
+    press(&mut editor, 23);
+    press(&mut editor, b'b');
+    press(&mut editor, 13);
+    let saved = editor.files_mut().take_dirty_files();
+    assert_eq!(saved.len(), 1, "Enter writes exactly the stage pack");
+    assert_eq!(saved[0].0, "/stagepack.dat");
+    let pack = saved[0].1.clone();
+    assert_eq!(pack.len(), 2198, "the pack holds a header and 18 stages");
+    assert_eq!(&pack[..4], &[0x0f, 0x00, 0x01, 0x00]);
+    assert_eq!(pack[20], 3, "M paints the strong brick");
+    assert_eq!(pack[21], 2, "N paints the medium brick");
+    assert_eq!(pack[22], 1, "B paints the plain brick");
+    assert_eq!(pack[20 + 10 * 11 + 2], 1, "Left wraps to the last column");
+    assert_eq!(pack[1956], 3, "the shipped stage 17 brick survives");
+    let mut halted = None;
+    editor.input_mut().set_keys([27]);
+    for _ in 0..60 {
+        if let FrameStatus::Halted(code) = editor.run_frame().unwrap().status {
+            halted = Some(code);
+            break;
+        }
+    }
+    assert_eq!(halted, Some(0), "Escape leaves the editor cleanly");
+
+    let mut editor = load("LAVA1 Crazy_ball/mapedit.lav");
+    advance(&mut editor, 120);
+    for _ in 0..11 {
+        press(&mut editor, b'b');
+        press(&mut editor, 22);
+    }
+    for _ in 0..10 {
+        press(&mut editor, 21);
+    }
+    for _ in 0..11 {
+        press(&mut editor, b'b');
+        press(&mut editor, 22);
+    }
+    press(&mut editor, 13);
+    let stage = editor
+        .files_mut()
+        .take_dirty_files()
+        .into_iter()
+        .find(|(path, _)| path == "/stagepack.dat")
+        .expect("the painted rows are saved")
+        .1;
+
+    let mut game = load("LAVA1 Crazy_ball/crazyball.lav");
+    game.files_mut().import_file("/stagepack.dat", stage);
+    advance(&mut game, 300);
+    assert_eq!(game.vm().pc(), 0x23b8, "the title waits for a key");
+    press(&mut game, 13);
+    advance(&mut game, 60);
+    assert_eq!(game.vm().pc(), 0x3c80, "Enter starts stage 1");
+    for column in 0..11 {
+        assert_eq!(
+            byte(&game, 0x4248 + column * 11),
+            1,
+            "the editor top row loads at column {column}"
+        );
+        assert_eq!(
+            byte(&game, 0x4248 + column * 11 + 10),
+            1,
+            "the editor bottom row loads at column {column}"
+        );
+    }
+    assert_eq!(
+        byte(&game, 0x4248 + 5 * 11 + 5),
+        0,
+        "the middle stays empty"
+    );
+    assert_eq!(word(&game, 0x42f9), 520, "the paddle starts centered");
+    assert_eq!(byte(&game, 0x42ed), 3, "three balls are available");
+    assert_eq!(byte(&game, 0x42e9), 0, "no score yet");
+
+    let mut left = game.clone();
+    hold(&mut left, 23, 30);
+    assert!(word(&left, 0x42f9) < 520, "Left moves the paddle left");
+    let mut right = game.clone();
+    hold(&mut right, 22, 30);
+    assert!(word(&right, 0x42f9) > 520, "Right moves the paddle right");
+
+    press(&mut game, 13);
+    advance(&mut game, 40);
+    assert_ne!(word(&game, 0x4330), 0, "Enter launches the ball");
+    assert_eq!(byte(&game, 0x429f), 0, "the spawn brick is cleared");
+    assert_eq!(byte(&game, 0x42e9), 5, "the first brick scores five");
+    advance(&mut game, 400);
+    assert_eq!(game.vm().pc(), 0x3cb0, "the missed ball shows You Miss");
+    press(&mut game, 13);
+    assert_eq!(game.vm().pc(), 0x3c80, "a key respawns the ball");
+    assert_eq!(byte(&game, 0x42ed), 2, "the miss costs one ball");
+    advance(&mut game, 30);
+    press(&mut game, 13);
+    advance(&mut game, 200);
+    assert_eq!(
+        byte(&game, 0x42b6),
+        0,
+        "the second life clears a top-row brick"
+    );
+    assert_eq!(byte(&game, 0x42e9), 10, "the score accumulates");
+    assert_eq!(byte(&game, 0x42ed), 2, "the second ball is still in play");
+
+    let mut empty = load("LAVA1 Crazy_ball/crazyball.lav");
+    advance(&mut empty, 300);
+    press(&mut empty, 13);
+    assert_eq!(
+        empty.vm().pc(),
+        0x3d1f,
+        "the shipped empty stage clears at once"
+    );
+    assert_eq!(byte(&empty, 0x42e7), 1);
+    for _ in 0..4 {
+        press(&mut empty, 13);
+    }
+    assert_eq!(byte(&empty, 0x42e7), 5, "each key advances the empty stage");
+    assert_eq!(empty.vm().pc(), 0x3d1f);
+}
