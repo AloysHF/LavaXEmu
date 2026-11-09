@@ -29025,3 +29025,289 @@ fn jianghu2_demo_monochrome_and_grayscale_menus_and_new_game() {
         0x4305,
     );
 }
+
+#[test]
+#[ignore = "requires the local game corpus via LAVAX_GAME_ROOT"]
+fn poker_twenty_one_walks_the_bet_ladder_and_persists_the_purse() {
+    let word = |game: &Emulator, address: usize| {
+        u16::from_le_bytes([game.vm().memory()[address], game.vm().memory()[address + 1]])
+    };
+    let purse = |game: &Emulator| word(game, 0x2091);
+    let bet = |game: &Emulator| word(game, 0x2000);
+    let reserve = |game: &Emulator| word(game, 0x2010);
+    let card = |game: &Emulator, index: usize| game.vm().memory()[0x2095 + 3 * index];
+    let marked = |game: &Emulator, index: usize| {
+        i16::from_le_bytes([
+            game.vm().memory()[0x2096 + 3 * index],
+            game.vm().memory()[0x2097 + 3 * index],
+        ])
+    };
+    let used = |game: &Emulator| {
+        (0..52)
+            .filter(|&index| word(game, 0x2012 + 2 * index) == 0)
+            .count()
+    };
+    let region = |game: &Emulator, x0: usize, x1: usize, y0: usize, y1: usize| {
+        let width = usize::from(game.display().width());
+        game.display()
+            .indexed_frame()
+            .chunks_exact(width)
+            .skip(y0)
+            .take(y1 - y0)
+            .flat_map(|row| row[x0..x1].iter().copied())
+            .collect::<Vec<u8>>()
+    };
+
+    let mut game = load("LAVA1 puke21/扑克21.lav");
+    advance(&mut game, 300);
+    assert_eq!(game.vm().pc(), 0x19ba, "the mascot splash waits for a key");
+    assert_eq!(
+        game.run_frame().unwrap().status,
+        FrameStatus::WaitingForInput
+    );
+    assert!(
+        game.display()
+            .indexed_frame()
+            .iter()
+            .any(|&pixel| pixel != game.display().indexed_frame()[0]),
+        "the splash draws the mascot"
+    );
+    capture(&game, "poker-21-splash");
+
+    press(&mut game, 13);
+    assert_eq!(game.vm().pc(), 0xdbc, "Enter opens the betting screen");
+    assert_eq!(purse(&game), 50, "a first run starts with 50");
+    assert_eq!(bet(&game), 5, "the round opens at the minimum bet");
+    assert_eq!(reserve(&game), 45, "the bet leaves the reserve");
+
+    for (index, expected) in [10u16, 15, 20, 25, 5].into_iter().enumerate() {
+        press(&mut game, 20);
+        assert_eq!(bet(&game), expected, "Up step {index} walks the bet");
+        assert_eq!(
+            reserve(&game),
+            50 - expected,
+            "Up step {index} moves the bet out of the reserve"
+        );
+    }
+    for (index, expected) in [25u16, 20, 15, 10, 5].into_iter().enumerate() {
+        press(&mut game, 21);
+        assert_eq!(bet(&game), expected, "Down step {index} walks the bet back");
+        assert_eq!(
+            reserve(&game),
+            50 - expected,
+            "Down step {index} returns the bet to the reserve"
+        );
+    }
+    capture(&game, "poker-21-betting");
+
+    press(&mut game, b's');
+    assert_eq!(
+        game.vm().pc(),
+        0xdbc,
+        "saving keeps the betting screen open"
+    );
+    let saved = game.files_mut().take_dirty_files();
+    assert_eq!(saved.len(), 1, "the s key writes only the purse file");
+    assert_eq!(saved[0].0, "/lavadata/puke.sav");
+    assert_eq!(
+        saved[0].1,
+        [50, 0, 0, 0],
+        "the purse is stored as a 32-bit value"
+    );
+
+    press(&mut game, 25);
+    assert_ne!(game.vm().pc(), 0xdbc, "the help key opens the rules");
+    let marker = region(&game, 100, 160, 0, 70);
+    let mut blinked = false;
+    for _ in 0..120 {
+        advance(&mut game, 1);
+        if region(&game, 100, 160, 0, 70) != marker {
+            blinked = true;
+            break;
+        }
+    }
+    assert!(blinked, "the rules page blinks its continue marker");
+    capture(&game, "poker-21-rules");
+    let mut dismissed = 0;
+    loop {
+        press(&mut game, 13);
+        dismissed += 1;
+        assert!(dismissed < 8, "the rules must page back to the bet");
+        if game.vm().pc() == 0xdbc {
+            break;
+        }
+    }
+    assert_eq!(bet(&game), 5, "the rules leave the bet untouched");
+
+    press(&mut game, 13);
+    assert_eq!(game.vm().pc(), 0x1209, "Enter deals the five cards");
+    let hand = [
+        card(&game, 0),
+        card(&game, 1),
+        card(&game, 2),
+        card(&game, 3),
+        card(&game, 4),
+    ];
+    assert_eq!(hand, [9, 1, 11, 12, 9], "the deal is deterministic");
+    assert!(
+        hand.iter().all(|&rank| (1..=13).contains(&rank)),
+        "every dealt card is a rank"
+    );
+    assert!(
+        (0..5).all(|index| marked(&game, index) == -1),
+        "no card starts marked for replacement"
+    );
+    assert_eq!(used(&game), 5, "each dealt card leaves the deck");
+    let dealt = region(&game, 48, 64, 13, 39);
+    capture(&game, "poker-21-hand");
+
+    press(&mut game, b'b');
+    assert_eq!(
+        marked(&game, 0),
+        1,
+        "the first card is marked for replacement"
+    );
+    assert_ne!(
+        region(&game, 48, 64, 13, 39),
+        dealt,
+        "a marked card is drawn face down"
+    );
+    capture(&game, "poker-21-marked");
+    press(&mut game, b'b');
+    assert_eq!(
+        marked(&game, 0),
+        -1,
+        "marking the same card again clears it"
+    );
+    assert_eq!(
+        region(&game, 48, 64, 13, 39),
+        dealt,
+        "a cleared card is face up again"
+    );
+    press(&mut game, b'b');
+    press(&mut game, b'm');
+    assert_eq!(
+        [marked(&game, 0), marked(&game, 2)],
+        [1, 1],
+        "the number keys mark their own cards"
+    );
+    assert_eq!(
+        [marked(&game, 1), marked(&game, 3), marked(&game, 4)],
+        [-1, -1, -1],
+        "unmarked cards stay face up"
+    );
+
+    press(&mut game, 13);
+    assert_eq!(game.vm().pc(), 0x165f, "Enter replaces the marked cards");
+    assert_eq!(
+        [card(&game, 0), card(&game, 2)],
+        [7, 7],
+        "both marked cards are redrawn"
+    );
+    assert_eq!(
+        [card(&game, 1), card(&game, 3), card(&game, 4)],
+        [1, 12, 9],
+        "unmarked cards keep their rank"
+    );
+    assert_eq!(used(&game), 7, "each replacement consumes another card");
+    capture(&game, "poker-21-replaced");
+
+    press(&mut game, 13);
+    assert_eq!(game.vm().pc(), 0x1a33, "the hand is scored");
+    assert_eq!(word(&game, 0x2008), 1, "the pair of sevens is counted");
+    assert_eq!(purse(&game), 50, "a single pair neither wins nor loses");
+    capture(&game, "poker-21-pair");
+
+    press(&mut game, 13);
+    assert_eq!(game.vm().pc(), 0xdbc, "a key starts the next round");
+    assert_eq!(bet(&game), 5, "the new round opens at the minimum bet");
+    assert_eq!(reserve(&game), 45, "the new round bets from the purse");
+    assert_eq!(used(&game), 0, "the deck is shuffled whole again");
+
+    press(&mut game, 13);
+    assert_eq!(game.vm().pc(), 0x1209, "the second round deals");
+    assert_eq!(
+        [
+            card(&game, 0),
+            card(&game, 1),
+            card(&game, 2),
+            card(&game, 3),
+            card(&game, 4)
+        ],
+        [7, 4, 5, 9, 12],
+        "the second hand follows the deck"
+    );
+    assert_eq!(used(&game), 5, "the second deal consumes five cards");
+
+    press(&mut game, 13);
+    assert_eq!(
+        game.vm().pc(),
+        0x165f,
+        "Enter without a mark keeps the hand"
+    );
+    assert_eq!(used(&game), 5, "keeping the hand consumes no card");
+    press(&mut game, 13);
+    assert_eq!(word(&game, 0x2008), 0, "the second hand holds no pair");
+    assert_eq!(purse(&game), 45, "a losing hand costs the bet");
+    assert_eq!(reserve(&game), 45, "the reserve keeps the lost bet");
+    capture(&game, "poker-21-lost");
+
+    press(&mut game, 27);
+    assert_eq!(game.vm().pc(), 0xa24, "Esc quits from the round break");
+    assert_eq!(
+        game.run_frame().unwrap().status,
+        FrameStatus::WaitingForInput,
+        "the farewell screen waits for a key"
+    );
+    let saved = game.files_mut().take_dirty_files();
+    assert_eq!(saved.len(), 1, "quitting stores the purse once");
+    assert_eq!(
+        saved[0].1,
+        [45, 0, 0, 0],
+        "the farewell screen stores the lost purse"
+    );
+    capture(&game, "poker-21-farewell");
+    game.input_mut().set_keys([13]);
+    let mut halted = None;
+    for _ in 0..60 {
+        if let FrameStatus::Halted(code) = game.run_frame().unwrap().status {
+            halted = Some(code);
+            break;
+        }
+    }
+    assert_eq!(halted, Some(0), "the farewell key exits cleanly");
+
+    let mut reloaded = load("LAVA1 puke21/扑克21.lav");
+    reloaded
+        .files_mut()
+        .import_file("/lavadata/puke.sav", vec![45, 0, 0, 0]);
+    advance(&mut reloaded, 300);
+    assert_eq!(
+        reloaded.vm().pc(),
+        0x19ba,
+        "the stored purse does not skip the splash"
+    );
+    press(&mut reloaded, 13);
+    assert_eq!(purse(&reloaded), 45, "the stored purse is restored");
+    assert_eq!(
+        reserve(&reloaded),
+        40,
+        "the restored purse funds a smaller reserve"
+    );
+
+    let mut broke = load("LAVA1 puke21/扑克21.lav");
+    broke
+        .files_mut()
+        .import_file("/lavadata/puke.sav", vec![0, 0, 0, 0]);
+    advance(&mut broke, 300);
+    press(&mut broke, 13);
+    assert_eq!(
+        purse(&broke),
+        50,
+        "an empty purse is refinanced before the first bet"
+    );
+    assert!(
+        broke.files_mut().take_dirty_files().is_empty(),
+        "the purse is only written on the way out"
+    );
+}
