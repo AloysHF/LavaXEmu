@@ -28806,3 +28806,113 @@ fn crazy_ball_editor_saves_a_pack_that_scores_bricks_and_loses_balls() {
     assert_eq!(byte(&empty, 0x42e7), 5, "each key advances the empty stage");
     assert_eq!(empty.vm().pc(), 0x3d1f);
 }
+
+#[test]
+#[ignore = "requires the local game corpus via LAVAX_GAME_ROOT"]
+fn cs_blue_action_menu_missions_settings_and_raycaster_gameplay() {
+    let byte = |game: &Emulator, address: usize| game.vm().memory()[address];
+    let beword = |game: &Emulator, address: usize| {
+        u16::from_be_bytes([game.vm().memory()[address], game.vm().memory()[address + 1]])
+    };
+
+    let mut game = load("LAVA1 CS蓝色行动/CS蓝色行动.lav");
+    advance(&mut game, 300);
+    assert_eq!(game.vm().pc(), 0x3ce4, "the splash waits for a key");
+    press(&mut game, 13);
+    advance(&mut game, 60);
+    press(&mut game, 13);
+    advance(&mut game, 120);
+    assert_eq!(game.vm().pc(), 0x369a, "the four-entry CS menu opens");
+    assert_eq!(
+        byte(&game, 0x4198),
+        1,
+        "the cursor starts on the first entry"
+    );
+
+    for _ in 0..5 {
+        press(&mut game, 21);
+    }
+    assert_eq!(byte(&game, 0x4198), 4, "Down clamps at the exit entry");
+    for _ in 0..6 {
+        press(&mut game, 20);
+    }
+    assert_eq!(byte(&game, 0x4198), 1, "Up clamps at the first entry");
+
+    let mut practice = game.clone();
+    press(&mut practice, 13);
+    assert_eq!(
+        practice.vm().pc(),
+        0x37a1,
+        "practice shows the contest notice"
+    );
+    press(&mut practice, 13);
+    assert_eq!(
+        practice.vm().pc(),
+        0x37b8,
+        "the notice ends on the thanks page"
+    );
+
+    let mut settings = game.clone();
+    press(&mut settings, 21);
+    press(&mut settings, 21);
+    assert_eq!(byte(&settings, 0x4198), 3);
+    press(&mut settings, 13);
+    assert_eq!(
+        settings.vm().pc(),
+        0x3604,
+        "settings opens the sensitivity overlay"
+    );
+    assert_eq!(byte(&settings, 0x34e9), 2, "sensitivity starts at two");
+    press(&mut settings, 20);
+    assert_eq!(byte(&settings, 0x34e9), 1, "Up lowers the sensitivity");
+    press(&mut settings, 21);
+    press(&mut settings, 21);
+    assert_eq!(byte(&settings, 0x34e9), 3, "Down raises the sensitivity");
+    press(&mut settings, 13);
+    assert_eq!(settings.vm().pc(), 0x369a, "Enter returns to the menu");
+
+    let mut exit = game.clone();
+    for _ in 0..3 {
+        press(&mut exit, 21);
+    }
+    assert_eq!(byte(&exit, 0x4198), 4);
+    exit.input_mut().set_keys([13]);
+    let mut halted = None;
+    for _ in 0..90 {
+        if let FrameStatus::Halted(code) = exit.run_frame().unwrap().status {
+            halted = Some(code);
+            break;
+        }
+    }
+    assert_eq!(halted, Some(0), "the exit entry halts cleanly");
+
+    press(&mut game, 21);
+    assert_eq!(byte(&game, 0x4198), 2);
+    press(&mut game, 13);
+    assert_eq!(game.vm().pc(), 0x2e7c, "the mission selector opens");
+    assert_eq!(byte(&game, 0x2006), 0, "the first mission is selected");
+    press(&mut game, 21);
+    assert_eq!(byte(&game, 0x2006), 1, "Down selects the next mission");
+    press(&mut game, 20);
+    assert_eq!(byte(&game, 0x2006), 0, "Up returns to the first mission");
+    press(&mut game, 13);
+    assert_eq!(game.vm().pc(), 0x3379, "the mission briefing opens");
+    press(&mut game, 13);
+    assert_eq!(
+        game.vm().pc(),
+        0x338e,
+        "the briefing leads to the story page"
+    );
+    press(&mut game, 13);
+    advance(&mut game, 60);
+    assert_eq!(beword(&game, 0x4240), 100, "health starts at one hundred");
+    assert_eq!(beword(&game, 0x34f2), 30, "the clip holds thirty rounds");
+    assert_eq!(beword(&game, 0x34f4), 120, "the reserve holds 120 rounds");
+    let before = beword(&game, 0x3508);
+    hold(&mut game, 20, 15);
+    advance(&mut game, 10);
+    assert!(
+        beword(&game, 0x3508) > before,
+        "Up walks the player forward"
+    );
+}
