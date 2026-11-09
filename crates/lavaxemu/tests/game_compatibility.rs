@@ -29311,3 +29311,357 @@ fn poker_twenty_one_walks_the_bet_ladder_and_persists_the_purse() {
         "the purse is only written on the way out"
     );
 }
+
+#[test]
+#[ignore = "requires the local game corpus via LAVAX_GAME_ROOT"]
+fn pala_aftermath_shares_the_title_list_story_and_map_in_all_three_builds() {
+    fn word(game: &Emulator, address: usize) -> u16 {
+        u16::from_le_bytes([game.vm().memory()[address], game.vm().memory()[address + 1]])
+    }
+
+    fn scene(game: &Emulator) -> u64 {
+        let mut hash = 0xcbf29ce484222325u64;
+        for &pixel in game.display().indexed_frame() {
+            hash = (hash ^ u64::from(pixel)).wrapping_mul(0x100000001b3);
+        }
+        hash
+    }
+
+    struct Build {
+        tag: &'static str,
+        path: &'static str,
+        title: usize,
+        menu: usize,
+        notice: usize,
+        story: usize,
+        credits: usize,
+        map: usize,
+    }
+
+    const BUILDS: [Build; 3] = [
+        Build {
+            tag: "main",
+            path: "LAVA1 仙剑后传/Pala.lav",
+            title: 0x38d3,
+            menu: 0x13e4,
+            notice: 0x0411,
+            story: 0x03f6,
+            credits: 0x3997,
+            map: 0x0aefe,
+        },
+        Build {
+            tag: "nc",
+            path: "LAVA1 仙剑后传/Pala_.lav",
+            title: 0x38d5,
+            menu: 0x13e6,
+            notice: 0x0412,
+            story: 0x03f7,
+            credits: 0x3999,
+            map: 0x0af00,
+        },
+        Build {
+            tag: "tc800",
+            path: "LAVA1 仙剑后传/Pala_TC800.lav",
+            title: 0x38dd,
+            menu: 0x13ee,
+            notice: 0x041a,
+            story: 0x03ff,
+            credits: 0x39a1,
+            map: 0x0af08,
+        },
+    ];
+
+    let wait_title = |path: &str, title: usize| -> Emulator {
+        let mut game = load(path);
+        for _ in 0..40 {
+            advance(&mut game, 60);
+            if (title..title + 2).contains(&game.vm().pc()) {
+                return game;
+            }
+        }
+        panic!("{path} never reached the title screen");
+    };
+
+    let mut screens: Vec<Vec<u64>> = Vec::new();
+    for build in &BUILDS {
+        let mut shots = Vec::new();
+        let title = wait_title(build.path, build.title);
+        let mut game = title.clone();
+        assert_eq!(
+            word(&game, 0x1b0c),
+            0x0001,
+            "{} starts the title on its first entry",
+            build.tag
+        );
+        shots.push(scene(&game));
+        capture(&game, &format!("pala-{}-title", build.tag));
+
+        press(&mut game, 13);
+        assert_eq!(
+            game.vm().pc(),
+            build.menu,
+            "{} Enter on the first title entry opens the saved-game list",
+            build.tag
+        );
+        assert_eq!(
+            word(&game, 0x1b0c),
+            0x26,
+            "{} the first slot starts highlighted",
+            build.tag
+        );
+        assert_ne!(
+            scene(&game),
+            shots[0],
+            "{} the list draws over the title",
+            build.tag
+        );
+        shots.push(scene(&game));
+        capture(&game, &format!("pala-{}-list", build.tag));
+
+        let mut cursor = Vec::new();
+        for _ in 0..4 {
+            press(&mut game, 21);
+            cursor.push(word(&game, 0x1b0c));
+            shots.push(scene(&game));
+        }
+        assert_eq!(
+            cursor,
+            [0x33, 0x40, 0x40, 0x40],
+            "{} Down walks the three slots and then stops",
+            build.tag
+        );
+        let mut cursor = Vec::new();
+        for _ in 0..4 {
+            press(&mut game, 20);
+            cursor.push(word(&game, 0x1b0c));
+            shots.push(scene(&game));
+        }
+        assert_eq!(
+            cursor,
+            [0x33, 0x26, 0x26, 0x26],
+            "{} Up walks back to the first slot and then stops",
+            build.tag
+        );
+        assert_eq!(
+            game.vm().pc(),
+            build.menu,
+            "{} both walks stay in the list",
+            build.tag
+        );
+
+        press(&mut game, 13);
+        assert_eq!(
+            game.vm().pc(),
+            build.notice,
+            "{} an empty slot is refused instead of loaded",
+            build.tag
+        );
+        assert_eq!(
+            word(&game, 0x1b0c),
+            0x48,
+            "{} the refusal shows the failed-read notice",
+            build.tag
+        );
+        assert_ne!(
+            scene(&game),
+            *shots.last().unwrap(),
+            "{} the notice draws over the list",
+            build.tag
+        );
+        shots.push(scene(&game));
+        capture(&game, &format!("pala-{}-refused", build.tag));
+
+        press(&mut game, 13);
+        assert_eq!(
+            game.vm().pc(),
+            build.menu,
+            "{} a key returns from the refusal to the list",
+            build.tag
+        );
+        assert_eq!(
+            word(&game, 0x1b0c),
+            0x26,
+            "{} the list reopens on the first slot",
+            build.tag
+        );
+        shots.push(scene(&game));
+
+        press(&mut game, 27);
+        assert!(
+            (build.title..build.title + 2).contains(&game.vm().pc()),
+            "{} Escape leaves the list for the title",
+            build.tag
+        );
+        assert_eq!(
+            word(&game, 0x1b0c),
+            0x0001,
+            "{} the title is reset to its first entry",
+            build.tag
+        );
+        shots.push(scene(&game));
+
+        press(&mut game, 20);
+        assert_ne!(
+            scene(&game),
+            shots[shots.len() - 2],
+            "{} Up wraps the title to its last entry",
+            build.tag
+        );
+        shots.push(scene(&game));
+        press(&mut game, 13);
+        assert_eq!(
+            game.vm().pc(),
+            build.story,
+            "{} Enter on the last title entry starts a new game",
+            build.tag
+        );
+
+        let mut intro = vec![scene(&game)];
+        for _ in 0..30 {
+            press(&mut game, 13);
+            intro.push(scene(&game));
+        }
+        assert!(
+            intro.windows(2).take(8).all(|pair| pair[0] != pair[1]),
+            "{} every key turns the opening dialogue",
+            build.tag
+        );
+        assert_eq!(
+            word(&game, 0x1b0c),
+            0x10,
+            "{} the opening ends in the first scene",
+            build.tag
+        );
+        assert_eq!(
+            game.vm().pc(),
+            build.map,
+            "{} the opening ends on the map loop",
+            build.tag
+        );
+        shots.extend(intro);
+        let map = scene(&game);
+        capture(&game, &format!("pala-{}-map", build.tag));
+        assert!(
+            game.files().file("/paladata.dat").is_some(),
+            "{} the story data is mounted next to the program",
+            build.tag
+        );
+        assert!(
+            game.files().file("/palasave1.dat").is_none(),
+            "{} the opening writes no save",
+            build.tag
+        );
+
+        for (key, name) in [
+            (b's', "status"),
+            (b'w', "attribute"),
+            (b'x', "skill"),
+            (b'e', "item"),
+        ] {
+            let mut branch = game.clone();
+            press(&mut branch, key);
+            assert_eq!(
+                branch.vm().pc(),
+                build.menu,
+                "{} the {name} key opens a menu",
+                build.tag
+            );
+            assert_ne!(
+                scene(&branch),
+                map,
+                "{} the {name} menu draws over the map",
+                build.tag
+            );
+            shots.push(scene(&branch));
+            capture(&branch, &format!("pala-{}-{name}", build.tag));
+            press(&mut branch, 27);
+            assert_eq!(
+                scene(&branch),
+                map,
+                "{} Escape closes the {name} menu back onto the map",
+                build.tag
+            );
+        }
+
+        for (key, name) in [(21u8, "south"), (22, "east"), (23, "west")] {
+            let before = scene(&game);
+            for _ in 0..6 {
+                press(&mut game, key);
+            }
+            assert_ne!(scene(&game), before, "{} {name} walks the hero", build.tag);
+            assert_eq!(
+                word(&game, 0x1b0c),
+                0x10,
+                "{} {name} keeps the hero on the map",
+                build.tag
+            );
+            assert_eq!(
+                game.vm().pc(),
+                build.map,
+                "{} {name} returns to the map loop",
+                build.tag
+            );
+            shots.push(scene(&game));
+        }
+        capture(&game, &format!("pala-{}-walked", build.tag));
+        assert!(
+            game.files_mut().take_dirty_files().is_empty(),
+            "{} walking and the menus write no save",
+            build.tag
+        );
+
+        let mut credits = title.clone();
+        press(&mut credits, 21);
+        press(&mut credits, 13);
+        assert!(
+            (build.credits - 4..build.credits + 4).contains(&credits.vm().pc()),
+            "{} the second title entry opens the credits",
+            build.tag
+        );
+        assert_eq!(
+            word(&credits, 0x1b0c),
+            0x82,
+            "{} the credits roll their own notice",
+            build.tag
+        );
+        shots.push(scene(&credits));
+        capture(&credits, &format!("pala-{}-credits", build.tag));
+
+        let mut quit = title.clone();
+        press(&mut quit, 21);
+        press(&mut quit, 21);
+        shots.push(scene(&quit));
+        capture(&quit, &format!("pala-{}-quit", build.tag));
+        quit.input_mut().set_keys([13]);
+        let mut exit = None;
+        for _ in 0..180 {
+            if let FrameStatus::Halted(code) = quit.run_frame().expect("game must execute").status {
+                exit = Some(code);
+                break;
+            }
+        }
+        assert_eq!(
+            exit,
+            Some(0),
+            "{} the third title entry exits cleanly",
+            build.tag
+        );
+
+        screens.push(shots);
+    }
+
+    for (index, shots) in screens.iter().enumerate().skip(1) {
+        assert_eq!(
+            shots.len(),
+            screens[0].len(),
+            "{} and {} walk the same number of screens",
+            BUILDS[0].tag,
+            BUILDS[index].tag
+        );
+        assert_eq!(
+            shots, &screens[0],
+            "{} paints exactly the screens {} paints",
+            BUILDS[index].tag, BUILDS[0].tag
+        );
+    }
+}
