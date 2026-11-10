@@ -31369,3 +31369,220 @@ fn magic_puzzle_covers_logo_preview_shuffle_swap_and_exit() {
         assert!(game.files_mut().take_dirty_files().is_empty());
     }
 }
+
+#[test]
+#[ignore = "requires the local game corpus via LAVAX_GAME_ROOT"]
+fn magic_box_covers_menu_settings_help_rank_game_and_exit() {
+    fn scene(game: &Emulator) -> u64 {
+        let mut hash = 0xcbf29ce484222325u64;
+        for &pixel in game.display().indexed_frame() {
+            hash = (hash ^ u64::from(pixel)).wrapping_mul(0x100000001b3);
+        }
+        hash
+    }
+    fn byte(game: &Emulator, address: usize) -> u8 {
+        game.vm().memory()[address]
+    }
+    fn board(game: &Emulator) -> Vec<u8> {
+        game.vm().memory()[BOARD..BOARD + 112].to_vec()
+    }
+    fn tap_and_halt(game: &mut Emulator, key: u8, limit: usize) -> Option<i32> {
+        for _ in 0..6 {
+            game.input_mut().set_keys([key]);
+            game.run_frame().unwrap();
+        }
+        game.input_mut().set_keys([]);
+        for _ in 0..limit {
+            if let FrameStatus::Halted(code) = game.run_frame().unwrap().status {
+                return Some(code);
+            }
+        }
+        None
+    }
+
+    const LOOSE: &str = "LAVA1 魔法方块/魔法方块.lav";
+    // The HUD timer, falling-piece column, repeat delay and key map are fixed
+    // data-segment offsets; the 8x14 board follows the key map.
+    const TIMER: usize = 0x2000;
+    const PIECE_X: usize = 0x2004;
+    const REPEAT_DELAY: usize = 0x2012;
+    const KEYS: usize = 0x2054;
+    const BOARD: usize = 0x2059;
+    const FIRST_NAME: usize = 0x20d0;
+    let empty_board = {
+        let mut cells = vec![0u8; 112];
+        for x in 0..8 {
+            cells[x * 14 + 13] = 10;
+        }
+        for y in 0..14 {
+            cells[y] = 10;
+            cells[7 * 14 + y] = 10;
+        }
+        cells
+    };
+
+    let mut game = load(LOOSE);
+    advance(&mut game, 300);
+    assert_eq!(game.display().width(), 160);
+    assert_eq!(game.display().height(), 80);
+    assert_eq!(game.vm().pc(), 0x26db);
+    assert_eq!(scene(&game), 0x66bfd7feefcd3992);
+    capture(&game, "box-title");
+
+    // A fresh boot seeds the score file with placeholder names, the default
+    // key map and repeat delay.
+    let seeded = game.files_mut().take_dirty_files();
+    assert_eq!(seeded.len(), 1);
+    assert_eq!(seeded[0].0, "/lavadata/mofabox.dat");
+    assert_eq!(seeded[0].1.len(), 59);
+    assert_eq!(&seeded[0].1[12..18], &[206, 222, 188, 199, 194, 188]);
+    assert_eq!(&seeded[0].1[48..53], &[23, 22, 21, 13, 20]);
+    assert_eq!(seeded[0].1[58], 10);
+
+    // The leaderboard lists six placeholder scores and returns on any key.
+    hold(&mut game, 21, 6);
+    assert_eq!(scene(&game), 0xe3b609f276286286);
+    hold(&mut game, 13, 6);
+    assert_eq!(game.vm().pc(), 0xffb);
+    assert_eq!(scene(&game), 0xb84625fd7c813ad2);
+    assert_eq!(
+        &game.vm().memory()[FIRST_NAME..FIRST_NAME + 6],
+        &[206, 222, 188, 199, 194, 188]
+    );
+    capture(&game, "box-rank");
+    hold(&mut game, 32, 6);
+    assert_eq!(game.vm().pc(), 0x26db);
+    assert_eq!(scene(&game), 0xe3b609f276286286);
+
+    // The help page scrolls one window at a time and escapes to the menu.
+    hold(&mut game, 21, 6);
+    assert_eq!(scene(&game), 0xae58799a430f9182);
+    hold(&mut game, 13, 6);
+    assert_eq!(game.vm().pc(), 0x481);
+    assert_eq!(scene(&game), 0x3960159070e85e77);
+    capture(&game, "box-help");
+    hold(&mut game, 21, 6);
+    assert_eq!(scene(&game), 0x573a75ae7c72571b);
+    hold(&mut game, 21, 6);
+    assert_eq!(scene(&game), 0x942210b92c21fe18);
+    hold(&mut game, 20, 6);
+    assert_eq!(scene(&game), 0x573a75ae7c72571b);
+    hold(&mut game, 27, 6);
+    assert_eq!(game.vm().pc(), 0x26db);
+    assert_eq!(scene(&game), 0xae58799a430f9182);
+
+    // Rebinding the first key: five presses then Y persist the new map.
+    hold(&mut game, 23, 6);
+    assert_eq!(scene(&game), 0xe753909ff169849a);
+    hold(&mut game, 13, 6);
+    assert_eq!(game.vm().pc(), 0x5ef);
+    assert_eq!(scene(&game), 0x88d619f46be2caeb);
+    capture(&game, "box-settings");
+    hold(&mut game, 13, 6);
+    assert_eq!(game.vm().pc(), 0x87f);
+    assert_eq!(scene(&game), 0x55afb36db074e78c);
+    capture(&game, "box-keys");
+    for key in [b'a', 22, 21, 13, 20] {
+        hold(&mut game, key, 6);
+    }
+    assert_eq!(game.vm().pc(), 0x928);
+    hold(&mut game, b'y', 6);
+    assert_eq!(game.vm().pc(), 0x5ef);
+    assert_eq!(byte(&game, KEYS), b'a');
+    let rebound = game.files_mut().take_dirty_files();
+    assert_eq!(rebound.len(), 1);
+    assert_eq!(&rebound[0].1[48..53], &[b'a', 22, 21, 13, 20]);
+
+    // The repeat delay wraps in 6..=15 and Enter writes it back.
+    hold(&mut game, 21, 6);
+    assert_eq!(scene(&game), 0xcee7c51facc4af0f);
+    hold(&mut game, 13, 6);
+    assert_eq!(game.vm().pc(), 0x6d2);
+    assert_eq!(scene(&game), 0xb584979bf66796d0);
+    assert_eq!(byte(&game, REPEAT_DELAY), 10);
+    hold(&mut game, 23, 6);
+    assert_eq!(byte(&game, REPEAT_DELAY), 9);
+    assert_eq!(scene(&game), 0x9dfc9fba03552272);
+    capture(&game, "box-delay");
+    hold(&mut game, 23, 6);
+    assert_eq!(byte(&game, REPEAT_DELAY), 8);
+    hold(&mut game, 22, 6);
+    assert_eq!(byte(&game, REPEAT_DELAY), 9);
+    hold(&mut game, 13, 6);
+    assert_eq!(game.vm().pc(), 0x5ef);
+    let saved = game.files_mut().take_dirty_files();
+    assert_eq!(saved.len(), 1);
+    assert_eq!(saved[0].1[48], b'a');
+    assert_eq!(saved[0].1[58], 9);
+
+    // Escape backs out to the menu and then exits with code 0.
+    hold(&mut game, 27, 6);
+    assert_eq!(game.vm().pc(), 0x26db);
+    assert_eq!(scene(&game), 0xe753909ff169849a);
+    assert_eq!(tap_and_halt(&mut game, 27, 400), Some(0));
+
+    // Traditional mode: steer, rotate, hard drop, pause and leave.
+    let mut game = load(LOOSE);
+    advance(&mut game, 300);
+    hold(&mut game, 13, 6);
+    assert_eq!(game.vm().pc(), 0x229e);
+    assert_eq!(scene(&game), 0x8529bd7bbc27489a);
+    assert_eq!(board(&game), empty_board);
+    assert_eq!(byte(&game, TIMER), 0x2c);
+    assert_eq!(byte(&game, PIECE_X), 3);
+    capture(&game, "box-play");
+    hold(&mut game, 23, 6);
+    assert_eq!(byte(&game, PIECE_X), 2);
+    assert_eq!(scene(&game), 0x1f40bd97b05d2bc9);
+    hold(&mut game, 22, 6);
+    assert_eq!(byte(&game, PIECE_X), 3);
+    hold(&mut game, 22, 6);
+    assert_eq!(byte(&game, PIECE_X), 4);
+    hold(&mut game, 20, 6);
+    assert_eq!(scene(&game), 0x6dac636befec11eb);
+    hold(&mut game, 21, 6);
+    assert_eq!(scene(&game), 0x4f21fd4d0ec0f574);
+    let mut landed = empty_board.clone();
+    landed[4 * 14 + 12] = 3;
+    landed[5 * 14 + 12] = 1;
+    landed[6 * 14 + 12] = 2;
+    assert_eq!(board(&game), landed);
+    advance(&mut game, 120);
+    assert_eq!(scene(&game), 0x88af3d0d6ef278ce);
+    assert_eq!(board(&game), landed);
+    hold(&mut game, 13, 6);
+    assert_eq!(game.vm().pc(), 0x23c8);
+    assert_eq!(scene(&game), 0x0d48770453313544);
+    hold(&mut game, 13, 6);
+    assert_eq!(game.vm().pc(), 0x229e);
+    hold(&mut game, 27, 6);
+    assert_eq!(game.vm().pc(), 0x26db);
+    assert_eq!(scene(&game), 0x66bfd7feefcd3992);
+
+    // Limit mode counts the 300-second clock down one second per 60 frames.
+    let mut game = load(LOOSE);
+    advance(&mut game, 300);
+    hold(&mut game, 22, 6);
+    assert_eq!(scene(&game), 0xedac9d3ad5974762);
+    hold(&mut game, 13, 6);
+    assert_eq!(game.vm().pc(), 0x229e);
+    assert_eq!(scene(&game), 0x11f15efd054e651f);
+    assert_eq!(byte(&game, TIMER), 0x2b);
+    advance(&mut game, 60);
+    assert_eq!(scene(&game), 0x81500d17d5ca9e53);
+    assert_eq!(byte(&game, TIMER), 0x2a);
+    advance(&mut game, 300);
+    assert_eq!(scene(&game), 0x0cb714791230bf8b);
+    assert_eq!(byte(&game, TIMER), 0x25);
+    capture(&game, "box-limit");
+    hold(&mut game, 27, 6);
+    assert_eq!(game.vm().pc(), 0x26db);
+    assert_eq!(scene(&game), 0xedac9d3ad5974762);
+
+    // The quit entry halts with code 0.
+    let mut game = load(LOOSE);
+    advance(&mut game, 300);
+    hold(&mut game, 23, 6);
+    assert_eq!(scene(&game), 0xdba1f07376a6dc3a);
+    assert_eq!(tap_and_halt(&mut game, 13, 400), Some(0));
+}
