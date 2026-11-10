@@ -30505,3 +30505,211 @@ fn wind_fighter_covers_menu_settings_character_select_and_battles() {
     assert_eq!(halted_by(boot(), 27), Some(0));
     assert_eq!(halted_by(boot(), 116), Some(0));
 }
+
+#[test]
+#[ignore = "requires the local game corpus via LAVAX_GAME_ROOT"]
+fn fly_science_covers_tool_tabs_and_the_periodic_table() {
+    fn scene(game: &Emulator) -> u64 {
+        let mut hash = 0xcbf29ce484222325u64;
+        for &pixel in game.display().indexed_frame() {
+            hash = (hash ^ u64::from(pixel)).wrapping_mul(0x100000001b3);
+        }
+        hash
+    }
+    fn boot(path: &str) -> Emulator {
+        let mut game = load(path);
+        advance(&mut game, 240);
+        game
+    }
+    fn open(path: &str, pages: usize, rows: usize, columns: usize) -> Emulator {
+        let mut game = boot(path);
+        hold(&mut game, 13, 6);
+        hold(&mut game, 21, 6);
+        for _ in 0..pages {
+            hold(&mut game, 14, 6);
+        }
+        for _ in 0..rows {
+            hold(&mut game, 21, 6);
+        }
+        for _ in 0..columns {
+            hold(&mut game, 22, 6);
+        }
+        hold(&mut game, 13, 6);
+        game
+    }
+    fn type_keys(game: &mut Emulator, text: &str) {
+        for key in text.bytes() {
+            hold(game, key, 3);
+        }
+    }
+
+    const SUITE: &str = "LAVA1 飞翔理科/飞翔理科1020.lav";
+    const TABLE: &str = "LAVA1 飞翔理科/元素周期.lav";
+
+    // The suite opens on a title card and an author page before the tool grid.
+    let mut suite = boot(SUITE);
+    assert_eq!(suite.vm().pc(), 0x19b5);
+    assert_eq!(scene(&suite), 0x3297b58674a925f2);
+    capture(&suite, "fly-title");
+    hold(&mut suite, 13, 6);
+    assert_eq!(suite.vm().pc(), 0x6fd6);
+    assert_eq!(scene(&suite), 0x6fc3cf8af091f50e);
+    capture(&suite, "fly-author-page");
+
+    // PageDown walks the tool tabs: math, physics, chemistry, biology, author.
+    let mut tabs = Vec::new();
+    for _ in 0..4 {
+        hold(&mut suite, 14, 6);
+        assert_eq!(suite.vm().pc(), 0x2417);
+        tabs.push(scene(&suite));
+    }
+    assert_eq!(
+        tabs,
+        [
+            0x2c2519abfb45d207,
+            0x5851aa007a380ccd,
+            0xe79b531ebf46664f,
+            0x612cffadc2835215
+        ]
+    );
+    capture(&suite, "fly-tab-author");
+
+    // Geometry: distance 3 against radius 5 puts the point inside the circle.
+    let mut position = open(SUITE, 0, 2, 1);
+    hold(&mut position, b'b', 6);
+    hold(&mut position, b'b', 6);
+    type_keys(&mut position, "5");
+    hold(&mut position, 13, 3);
+    type_keys(&mut position, "3");
+    hold(&mut position, 13, 3);
+    assert_eq!(position.vm().pc(), 0x383e);
+    assert_eq!(scene(&position), 0x462a49208f25a4f3);
+    capture(&position, "fly-position-inside-circle");
+
+    // Function graph draws a proportional line after the scale is committed.
+    let mut graph = open(SUITE, 0, 2, 0);
+    hold(&mut graph, 13, 6);
+    type_keys(&mut graph, "100");
+    hold(&mut graph, 13, 6);
+    advance(&mut graph, 960);
+    assert_eq!(graph.vm().pc(), 0x2878);
+    assert_eq!(scene(&graph), 0xabd52413358f2cbb);
+    capture(&graph, "fly-graph-line");
+    advance(&mut graph, 240);
+    assert_eq!(
+        scene(&graph),
+        0xabd52413358f2cbb,
+        "the finished graph is stable"
+    );
+
+    // Projectile motion animates the ballistic path.
+    let mut projectile = open(SUITE, 1, 0, 0);
+    for value in ["50", "10", "5"] {
+        type_keys(&mut projectile, value);
+        hold(&mut projectile, 13, 3);
+    }
+    advance(&mut projectile, 40);
+    assert_eq!(projectile.vm().pc(), 0x51f8);
+    assert_eq!(scene(&projectile), 0x5150f583f1f4fc6b);
+    capture(&projectile, "fly-projectile");
+
+    // Chemistry directs the periodic table to its standalone program.
+    let mut notice = open(SUITE, 2, 0, 1);
+    hold(&mut notice, 13, 6);
+    assert_eq!(notice.vm().pc(), 0x5bb3);
+    assert_eq!(scene(&notice), 0xa35632c046bf8f1b);
+    capture(&notice, "fly-chemistry-periodic-notice");
+
+    // Placeholder tools report that the feature is unavailable.
+    let mut balance = open(SUITE, 2, 0, 2);
+    hold(&mut balance, 13, 6);
+    assert_eq!(balance.vm().pc(), 0x5b60);
+    assert_eq!(scene(&balance), 0x604f5193812ba677);
+    capture(&balance, "fly-chemistry-unavailable");
+
+    // pH 7 is neutral with a hydrogen ion concentration of 1e-7.
+    let mut ph = open(SUITE, 2, 2, 0);
+    type_keys(&mut ph, "7");
+    hold(&mut ph, 13, 6);
+    assert_eq!(ph.vm().pc(), 0x5d23);
+    assert_eq!(scene(&ph), 0x5344ffd223eb04ab);
+    capture(&ph, "fly-ph");
+
+    // C3H8 burns with 5 O2, producing 4 H2O and 3 CO2.
+    let mut combustion = open(SUITE, 2, 1, 0);
+    for value in ["3", "8", "0"] {
+        type_keys(&mut combustion, value);
+        hold(&mut combustion, 13, 3);
+    }
+    assert_eq!(combustion.vm().pc(), 0x5e82);
+    assert_eq!(scene(&combustion), 0xe3510063d275d098);
+    capture(&combustion, "fly-combustion");
+
+    // Aa x Aa segregation lists the F1 ratio.
+    let mut segregation = open(SUITE, 3, 0, 0);
+    for _ in 0..3 {
+        hold(&mut segregation, 13, 3);
+    }
+    hold(&mut segregation, b'n', 6);
+    hold(&mut segregation, b'n', 6);
+    assert_eq!(segregation.vm().pc(), 0x6e2d);
+    assert_eq!(scene(&segregation), 0xa260f7abd4fe6862);
+    capture(&segregation, "fly-segregation");
+
+    // 30 AA, 50 Aa and 20 aa give gene frequencies of 55% and 45%.
+    let mut frequency = open(SUITE, 3, 0, 1);
+    hold(&mut frequency, 13, 3);
+    for value in ["100", "30", "50", "20"] {
+        type_keys(&mut frequency, value);
+        hold(&mut frequency, 13, 3);
+    }
+    assert_eq!(frequency.vm().pc(), 0x6764);
+    assert_eq!(scene(&frequency), 0xa4cd1daf8e06b2e9);
+    capture(&frequency, "fly-gene-frequency");
+
+    // Mark-recapture estimates 320 animals from 40/40/5.
+    let mut mark = open(SUITE, 3, 0, 2);
+    for _ in 0..3 {
+        hold(&mut mark, 13, 3);
+    }
+    for value in ["40", "40", "5"] {
+        type_keys(&mut mark, value);
+        hold(&mut mark, 13, 3);
+    }
+    assert_eq!(mark.vm().pc(), 0x652d);
+    assert_eq!(scene(&mark), 0x70b5fd049499970d);
+    capture(&mark, "fly-mark-recapture");
+
+    // The standalone periodic table tracks the cursor across periods and groups.
+    let mut table = boot(TABLE);
+    assert_eq!(table.vm().pc(), 0x2dd4);
+    assert_eq!(scene(&table), 0x3297b58674a925f2);
+    hold(&mut table, 13, 6);
+    assert_eq!(table.vm().pc(), 0x2e2d);
+    let mut elements = vec![scene(&table)];
+    capture(&table, "fly-periodic-hydrogen");
+    for (key, expected) in [
+        (21, 0x25231dd6cb6d0c50u64),
+        (22, 0x780c4cb9be548a2a),
+        (21, 0xca7c019f163609df),
+        (20, 0x780c4cb9be548a2a),
+        (22, 0x466c2c9cecb42ebc),
+        (21, 0x3a6197286a44b2ff),
+    ] {
+        hold(&mut table, key, 6);
+        assert_eq!(scene(&table), expected);
+        elements.push(expected);
+    }
+    assert_eq!(elements[0], 0xb68ed36a80aad05b, "hydrogen is selected");
+    capture(&table, "fly-periodic-aluminium");
+
+    // The transition-metal gap has no element card, and other keys are inert.
+    hold(&mut table, 21, 6);
+    assert_eq!(scene(&table), 0x010397ae60cebe87);
+    capture(&table, "fly-periodic-empty-cell");
+    hold(&mut table, b'l', 6);
+    hold(&mut table, 13, 6);
+    type_keys(&mut table, "26");
+    hold(&mut table, 13, 6);
+    assert_eq!(scene(&table), 0x010397ae60cebe87);
+}
