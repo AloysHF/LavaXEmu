@@ -30713,3 +30713,144 @@ fn fly_science_covers_tool_tabs_and_the_periodic_table() {
     hold(&mut table, 13, 6);
     assert_eq!(scene(&table), 0x010397ae60cebe87);
 }
+
+#[test]
+#[ignore = "requires the local game corpus via LAVAX_GAME_ROOT"]
+fn flight_chess_covers_menu_config_roll_and_exit() {
+    fn scene(game: &Emulator) -> u64 {
+        let mut hash = 0xcbf29ce484222325u64;
+        for &pixel in game.display().indexed_frame() {
+            hash = (hash ^ u64::from(pixel)).wrapping_mul(0x100000001b3);
+        }
+        hash
+    }
+    fn byte(game: &Emulator, address: usize) -> u8 {
+        game.vm().memory()[address]
+    }
+    fn wait_pc(game: &mut Emulator, pc: usize, limit: usize) {
+        for _ in 0..limit {
+            if game.vm().pc() == pc {
+                return;
+            }
+            advance(game, 1);
+        }
+        panic!("expected pc {pc:04x}, stopped at {:04x}", game.vm().pc());
+    }
+    fn halted_by(mut game: Emulator, key: u8) -> Option<i32> {
+        game.input_mut().set_keys([key]);
+        for _ in 0..400 {
+            if let FrameStatus::Halted(code) = game.run_frame().unwrap().status {
+                return Some(code);
+            }
+        }
+        None
+    }
+
+    const LOOSE: &str = "LAVA1 飞行棋/非pac/飞行棋.lav";
+    const PACKAGE: &str = "LAVA1 飞行棋/飞行棋 v1.1 For WQX Lava All Fixed.pac";
+    // Configuration cursor row and the player 3/4 mode bytes.
+    const ROW: usize = 0x3a7b;
+    const PLAYER3: usize = 0x32c4;
+    const PLAYER4: usize = 0x32c6;
+    // Dice value and turn phase in the board loop.
+    const DICE: usize = 0x1b18;
+    const TURN_DICE: usize = 0x334f;
+    const TURN_STEP: usize = 0x3350;
+
+    for path in [LOOSE, PACKAGE] {
+        let mut game = load(path);
+        advance(&mut game, 360);
+        assert_eq!(game.vm().pc(), 0x09e0);
+        assert_eq!(scene(&game), 0x73c02cfd2aa2dfea);
+        capture(&game, "flight-menu");
+
+        // The main menu opens the control settings screen.
+        hold(&mut game, 13, 6);
+        assert_eq!(game.vm().pc(), 0x0be2);
+        assert_eq!(scene(&game), 0x382bdd3ba622b527);
+        assert_eq!(byte(&game, ROW), 0);
+
+        // Down walks the four player rows and clamps on the last one.
+        hold(&mut game, 21, 6);
+        assert_eq!(byte(&game, ROW), 1);
+        assert_eq!(scene(&game), 0x154d31cb72a7e687);
+
+        // Player 2 is fixed as a computer, so left and right change nothing.
+        hold(&mut game, 22, 6);
+        assert_eq!(scene(&game), 0x154d31cb72a7e687);
+        assert_eq!(byte(&game, PLAYER3), 0);
+        assert_eq!(byte(&game, PLAYER4), 0);
+
+        // Players 3 and 4 cycle through their modes and clamp at player.
+        hold(&mut game, 21, 6);
+        assert_eq!(byte(&game, ROW), 2);
+        assert_eq!(scene(&game), 0x46da8a77ce92516b);
+        hold(&mut game, 22, 6);
+        assert_eq!(scene(&game), 0x57234bfcba3e4198);
+        assert_eq!(byte(&game, PLAYER3), 1);
+        hold(&mut game, 21, 6);
+        assert_eq!(byte(&game, ROW), 3);
+        assert_eq!(scene(&game), 0x43e99d6990e26f18);
+        hold(&mut game, 22, 6);
+        assert_eq!(scene(&game), 0x86fe5a0ea8f9e82f);
+        assert_eq!(byte(&game, PLAYER4), 1);
+        hold(&mut game, 21, 6);
+        assert_eq!(scene(&game), 0x86fe5a0ea8f9e82f, "the row clamps");
+        hold(&mut game, 22, 6);
+        assert_eq!(scene(&game), 0x02714f9c883caf8b);
+        assert_eq!(byte(&game, PLAYER4), 2);
+        hold(&mut game, 22, 6);
+        assert_eq!(scene(&game), 0x02714f9c883caf8b, "the mode clamps");
+        capture(&game, "flight-config-players");
+
+        // Restore the defaults and return to the first row.
+        hold(&mut game, 23, 6);
+        hold(&mut game, 23, 6);
+        hold(&mut game, 20, 6);
+        hold(&mut game, 23, 6);
+        hold(&mut game, 20, 6);
+        hold(&mut game, 20, 6);
+        assert_eq!(byte(&game, ROW), 0);
+        assert_eq!(byte(&game, PLAYER3), 0);
+        assert_eq!(byte(&game, PLAYER4), 0);
+        assert_eq!(scene(&game), 0x382bdd3ba622b527);
+        capture(&game, "flight-config");
+
+        // The countdown leaves the board waiting for the first roll.
+        hold(&mut game, 13, 6);
+        wait_pc(&mut game, 0x0dda, 1200);
+        assert_eq!(scene(&game), 0x9fe5c5e2f0e790f8);
+        assert_eq!(byte(&game, DICE), 0);
+        assert_eq!(byte(&game, TURN_DICE), 0);
+        assert_eq!(byte(&game, TURN_STEP), 0);
+        capture(&game, "flight-board");
+
+        // Enter rolls the die and the turn settles with a fixed result.
+        hold(&mut game, 13, 6);
+        assert_eq!(game.vm().pc(), 0x0ea4);
+        assert_eq!(scene(&game), 0x82b91f33d02edd88);
+        assert_eq!(byte(&game, DICE), 4);
+        assert_eq!(byte(&game, TURN_DICE), 4);
+        wait_pc(&mut game, 0x103f, 600);
+        advance(&mut game, 240);
+        assert_eq!(scene(&game), 0x25fbd5bd5e0f6d6c);
+        assert_eq!(byte(&game, DICE), 5);
+        assert_eq!(byte(&game, TURN_DICE), 5);
+        assert_eq!(byte(&game, TURN_STEP), 1);
+        capture(&game, "flight-roll");
+
+        // Page keys flip between board views and back.
+        hold(&mut game, 14, 6);
+        assert_eq!(scene(&game), 0x50550d4d3af0f910);
+        capture(&game, "flight-board-page");
+        hold(&mut game, 19, 6);
+        assert_eq!(scene(&game), 0x25fbd5bd5e0f6d6c);
+
+        // Escape asks for confirmation and y halts with code 0.
+        hold(&mut game, 27, 6);
+        assert_eq!(game.vm().pc(), 0x06f1);
+        assert_eq!(scene(&game), 0xd2bc8384a551d071);
+        capture(&game, "flight-quit");
+        assert_eq!(halted_by(game, b'y'), Some(0));
+    }
+}
