@@ -30164,3 +30164,344 @@ fn frog_adventure_walks_its_menu_level_select_editor_and_gameplay() {
         "the same script repaints identical frames"
     );
 }
+
+#[test]
+#[ignore = "requires the local game corpus via LAVAX_GAME_ROOT"]
+fn wind_fighter_covers_menu_settings_character_select_and_battles() {
+    fn byte(game: &Emulator, address: usize) -> u8 {
+        game.vm().memory()[address]
+    }
+    fn word(game: &Emulator, address: usize) -> i16 {
+        i16::from_le_bytes([byte(game, address), byte(game, address + 1)])
+    }
+    fn long(game: &Emulator, address: usize) -> i32 {
+        i32::from_le_bytes([
+            byte(game, address),
+            byte(game, address + 1),
+            byte(game, address + 2),
+            byte(game, address + 3),
+        ])
+    }
+    fn scene(game: &Emulator) -> u64 {
+        let mut hash = 0xcbf29ce484222325u64;
+        for &pixel in game.display().indexed_frame() {
+            hash = (hash ^ u64::from(pixel)).wrapping_mul(0x100000001b3);
+        }
+        hash
+    }
+    fn tap(game: &mut Emulator, key: u8) {
+        hold(game, key, 20);
+    }
+    fn wait_pc(game: &mut Emulator, pc: usize, limit: usize) {
+        for _ in 0..limit {
+            if game.vm().pc() == pc {
+                return;
+            }
+            advance(game, 1);
+        }
+        panic!("expected pc {pc:04x}, stopped at {:04x}", game.vm().pc());
+    }
+    fn halted_by(mut game: Emulator, key: u8) -> Option<i32> {
+        game.input_mut().set_keys([key]);
+        for _ in 0..400 {
+            if let FrameStatus::Halted(code) = game.run_frame().unwrap().status {
+                return Some(code);
+            }
+        }
+        None
+    }
+
+    const PATH: &str = "LAVA1 风斗/wind.lav";
+    // Global x: menu row (1..3) and fighter index (0..11) in the selects.
+    const CURSOR: usize = 0x24a4;
+    // Global long datx[20]: [0], delay ms, countdown frames, countdown toggle.
+    const DATX: usize = 0x2554;
+    const MENU_BLINK_OFF: u64 = 0xed62f2016dd95892;
+    const MENU_BLINK_ON: u64 = 0x8b716d4feeeac9da;
+    const MENU_BLANK: u64 = 0x79e6435029510b25;
+
+    let boot = || -> Emulator {
+        let mut game = load(PATH);
+        for _ in 0..30 {
+            advance(&mut game, 10);
+            if game.vm().pc() == 0x09c6 {
+                return game;
+            }
+        }
+        panic!("the mode menu must appear during boot");
+    };
+
+    let mut menu = boot();
+    assert_eq!(word(&menu, CURSOR), 1, "menu starts on VS. Player");
+    let windx = menu
+        .files()
+        .files()
+        .iter()
+        .find(|file| file.path == "/lavadata/windx.dat")
+        .cloned()
+        .expect("boot creates /LavaData/Windx.dat");
+    assert_eq!(windx.size, 0);
+    assert!(windx.dirty);
+    advance(&mut menu, 60);
+    let mut frames = Vec::new();
+    for _ in 0..12 {
+        frames.push(scene(&menu));
+        advance(&mut menu, 30);
+    }
+    assert!(
+        frames.contains(&MENU_BLINK_OFF) && frames.contains(&MENU_BLINK_ON),
+        "the menu blinks between two repaints"
+    );
+    assert!(
+        frames
+            .iter()
+            .all(|hash| [MENU_BLINK_OFF, MENU_BLINK_ON, MENU_BLANK].contains(hash))
+    );
+    capture(&menu, "wind-menu");
+    for (key, expected) in [
+        (21u8, 2i16),
+        (21, 3),
+        (21, 3),
+        (20, 2),
+        (20, 1),
+        (20, 0),
+        (20, 0),
+        (21, 1),
+    ] {
+        tap(&mut menu, key);
+        assert_eq!(word(&menu, CURSOR), expected, "menu cursor");
+    }
+
+    // Settings: edit delay, countdown and toggle, then save and reload.
+    let mut settings = boot();
+    tap(&mut settings, 21);
+    tap(&mut settings, 13);
+    assert_eq!(scene(&settings), 0x1794081078f3d9f1);
+    assert_eq!(
+        (
+            long(&settings, DATX + 4),
+            long(&settings, DATX + 8),
+            long(&settings, DATX + 12)
+        ),
+        (200, 300, 1),
+        "defaults: 200 ms, 300 frames, countdown on"
+    );
+    capture(&settings, "wind-settings");
+    for (key, expected) in [(22u8, 215i32), (23, 185), (14, 290), (19, 110)] {
+        let mut branch = settings.clone();
+        tap(&mut branch, key);
+        assert_eq!(long(&branch, DATX + 4), expected, "delay step");
+    }
+    tap(&mut settings, 22);
+    assert_eq!(long(&settings, DATX + 4), 215);
+    let delay_row = scene(&settings);
+    tap(&mut settings, 21);
+    assert_ne!(
+        scene(&settings),
+        delay_row,
+        "cursor moves to the countdown row"
+    );
+    capture(&settings, "wind-settings-countdown");
+    tap(&mut settings, 14);
+    assert_eq!(long(&settings, DATX + 8), 450);
+    tap(&mut settings, 19);
+    assert_eq!(long(&settings, DATX + 8), 300);
+    let countdown_row = scene(&settings);
+    tap(&mut settings, 21);
+    assert_ne!(
+        scene(&settings),
+        countdown_row,
+        "cursor moves to the toggle row"
+    );
+    capture(&settings, "wind-settings-toggle");
+    tap(&mut settings, 22);
+    assert_eq!(long(&settings, DATX + 12), 0);
+    let saved = (
+        long(&settings, DATX + 4),
+        long(&settings, DATX + 8),
+        long(&settings, DATX + 12),
+    );
+    tap(&mut settings, 13);
+    assert_eq!(settings.vm().pc(), 0x09c6);
+    let dirty = settings.files_mut().take_dirty_files();
+    assert_eq!(dirty.len(), 1);
+    assert_eq!(dirty[0].0, "/lavadata/windx.dat");
+    assert_eq!(dirty[0].1.len(), 80);
+    let stored: Vec<i32> = dirty[0]
+        .1
+        .as_chunks::<4>()
+        .0
+        .iter()
+        .map(|chunk| i32::from_le_bytes(*chunk))
+        .collect();
+    assert_eq!(stored[1..4], [saved.0, saved.1, saved.2]);
+    assert!(stored[4..].iter().all(|value| *value == 0));
+    tap(&mut settings, 21);
+    tap(&mut settings, 13);
+    assert_eq!(
+        (
+            long(&settings, DATX + 4),
+            long(&settings, DATX + 8),
+            long(&settings, DATX + 12)
+        ),
+        saved,
+        "saved preferences are read back"
+    );
+    tap(&mut settings, 21);
+    tap(&mut settings, 22);
+    assert_eq!(long(&settings, DATX + 8), 330);
+    tap(&mut settings, 27);
+    wait_pc(&mut settings, 0x09c6, 600);
+    assert_eq!(long(&settings, DATX + 8), 300, "Esc discards the change");
+    assert!(settings.files_mut().take_dirty_files().is_empty());
+
+    // VS. Computer: opponent select wraps, then the battle accepts attack input.
+    let mut computer = boot();
+    assert_eq!(computer.files_mut().take_dirty_files().len(), 1);
+    tap(&mut computer, 20);
+    tap(&mut computer, 13);
+    assert_eq!(computer.vm().pc(), 0x035b);
+    assert_eq!(word(&computer, CURSOR), 0);
+    assert_eq!(scene(&computer), 0x4d76dfbbf8d4a178);
+    capture(&computer, "wind-computer-select");
+    tap(&mut computer, 20);
+    assert_eq!(
+        word(&computer, CURSOR),
+        11,
+        "previous wraps to the last fighter"
+    );
+    assert_eq!(scene(&computer), 0x3a1842cb5c9abd14);
+    tap(&mut computer, 21);
+    assert_eq!(
+        word(&computer, CURSOR),
+        0,
+        "next wraps to the first fighter"
+    );
+    tap(&mut computer, 21);
+    tap(&mut computer, 21);
+    assert_eq!(word(&computer, CURSOR), 2);
+    tap(&mut computer, 20);
+    tap(&mut computer, 20);
+    assert_eq!(word(&computer, CURSOR), 0);
+    tap(&mut computer, 13);
+    assert_eq!(computer.vm().pc(), 0x035b);
+    capture(&computer, "wind-own-select");
+    tap(&mut computer, 13);
+    wait_pc(&mut computer, 0x020f, 600);
+    let battle = computer.display().indexed_frame();
+    assert!(battle.iter().any(|&pixel| pixel != battle[0]));
+    capture(&computer, "wind-battle");
+    let mut idle = computer.clone();
+    advance(&mut idle, 60);
+    let mut attack = computer.clone();
+    attack.input_mut().set_keys([13]);
+    advance(&mut attack, 18);
+    attack.input_mut().set_keys([]);
+    advance(&mut attack, 42);
+    assert_eq!(attack.vm().pc(), 0x020f);
+    assert_ne!(scene(&idle), scene(&attack), "attack changes the fight");
+    capture(&attack, "wind-battle-attack");
+    tap(&mut computer, 27);
+    assert_eq!(computer.vm().pc(), 0x302b);
+    capture(&computer, "wind-quit-dialog");
+    tap(&mut computer, b'n');
+    assert_eq!(computer.vm().pc(), 0x020f);
+    tap(&mut computer, 27);
+    tap(&mut computer, b'y');
+    assert_eq!(computer.vm().pc(), 0x09c6, "quitting returns to the menu");
+    assert!(computer.files_mut().take_dirty_files().is_empty());
+
+    // VS. Player: build both teams, then fight with the letter keys.
+    let mut player = boot();
+    tap(&mut player, 13);
+    assert_eq!(player.vm().pc(), 0x0aae);
+    assert_eq!(scene(&player), 0xeb0b08a598588706);
+    capture(&player, "wind-player-title");
+    tap(&mut player, 13);
+    assert_eq!(player.vm().pc(), 0x04e3);
+    assert!(
+        player
+            .display()
+            .indexed_frame()
+            .iter()
+            .any(|&pixel| pixel != player.display().indexed_frame()[0])
+    );
+    capture(&player, "wind-team-select");
+    let mut rotate = player.clone();
+    let base = scene(&rotate);
+    tap(&mut rotate, 120);
+    assert_ne!(scene(&rotate), base, "P1 next changes the fighter");
+    tap(&mut rotate, 21);
+    assert_ne!(scene(&rotate), base, "P2 next changes the fighter");
+    for _ in 0..3 {
+        tap(&mut player, 113);
+    }
+    for _ in 0..3 {
+        tap(&mut player, 13);
+    }
+    assert_eq!(player.vm().pc(), 0x07d7);
+    tap(&mut player, 13);
+    wait_pc(&mut player, 0x020f, 600);
+    let pvp_battle = player.display().indexed_frame();
+    assert!(pvp_battle.iter().any(|&pixel| pixel != pvp_battle[0]));
+    capture(&player, "wind-pvp-battle");
+    let mut pvp_idle = player.clone();
+    advance(&mut pvp_idle, 60);
+    let mut pvp_attack = player.clone();
+    pvp_attack.input_mut().set_keys(*b"a");
+    advance(&mut pvp_attack, 18);
+    pvp_attack.input_mut().set_keys([]);
+    advance(&mut pvp_attack, 42);
+    assert_eq!(pvp_attack.vm().pc(), 0x020f);
+    assert_ne!(
+        scene(&pvp_idle),
+        scene(&pvp_attack),
+        "1P attack changes the fight"
+    );
+    tap(&mut player, 27);
+    tap(&mut player, b'y');
+    assert_eq!(player.vm().pc(), 0x09c6);
+
+    // Computer vs computer continues unattended and can be quit.
+    let mut demo = boot();
+    tap(&mut demo, 120);
+    assert_eq!(demo.vm().pc(), 0x035b);
+    assert_eq!(scene(&demo), 0x4d76dfbbf8d4a178);
+    tap(&mut demo, 13);
+    assert_eq!(scene(&demo), 0x3db0af3d0523d82a);
+    tap(&mut demo, 13);
+    wait_pc(&mut demo, 0x020f, 600);
+    capture(&demo, "wind-cvc-battle");
+    advance(&mut demo, 240);
+    tap(&mut demo, 27);
+    assert_eq!(demo.vm().pc(), 0x302b);
+    tap(&mut demo, b'y');
+    assert_eq!(demo.vm().pc(), 0x09c6);
+
+    // The idle menu starts an auto demo; any key returns to the menu.
+    let mut attract = boot();
+    assert_eq!(attract.files_mut().take_dirty_files().len(), 1);
+    advance(&mut attract, 600);
+    assert_eq!(attract.vm().pc(), 0x09c6, "the menu idles before the demo");
+    wait_pc(&mut attract, 0x020f, 300);
+    capture(&attract, "wind-demo");
+    tap(&mut attract, 13);
+    wait_pc(&mut attract, 0x09c6, 120);
+    assert!(attract.files_mut().take_dirty_files().is_empty());
+
+    // Exit row, Escape and 't' all halt with code 0.
+    let mut exit = boot();
+    tap(&mut exit, 21);
+    tap(&mut exit, 21);
+    exit.input_mut().set_keys([13]);
+    let mut exit_code = None;
+    for _ in 0..400 {
+        if let FrameStatus::Halted(code) = exit.run_frame().unwrap().status {
+            exit_code = Some(code);
+            break;
+        }
+    }
+    assert_eq!(exit_code, Some(0));
+    assert_eq!(halted_by(boot(), 27), Some(0));
+    assert_eq!(halted_by(boot(), 116), Some(0));
+}
