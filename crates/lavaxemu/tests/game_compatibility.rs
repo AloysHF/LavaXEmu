@@ -31226,3 +31226,146 @@ fn magic_tower_integrated_covers_splash_map_menu_and_saves() {
     assert_eq!(game.vm().pc(), 0x2581);
     assert_eq!(scene(&game), 0x0c428cf6dbd7e521);
 }
+
+#[test]
+#[ignore = "requires the local game corpus via LAVAX_GAME_ROOT"]
+fn magic_puzzle_covers_logo_preview_shuffle_swap_and_exit() {
+    fn scene(game: &Emulator) -> u64 {
+        let mut hash = 0xcbf29ce484222325u64;
+        for &pixel in game.display().indexed_frame() {
+            hash = (hash ^ u64::from(pixel)).wrapping_mul(0x100000001b3);
+        }
+        hash
+    }
+    fn byte(game: &Emulator, address: usize) -> u8 {
+        game.vm().memory()[address]
+    }
+    fn board(game: &Emulator) -> Vec<u8> {
+        game.vm().memory()[BOARD..BOARD + 50].to_vec()
+    }
+    fn press_until_halt(game: &mut Emulator, key: u8, limit: usize) -> Option<i32> {
+        for _ in 0..15 {
+            game.input_mut().set_keys([key]);
+            game.run_frame().unwrap();
+        }
+        game.input_mut().set_keys([]);
+        for _ in 0..limit {
+            if let FrameStatus::Halted(code) = game.run_frame().unwrap().status {
+                return Some(code);
+            }
+        }
+        None
+    }
+
+    const LOOSE: &str = "LAVA1 魔法拼图/LAVA/PTV1.0.lav";
+    const PACKAGE: &str = "LAVA1 魔法拼图/Package/PTV1.0.pac";
+    // The board is a 50-entry column-major permutation of ten 16x16
+    // columns and five rows; the cursor follows it in tile coordinates.
+    const BOARD: usize = 0x26a6;
+    const CURSOR_X: usize = 0x26d8;
+    const CURSOR_Y: usize = 0x26d9;
+    const SELECTED: usize = 0x26f9;
+    const SELECT_X: usize = 0x26fa;
+    const SELECT_Y: usize = 0x26fb;
+    let shuffled = vec![
+        10, 27, 23, 24, 13, 9, 19, 11, 15, 4, 30, 28, 18, 40, 37, 48, 44, 41, 5, 16, 25, 3, 34, 26,
+        0, 43, 45, 1, 29, 39, 32, 49, 36, 12, 35, 14, 2, 17, 8, 46, 6, 31, 47, 33, 20, 7, 38, 22,
+        42, 21,
+    ];
+
+    // The packaged build carries the same bytecode as the loose program.
+    for (path, prefix) in [(LOOSE, "puzzle-lav"), (PACKAGE, "puzzle-pac")] {
+        let mut game = load(path);
+        advance(&mut game, 300);
+        assert_eq!(game.display().width(), 160);
+        assert_eq!(game.display().height(), 80);
+        assert_eq!(game.vm().pc(), 0xa0c);
+        assert_eq!(scene(&game), 0xc674fdf3349434ba);
+        capture(&game, &format!("{prefix}-logo"));
+
+        // Enter opens the intact bitmap preview, then the shuffled board
+        // with a Ready? Go! prompt that waits for any key.
+        hold(&mut game, 13, 6);
+        assert_eq!(game.vm().pc(), 0x6c4);
+        assert_eq!(scene(&game), 0xefa53d2213fdaad1);
+        capture(&game, &format!("{prefix}-preview"));
+        hold(&mut game, 13, 6);
+        assert_eq!(game.vm().pc(), 0x754);
+        assert_eq!(scene(&game), 0xd5859609acb6a977);
+        advance(&mut game, 60);
+        assert_eq!(game.vm().pc(), 0x754);
+        assert_eq!(scene(&game), 0xd5859609acb6a977);
+        capture(&game, &format!("{prefix}-ready"));
+
+        // The shuffle is deterministic: every tile appears exactly once.
+        hold(&mut game, 32, 6);
+        advance(&mut game, 60);
+        assert_eq!(game.vm().pc(), 0x924);
+        assert_eq!(scene(&game), 0x294e76baa528a77f);
+        assert_eq!(board(&game), shuffled);
+        assert_eq!(byte(&game, CURSOR_X), 4);
+        assert_eq!(byte(&game, CURSOR_Y), 2);
+        capture(&game, &format!("{prefix}-shuffled"));
+
+        // Clamp the cursor to the top-left tile and select it.
+        hold(&mut game, 23, 150);
+        hold(&mut game, 20, 150);
+        assert_eq!(byte(&game, CURSOR_X), 0);
+        assert_eq!(byte(&game, CURSOR_Y), 0);
+        hold(&mut game, 13, 15);
+        assert_eq!(byte(&game, SELECTED), 1);
+        assert_eq!(byte(&game, SELECT_X), 0);
+        assert_eq!(byte(&game, SELECT_Y), 0);
+
+        // Selecting a second tile opens the swap prompt; N keeps the board.
+        hold(&mut game, 22, 150);
+        hold(&mut game, 21, 150);
+        assert_eq!(byte(&game, CURSOR_X), 9);
+        assert_eq!(byte(&game, CURSOR_Y), 4);
+        hold(&mut game, 13, 15);
+        assert_eq!(game.vm().pc(), 0x83e);
+        assert_eq!(scene(&game), 0xd815de52494caac1);
+        capture(&game, &format!("{prefix}-swap-prompt"));
+        hold(&mut game, b'n', 15);
+        assert_eq!(game.vm().pc(), 0x924);
+        assert_eq!(scene(&game), 0xe5f3fed145d97221);
+        assert_eq!(board(&game), shuffled);
+
+        // Repeating the two selections and answering Y exchanges the tiles.
+        hold(&mut game, 13, 15);
+        assert_eq!(byte(&game, SELECTED), 1);
+        assert_eq!(byte(&game, SELECT_X), 9);
+        assert_eq!(byte(&game, SELECT_Y), 4);
+        hold(&mut game, 23, 150);
+        hold(&mut game, 20, 150);
+        assert_eq!(byte(&game, CURSOR_X), 0);
+        assert_eq!(byte(&game, CURSOR_Y), 0);
+        hold(&mut game, 13, 15);
+        assert_eq!(game.vm().pc(), 0x83e);
+        assert_eq!(scene(&game), 0x42e166dba4047761);
+        hold(&mut game, b'y', 15);
+        assert_eq!(game.vm().pc(), 0x924);
+        assert_eq!(scene(&game), 0x500f50528c20feb2);
+        let mut swapped = shuffled.clone();
+        swapped[0] = 21;
+        swapped[49] = 10;
+        assert_eq!(board(&game), swapped);
+        capture(&game, &format!("{prefix}-swapped"));
+
+        // The exit prompt cancels once and then halts the program on Y.
+        hold(&mut game, 27, 15);
+        assert_eq!(game.vm().pc(), 0x8f0);
+        assert_eq!(scene(&game), 0x2dc0b5d96021f3aa);
+        capture(&game, &format!("{prefix}-exit"));
+        hold(&mut game, b'n', 15);
+        assert_eq!(game.vm().pc(), 0x924);
+        assert_eq!(scene(&game), 0x500f50528c20feb2);
+        hold(&mut game, 27, 15);
+        assert_eq!(game.vm().pc(), 0x8f0);
+        assert_eq!(scene(&game), 0x2dc0b5d96021f3aa);
+        assert_eq!(press_until_halt(&mut game, b'y', 400), Some(0));
+        assert_eq!(game.vm().pc(), 0x91a);
+        assert_eq!(scene(&game), 0x2dc0b5d96021f3aa);
+        assert!(game.files_mut().take_dirty_files().is_empty());
+    }
+}
