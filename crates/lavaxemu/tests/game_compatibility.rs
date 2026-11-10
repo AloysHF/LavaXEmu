@@ -31586,3 +31586,275 @@ fn magic_box_covers_menu_settings_help_rank_game_and_exit() {
     assert_eq!(scene(&game), 0xdba1f07376a6dc3a);
     assert_eq!(tap_and_halt(&mut game, 13, 400), Some(0));
 }
+
+#[test]
+#[ignore = "requires the local game corpus via LAVAX_GAME_ROOT"]
+fn mojie_legend_covers_menu_help_prologue_room_pages_save_load_and_exit() {
+    fn scene(game: &Emulator) -> u64 {
+        let mut hash = 0xcbf29ce484222325u64;
+        for &pixel in game.display().indexed_frame() {
+            hash = (hash ^ u64::from(pixel)).wrapping_mul(0x100000001b3);
+        }
+        hash
+    }
+    fn byte(game: &Emulator, address: usize) -> u8 {
+        game.vm().memory()[address]
+    }
+    fn tap_and_halt(game: &mut Emulator, key: u8, limit: usize) -> Option<i32> {
+        for _ in 0..6 {
+            game.input_mut().set_keys([key]);
+            game.run_frame().unwrap();
+        }
+        game.input_mut().set_keys([]);
+        for _ in 0..limit {
+            if let FrameStatus::Halted(code) = game.run_frame().unwrap().status {
+                return Some(code);
+            }
+        }
+        None
+    }
+
+    const LOOSE: &str = "LAVA1 魔界传说/魔界传说程序/魔界传说.lav";
+    const PACKAGE: &str = "LAVA1 魔界传说/魔界传说程序/魔界传说安装包.pac";
+    const X: usize = 0x2008;
+    const Y: usize = 0x2009;
+    const SAVE_PATH: &str = "/lavadata/mojie.sav";
+
+    for (path, prefix) in [(LOOSE, "mojie-lav"), (PACKAGE, "mojie-pac")] {
+        let mut game = load(path);
+        advance(&mut game, 120);
+        assert_eq!(game.display().width(), 160);
+        assert_eq!(game.display().height(), 80);
+        assert_eq!(game.vm().pc(), 0x26f5);
+        assert_eq!(scene(&game), 0xf098faf2be8398f2);
+        capture(&game, &format!("{prefix}-logo"));
+
+        // The logo opens the title menu on the first key.
+        hold(&mut game, 13, 3);
+        assert_eq!(game.vm().pc(), 0x27ef);
+        assert_eq!(scene(&game), 0xfe482e9f6afa2d9a);
+        capture(&game, &format!("{prefix}-title"));
+
+        // Loading without a save reports the empty slot and stays on the menu.
+        hold(&mut game, 21, 3);
+        assert_eq!(scene(&game), 0xdf3d4f50b79f32ce);
+        hold(&mut game, 13, 3);
+        assert_eq!(game.vm().pc(), 0x57a);
+        assert_eq!(scene(&game), 0xefd6f708dcc8af24);
+        capture(&game, &format!("{prefix}-no-save"));
+        hold(&mut game, 13, 3);
+        assert_eq!(game.vm().pc(), 0x27ef);
+        assert_eq!(scene(&game), 0xdf3d4f50b79f32ce);
+
+        // The help entry scrolls through its control guide and credits.
+        hold(&mut game, 21, 3);
+        assert_eq!(scene(&game), 0xc6aca84f74b3a55a);
+        hold(&mut game, 13, 3);
+        assert_eq!(game.vm().pc(), 0x2540);
+        assert_eq!(scene(&game), 0x6c974788606c3660);
+        capture(&game, &format!("{prefix}-help"));
+        hold(&mut game, 27, 3);
+        assert_eq!(game.vm().pc(), 0x25ab);
+        assert_eq!(scene(&game), 0x91d23bee914104c4);
+        capture(&game, &format!("{prefix}-credits"));
+        hold(&mut game, 27, 3);
+        assert_eq!(game.vm().pc(), 0x27ef);
+        assert_eq!(scene(&game), 0xc6aca84f74b3a55a);
+
+        // Two Up presses return to the start entry and open the prologue.
+        hold(&mut game, 20, 3);
+        assert_eq!(scene(&game), 0xdf3d4f50b79f32ce);
+        hold(&mut game, 20, 3);
+        assert_eq!(scene(&game), 0xfe482e9f6afa2d9a);
+        hold(&mut game, 13, 3);
+        assert_eq!(game.vm().pc(), 0x1fd5);
+        assert_eq!(scene(&game), 0x28a60bcc4951f048);
+        capture(&game, &format!("{prefix}-prologue"));
+
+        // The prologue pages advance one key press at a time and end in the
+        // bedroom, where the first text box is still typing out.
+        for step in 1..=42 {
+            hold(&mut game, 13, 3);
+            match step {
+                8 => {
+                    assert_eq!(game.vm().pc(), 0x95e);
+                    assert_eq!(scene(&game), 0x9ec9fafc803b23ce);
+                }
+                17 => {
+                    assert_eq!(game.vm().pc(), 0x8a1);
+                    assert_eq!(scene(&game), 0x8033bef2043070c5);
+                }
+                25 => {
+                    assert_eq!(game.vm().pc(), 0x1de7);
+                    assert_eq!(scene(&game), 0x2e14c8ae1acbd6ad);
+                }
+                40 => {
+                    assert_eq!(game.vm().pc(), 0x1e82);
+                    assert_eq!(scene(&game), 0x5725bdd6b9d978ad);
+                }
+                42 => {
+                    assert_eq!(game.vm().pc(), 0x95e);
+                    assert_eq!(scene(&game), 0x736270bcad706885);
+                    capture(&game, &format!("{prefix}-room-typing"));
+                }
+                _ => {}
+            }
+        }
+        hold(&mut game, 13, 3);
+        assert_eq!(game.vm().pc(), 0x95e);
+        assert_eq!(scene(&game), 0xe84d1f6184e1dd53);
+        hold(&mut game, 13, 3);
+        assert_eq!(game.vm().pc(), 0x5950);
+        assert_eq!(scene(&game), 0x3822d5a22bd10d69);
+        assert_eq!(byte(&game, X), 0);
+        assert_eq!(byte(&game, Y), 1);
+        capture(&game, &format!("{prefix}-room"));
+
+        // Arrow keys step across the room grid and stop at the walls.
+        let mut walk = game.clone();
+        hold(&mut walk, 22, 3);
+        assert_eq!((byte(&walk, X), byte(&walk, Y)), (1, 1));
+        assert_eq!(scene(&walk), 0xfc9d1d8b5e14e4ee);
+        hold(&mut walk, 22, 3);
+        assert_eq!((byte(&walk, X), byte(&walk, Y)), (2, 1));
+        assert_eq!(scene(&walk), 0xc773cee038a91bd9);
+        hold(&mut walk, 23, 3);
+        assert_eq!((byte(&walk, X), byte(&walk, Y)), (1, 1));
+        assert_eq!(scene(&walk), 0x8e491f20007bf44);
+        hold(&mut walk, 20, 3);
+        assert_eq!((byte(&walk, X), byte(&walk, Y)), (1, 0));
+        assert_eq!(scene(&walk), 0x90eb88f0eae81d4f);
+        hold(&mut walk, 20, 3);
+        assert_eq!((byte(&walk, X), byte(&walk, Y)), (1, 0));
+        assert_eq!(scene(&walk), 0x88fbfaeb08c6d3f7);
+        capture(&walk, &format!("{prefix}-walk"));
+
+        // Escape opens the bottom bar; Status shows the fixed starting stats.
+        let mut pages = game.clone();
+        hold(&mut pages, 27, 3);
+        assert_eq!(pages.vm().pc(), 0x4f7c);
+        assert_eq!(scene(&pages), 0xe417305cf2979519);
+        capture(&pages, &format!("{prefix}-menu"));
+        hold(&mut pages, 13, 3);
+        assert_eq!(pages.vm().pc(), 0x5577);
+        assert_eq!(scene(&pages), 0x434934e6eccba560);
+        capture(&pages, &format!("{prefix}-status"));
+        hold(&mut pages, 27, 3);
+        assert_eq!(pages.vm().pc(), 0x56b8);
+        assert_eq!(scene(&pages), 0x1d13e61fe184d904);
+        hold(&mut pages, 27, 3);
+        assert_eq!(pages.vm().pc(), 0x4f7c);
+        assert_eq!(scene(&pages), 0xe417305cf2979519);
+        hold(&mut pages, 27, 3);
+        assert_eq!(pages.vm().pc(), 0x5950);
+        assert_eq!(scene(&pages), 0x3822d5a22bd10d69);
+
+        // The inventory is empty at the start.
+        let mut items = game.clone();
+        hold(&mut items, 27, 3);
+        hold(&mut items, 21, 3);
+        assert_eq!(items.vm().pc(), 0x4f7c);
+        assert_eq!(scene(&items), 0x6d9e888a28edca81);
+        hold(&mut items, 13, 3);
+        assert_eq!(items.vm().pc(), 0x95a);
+        assert_eq!(scene(&items), 0x807e469b1e627c13);
+        capture(&items, &format!("{prefix}-items"));
+
+        // The Info bar shows the task hint and closes back to the bar.
+        let mut info = game.clone();
+        hold(&mut info, 27, 3);
+        hold(&mut info, 21, 3);
+        hold(&mut info, 21, 3);
+        assert_eq!(info.vm().pc(), 0x4f7c);
+        assert_eq!(scene(&info), 0x94f725c112b30d1d);
+        hold(&mut info, 13, 3);
+        assert_eq!(info.vm().pc(), 0x8a1);
+        assert_eq!(scene(&info), 0xc096997be4fc95f3);
+        capture(&info, &format!("{prefix}-info"));
+        hold(&mut info, 27, 3);
+        assert_eq!(info.vm().pc(), 0x89d);
+        assert_eq!(scene(&info), 0x34e380ebcf6f149e);
+
+        // F3 cycles the game speed and F4 cycles the text output mode.
+        let mut speed = game.clone();
+        hold(&mut speed, 0x1e, 3);
+        assert_eq!(speed.vm().pc(), 0x51af);
+        assert_eq!(scene(&speed), 0xb95319b0371c4cf7);
+        capture(&speed, &format!("{prefix}-speed"));
+        hold(&mut speed, 21, 3);
+        assert_eq!(scene(&speed), 0x31a8ae8245f0868f);
+        hold(&mut speed, 13, 3);
+        assert_eq!(speed.vm().pc(), 0x5950);
+        assert_eq!(scene(&speed), 0x3822d5a22bd10d69);
+        let mut text = game.clone();
+        hold(&mut text, 0x1f, 3);
+        assert_eq!(text.vm().pc(), 0x53ac);
+        assert_eq!(scene(&text), 0x3af4502a07d578f8);
+        capture(&text, &format!("{prefix}-text"));
+        hold(&mut text, 21, 3);
+        assert_eq!(scene(&text), 0x474aaf89bcece758);
+        hold(&mut text, 21, 3);
+        assert_eq!(scene(&text), 0xc7225fed733101bc);
+        hold(&mut text, 13, 3);
+        assert_eq!(text.vm().pc(), 0x5950);
+        assert_eq!(scene(&text), 0x3822d5a22bd10d69);
+
+        // The System submenu saves the room state to the save slot.
+        let mut saver = game.clone();
+        hold(&mut saver, 27, 3);
+        for _ in 0..3 {
+            hold(&mut saver, 21, 3);
+        }
+        assert_eq!(saver.vm().pc(), 0x4f7c);
+        assert_eq!(scene(&saver), 0xc5c0544ad05e84a5);
+        hold(&mut saver, 13, 3);
+        assert_eq!(saver.vm().pc(), 0x57f9);
+        assert_eq!(scene(&saver), 0x2938908785c9fc09);
+        capture(&saver, &format!("{prefix}-save-menu"));
+        hold(&mut saver, 13, 3);
+        assert_eq!(saver.vm().pc(), 0x643);
+        assert_eq!(scene(&saver), 0x34e50bce1b90209a);
+        capture(&saver, &format!("{prefix}-save"));
+        let saved = saver.files_mut().take_dirty_files();
+        assert_eq!(saved.len(), 1);
+        assert_eq!(saved[0].0, SAVE_PATH);
+        assert_eq!(saved[0].1.len(), 459);
+        assert_eq!(
+            &saved[0].1[..16],
+            &[0u8, 0, 0, 50, 0, 0, 5, 2, 0, 1, 20, 16, 3, 0, 1, 0][..]
+        );
+        assert_eq!(saved[0].1[46], 14);
+        assert_eq!(saved[0].1[56], 9);
+
+        // A fresh session loads that slot straight into the room.
+        let mut loader = load(path);
+        loader
+            .files_mut()
+            .import_file(SAVE_PATH, saved[0].1.clone());
+        advance(&mut loader, 120);
+        hold(&mut loader, 13, 3);
+        hold(&mut loader, 21, 3);
+        assert_eq!(scene(&loader), 0xdf3d4f50b79f32ce);
+        hold(&mut loader, 13, 3);
+        assert_eq!(loader.vm().pc(), 0x5950);
+        assert_eq!(scene(&loader), 0x3822d5a22bd10d69);
+        assert_eq!(byte(&loader, X), 0);
+        assert_eq!(byte(&loader, Y), 1);
+        capture(&loader, &format!("{prefix}-loaded"));
+
+        // The System submenu also quits with code 1.
+        let mut quitter = game.clone();
+        hold(&mut quitter, 27, 3);
+        for _ in 0..3 {
+            hold(&mut quitter, 21, 3);
+        }
+        hold(&mut quitter, 13, 3);
+        assert_eq!(quitter.vm().pc(), 0x57f9);
+        hold(&mut quitter, 22, 3);
+        assert_eq!(quitter.vm().pc(), 0x57f9);
+        assert_eq!(scene(&quitter), 0xe700e8a2b440b8c1);
+        capture(&quitter, &format!("{prefix}-exit"));
+        assert_eq!(tap_and_halt(&mut quitter, 13, 400), Some(1));
+        assert!(quitter.files_mut().take_dirty_files().is_empty());
+    }
+}
