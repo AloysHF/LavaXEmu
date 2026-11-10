@@ -31858,3 +31858,380 @@ fn mojie_legend_covers_menu_help_prologue_room_pages_save_load_and_exit() {
         assert!(quitter.files_mut().take_dirty_files().is_empty());
     }
 }
+
+#[test]
+#[ignore = "requires the local game corpus via LAVAX_GAME_ROOT"]
+fn wzq_black_white_covers_title_help_about_exit_setup_board_undo_auto_save_and_reload() {
+    const LOOSE: &str = "LAVA1 黑白五子连珠/未打包文件/五子连珠.lav";
+    const PACKAGE: &str = "LAVA1 黑白五子连珠/已打包文件/五子联珠黑.pac";
+    const SAVE_PATH: &str = "/lavadata/jxwzqsave.dat";
+
+    fn scene(emulator: &Emulator) -> u64 {
+        let mut hash = 0xcbf29ce484222325u64;
+        for &pixel in emulator.display().indexed_frame() {
+            hash = (hash ^ u64::from(pixel)).wrapping_mul(0x100000001b3);
+        }
+        hash
+    }
+
+    fn check(label: &str, emulator: &Emulator, pc: usize, hash: u64) {
+        assert_eq!(emulator.vm().pc(), pc, "{label} pc");
+        assert_eq!(scene(emulator), hash, "{label} scene");
+        capture(emulator, label);
+    }
+
+    fn check_scene(label: &str, emulator: &Emulator, hash: u64) {
+        assert_eq!(scene(emulator), hash, "{label} scene");
+        capture(emulator, label);
+    }
+
+    fn tap_halt(emulator: &mut Emulator, key: u8, frames: usize) -> Option<i32> {
+        for _ in 0..3 {
+            emulator.input_mut().set_keys([key]);
+            if let FrameStatus::Halted(code) = emulator.run_frame().unwrap().status {
+                return Some(code);
+            }
+        }
+        emulator.input_mut().set_keys([]);
+        for _ in 0..frames {
+            if let FrameStatus::Halted(code) = emulator.run_frame().unwrap().status {
+                return Some(code);
+            }
+        }
+        None
+    }
+
+    for (path, prefix) in [(LOOSE, "wzq-lav"), (PACKAGE, "wzq-pac")] {
+        let mut game = load(path);
+        advance(&mut game, 200);
+        assert_eq!(game.display().width(), 160);
+        assert_eq!(game.display().height(), 80);
+        check(
+            &format!("{prefix}-title"),
+            &game,
+            0x69c5,
+            0xeb8b9648b185c4fa,
+        );
+
+        // Right/Left pick one of the four horizontal title items.
+        let mut help = game.clone();
+        hold(&mut help, 22, 3);
+        check_scene(
+            &format!("{prefix}-help-selected"),
+            &help,
+            0xc94b760cbab0a968,
+        );
+        hold(&mut help, 13, 3);
+        let pages = [
+            0x20e5e1300fcb36eu64,
+            0x7eb44e69f514e097,
+            0xe1943712bbaf5814,
+            0x78da3b0c0458c898,
+            0x345daf56e63a93a9,
+            0x2069308ec375590e,
+            0x6b45b61fe6ad37f6,
+            0xca4ab419b1c2adaa,
+            0x459045f8f95a3efb,
+            0xbb6ff5f6892d121e,
+            0xb199bd29bff49b6b,
+            0x46a8eabfd41584dc,
+            0x7d553acf1cd411ea,
+            0xd3f4738c5ad44785,
+            0x852c4946f1313f98,
+            0x6c86402be55ec6eb,
+        ];
+        check_scene(&format!("{prefix}-help-0"), &help, pages[0]);
+        for (page, expected) in pages.iter().enumerate().skip(1) {
+            hold(&mut help, 21, 3);
+            check_scene(&format!("{prefix}-help-{page}"), &help, *expected);
+        }
+        // The last page clamps: another Down keeps the same page.
+        hold(&mut help, 21, 3);
+        check_scene(&format!("{prefix}-help-last"), &help, 0x6c86402be55ec6eb);
+        hold(&mut help, 27, 3);
+        check(
+            &format!("{prefix}-help-back"),
+            &help,
+            0x69c5,
+            0xb2c7b9f78115695a,
+        );
+
+        let mut about = game.clone();
+        for _ in 0..2 {
+            hold(&mut about, 22, 3);
+        }
+        hold(&mut about, 13, 3);
+        check(
+            &format!("{prefix}-about"),
+            &about,
+            0x6328,
+            0x38445e47a4072085,
+        );
+        hold(&mut about, 27, 3);
+        check(
+            &format!("{prefix}-about-back"),
+            &about,
+            0x69c5,
+            0x1532ceacbbdf56f2,
+        );
+
+        // 离开 shows two credits pages and then terminates with code 0.
+        let mut exit = game.clone();
+        for _ in 0..3 {
+            hold(&mut exit, 22, 3);
+        }
+        hold(&mut exit, 13, 3);
+        check(
+            &format!("{prefix}-exit-credits"),
+            &exit,
+            0x5382,
+            0x91711ae871fe0171,
+        );
+        hold(&mut exit, 32, 3);
+        check(
+            &format!("{prefix}-exit-bye"),
+            &exit,
+            0x53d0,
+            0x13ec75d4b6521e88,
+        );
+        assert_eq!(tap_halt(&mut exit, 32, 200), Some(0));
+
+        // Difficulty screen: 初级 by default, Up/Down move the box, settle on 中级.
+        let mut game = game.clone();
+        hold(&mut game, 13, 3);
+        check(
+            &format!("{prefix}-difficulty"),
+            &game,
+            0x674c,
+            0xeb6deff283b03f33,
+        );
+        hold(&mut game, 21, 3);
+        check_scene(
+            &format!("{prefix}-difficulty-mid"),
+            &game,
+            0xb707cf70317f865f,
+        );
+        hold(&mut game, 21, 3);
+        check_scene(
+            &format!("{prefix}-difficulty-high"),
+            &game,
+            0x79e7020e35288f5d,
+        );
+
+        // Undo is refused at 高级: the same key press leaves the board untouched.
+        let mut high = game.clone();
+        hold(&mut high, 13, 3);
+        hold(&mut high, b'A', 3);
+        hold(&mut high, b'B', 3);
+        hold(&mut high, 13, 3);
+        hold(&mut high, 13, 3);
+        hold(&mut high, 13, 3);
+        for _ in 0..4 {
+            hold(&mut high, 20, 3);
+        }
+        hold(&mut high, 13, 3);
+        let placed = scene(&high);
+        hold(&mut high, b'h', 3);
+        assert_eq!(scene(&high), placed, "{prefix} high-difficulty undo");
+
+        hold(&mut game, 20, 3);
+        check_scene(
+            &format!("{prefix}-difficulty-mid2"),
+            &game,
+            0xb7bd868905bf7e8e,
+        );
+        hold(&mut game, 13, 3);
+        check(&format!("{prefix}-name"), &game, 0x71f, 0xb8502c053aa75b04);
+        hold(&mut game, b'A', 3);
+        hold(&mut game, b'B', 3);
+        check(
+            &format!("{prefix}-name-typed"),
+            &game,
+            0x71f,
+            0x7361936c475da28f,
+        );
+        hold(&mut game, 13, 3);
+        check(
+            &format!("{prefix}-player-avatar"),
+            &game,
+            0x9df,
+            0x226d347030f5d4a6,
+        );
+        hold(&mut game, 21, 3);
+        hold(&mut game, 21, 3);
+        check_scene(
+            &format!("{prefix}-player-avatar-changed"),
+            &game,
+            0x771e4946d2860498,
+        );
+        hold(&mut game, 13, 3);
+        check(
+            &format!("{prefix}-computer-avatar"),
+            &game,
+            0xaea,
+            0x7dcfbd2d8f5b17e4,
+        );
+        hold(&mut game, 22, 3);
+        hold(&mut game, 22, 3);
+        check_scene(
+            &format!("{prefix}-computer-avatar-changed"),
+            &game,
+            0x257474d6b7c7580,
+        );
+        hold(&mut game, 13, 3);
+        check(
+            &format!("{prefix}-board"),
+            &game,
+            0x48e5,
+            0x9a4f7f48212db4ba,
+        );
+
+        // The computer opens; Enter places the player stone and H retracts both moves.
+        // At 高级 the same key press is ignored, so undo is only exercised at 中级.
+        let mut board = game.clone();
+        for _ in 0..4 {
+            hold(&mut board, 20, 3);
+        }
+        hold(&mut board, 13, 3);
+        check_scene(&format!("{prefix}-place"), &board, 0x1e36d96734d68256);
+        hold(&mut board, b'h', 3);
+        check(
+            &format!("{prefix}-undo"),
+            &board,
+            0x48e5,
+            0x9a4f7f48212db4ba,
+        );
+        // A bare Enter right after the undo is ignored until the cursor moves.
+        hold(&mut board, 13, 3);
+        check_scene(
+            &format!("{prefix}-enter-after-undo"),
+            &board,
+            0x9a4f7f48212db4ba,
+        );
+        hold(&mut board, 22, 3);
+        hold(&mut board, 13, 3);
+        check_scene(&format!("{prefix}-place-again"), &board, 0x9ec0a08a334efbb4);
+
+        // Q hands the rest of the game to the computer; at 中级 white wins at 026.
+        hold(&mut board, b'q', 3);
+        check(
+            &format!("{prefix}-auto"),
+            &board,
+            0x2cd3,
+            0xdf0da186e6d15057,
+        );
+        advance(&mut board, 240);
+        check(
+            &format!("{prefix}-auto-result"),
+            &board,
+            0x1482,
+            0xe772e7634e1caac1,
+        );
+        hold(&mut board, b'q', 3);
+        check(
+            &format!("{prefix}-auto-back"),
+            &board,
+            0x48e5,
+            0x9664b9f8acf2bb8e,
+        );
+        hold(&mut board, 32, 3);
+        check(
+            &format!("{prefix}-scores"),
+            &board,
+            0x4b48,
+            0x1e539849e5abf19,
+        );
+        hold(&mut board, 27, 3);
+        check_scene(&format!("{prefix}-scores-back"), &board, 0x9664b9f8acf2bb8e);
+
+        // F1 resets the board after a confirmation, F4 edits the player profile.
+        hold(&mut board, 28, 3);
+        check(
+            &format!("{prefix}-reset-ask"),
+            &board,
+            0x4d30,
+            0x6dddebdb25cb5b94,
+        );
+        hold(&mut board, b'n', 3);
+        check(
+            &format!("{prefix}-reset-no"),
+            &board,
+            0x48e5,
+            0x9664b9f8acf2bb8e,
+        );
+        hold(&mut board, 31, 3);
+        check(
+            &format!("{prefix}-profile"),
+            &board,
+            0x71f,
+            0xb69083ce8b421e02,
+        );
+        hold(&mut board, 27, 3);
+        check(
+            &format!("{prefix}-profile-back"),
+            &board,
+            0x9df,
+            0x771e4946d2860498,
+        );
+
+        // Leaving asks first: N stays, Y returns to the title menu.
+        hold(&mut board, 27, 3);
+        check(
+            &format!("{prefix}-leave-ask"),
+            &board,
+            0x4879,
+            0xedb4ddcebc4d10,
+        );
+        hold(&mut board, b'n', 3);
+        check(
+            &format!("{prefix}-leave-no"),
+            &board,
+            0x48e5,
+            0x9664b9f8acf2bb8e,
+        );
+        hold(&mut board, 27, 3);
+        hold(&mut board, b'y', 3);
+        check(
+            &format!("{prefix}-leave-yes"),
+            &board,
+            0x69c5,
+            0xa77227bd436c5fe7,
+        );
+
+        let saved = board.files_mut().take_dirty_files();
+        assert_eq!(saved.len(), 1);
+        assert_eq!(saved[0].0, SAVE_PATH);
+        assert_eq!(saved[0].1.len(), 30);
+        assert_eq!(
+            saved[0].1,
+            [
+                0x20, 0x20, b'A', b'B', 0x20, 0x20, 0x00, 0x00, 0x14, 0x00, 0x02, 0x00, 0x02, 0x00,
+                0x00, 0x00, 0x01, 0x00, 0x01, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, b'v', b'1',
+                b'.', b'4',
+            ]
+        );
+
+        // A fresh session imports the save and goes straight to the recorded board.
+        let mut loader = load(path);
+        loader
+            .files_mut()
+            .import_file(SAVE_PATH, saved[0].1.clone());
+        advance(&mut loader, 200);
+        hold(&mut loader, 13, 3);
+        hold(&mut loader, 13, 3);
+        check(
+            &format!("{prefix}-loaded"),
+            &loader,
+            0x48e5,
+            0x9664b9f8acf2bb8e,
+        );
+        hold(&mut loader, 32, 3);
+        check(
+            &format!("{prefix}-loaded-scores"),
+            &loader,
+            0x4b48,
+            0x1e539849e5abf19,
+        );
+        assert!(loader.files_mut().take_dirty_files().is_empty());
+    }
+}
