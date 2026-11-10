@@ -28624,7 +28624,7 @@ fn zero_panic_menu_difficulty_password_and_win() {
     assert_eq!(game.vm().pc(), 0x105c);
     assert_eq!(word(&game, 0x2642), 0);
 
-    for key in [b'm', b'g', b'j'] {
+    for key in *b"mgj" {
         press(&mut game, key);
     }
     assert_eq!(game.vm().pc(), 0xe40);
@@ -29664,4 +29664,503 @@ fn pala_aftermath_shares_the_title_list_story_and_map_in_all_three_builds() {
             BUILDS[index].tag, BUILDS[0].tag
         );
     }
+}
+
+#[test]
+#[ignore = "requires the local game corpus via LAVAX_GAME_ROOT"]
+fn frog_adventure_walks_its_menu_level_select_editor_and_gameplay() {
+    fn byte(game: &Emulator, address: usize) -> u8 {
+        game.vm().memory()[address]
+    }
+
+    fn word(game: &Emulator, address: usize) -> u16 {
+        u16::from_le_bytes([byte(game, address), byte(game, address + 1)])
+    }
+
+    fn scene(game: &Emulator) -> u64 {
+        let mut hash = 0xcbf29ce484222325u64;
+        for &pixel in game.display().indexed_frame() {
+            hash = (hash ^ u64::from(pixel)).wrapping_mul(0x100000001b3);
+        }
+        hash
+    }
+
+    const PATH: &str = "LAVA1 青蛙冒险/青蛙冒险.lav";
+    let splash = || -> Emulator {
+        let mut game = load(PATH);
+        for _ in 0..40 {
+            advance(&mut game, 10);
+            if (0x1900..0x1990).contains(&game.vm().pc()) {
+                return game;
+            }
+        }
+        panic!("the game never reaches its splash screen");
+    };
+    let menu = || -> Emulator {
+        let mut game = splash();
+        game.input_mut().set_keys([13]);
+        advance(&mut game, 1);
+        game.input_mut().set_keys([]);
+        for _ in 0..60 {
+            advance(&mut game, 10);
+            if (0x19d0..0x1a30).contains(&game.vm().pc()) {
+                return game;
+            }
+        }
+        panic!("the splash never opens the menu");
+    };
+
+    let splash = splash();
+    assert_eq!(
+        splash.vm().pc(),
+        0x1925,
+        "the splash screen waits for a key"
+    );
+    assert_eq!(
+        word(&splash, 0x1b00),
+        0x00c8,
+        "the splash paints from its own state"
+    );
+    capture(&splash, "frog-splash");
+
+    let mut game = menu();
+    assert!(
+        (0x19d0..0x1a30).contains(&game.vm().pc()),
+        "a key on the splash opens the menu"
+    );
+    assert_eq!(byte(&game, 0x3778), 0, "the menu starts on 开始游戏");
+    capture(&game, "frog-menu");
+
+    let mut blinks = Vec::new();
+    for _ in 0..60 {
+        blinks.push(scene(&game));
+        advance(&mut game, 1);
+    }
+    blinks.sort_unstable();
+    blinks.dedup();
+    assert_eq!(blinks.len(), 2, "the menu blinks between two frames");
+
+    let mut cursor = Vec::new();
+    for _ in 0..4 {
+        press(&mut game, 21);
+        cursor.push(byte(&game, 0x3778));
+    }
+    assert_eq!(
+        cursor,
+        [1, 2, 3, 3],
+        "Down walks the four entries and clamps on 关于我们"
+    );
+    let mut cursor = Vec::new();
+    for _ in 0..4 {
+        press(&mut game, 20);
+        cursor.push(byte(&game, 0x3778));
+    }
+    assert_eq!(cursor, [2, 1, 0, 0], "Up walks back and clamps on 开始游戏");
+    assert!(
+        (0x19d0..0x1a30).contains(&game.vm().pc()),
+        "both walks stay in the menu"
+    );
+
+    let mut mode = game.clone();
+    press(&mut mode, 13);
+    assert_eq!(
+        mode.vm().pc(),
+        0x22f5,
+        "Enter on 开始游戏 opens the level mode select"
+    );
+    assert_eq!(
+        scene(&mode),
+        0xb70e19fb700e4ca7,
+        "the mode select paints its own card"
+    );
+    capture(&mode, "frog-mode-select");
+    for key in [13u8, 49, 50, 27, 20, 22] {
+        let mut branch = mode.clone();
+        press(&mut branch, key);
+        assert_eq!(branch.vm().pc(), 0x22f5, "key {key} is not a mode choice");
+        assert_eq!(
+            scene(&branch),
+            0xb70e19fb700e4ca7,
+            "key {key} leaves the mode select untouched"
+        );
+    }
+
+    let mut classic = mode.clone();
+    press(&mut classic, b'b');
+    assert_eq!(
+        classic.vm().pc(),
+        0x184f,
+        "the device 1 key opens the classic level prompt"
+    );
+    capture(&classic, "frog-classic-prompt");
+
+    let mut started = Vec::new();
+    for (digit, letter, level) in [
+        (49u8, b'b', 1u8),
+        (50, b'n', 2),
+        (51, b'm', 3),
+        (52, b'g', 4),
+        (53, b'h', 5),
+        (54, b'j', 6),
+        (55, b't', 7),
+        (56, b'y', 8),
+        (57, b'u', 9),
+    ] {
+        let mut typed = classic.clone();
+        press(&mut typed, digit);
+        let prompt = scene(&typed);
+        press(&mut typed, 13);
+        advance(&mut typed, 60);
+        assert_eq!(typed.vm().pc(), 0x2afa, "level {level} starts the game");
+        assert_eq!(
+            byte(&typed, 0x3755),
+            level,
+            "the prompt stores the chosen level {level}"
+        );
+
+        let mut spelled = classic.clone();
+        press(&mut spelled, letter);
+        assert_eq!(
+            scene(&spelled),
+            prompt,
+            "the {letter} key paints level {level} like the digit key"
+        );
+        press(&mut spelled, 13);
+        advance(&mut spelled, 60);
+        assert_eq!(
+            spelled.vm().pc(),
+            0x2afa,
+            "level {level} starts from the letter key too"
+        );
+        assert_eq!(
+            byte(&spelled, 0x3755),
+            level,
+            "the letter key stores level {level}"
+        );
+        assert_eq!(
+            scene(&spelled),
+            scene(&typed),
+            "both keys start level {level} identically"
+        );
+        started.push(spelled);
+    }
+
+    let mut custom = mode.clone();
+    press(&mut custom, b'n');
+    assert_eq!(
+        custom.vm().pc(),
+        0x1cdf,
+        "the device 2 key opens the custom level list"
+    );
+    assert_eq!(
+        byte(&custom, 0x1b08),
+        0,
+        "the list starts on the first slot"
+    );
+    capture(&custom, "frog-custom-list");
+    let mut slots = Vec::new();
+    for _ in 0..6 {
+        press(&mut custom, 21);
+        slots.push(byte(&custom, 0x1b08));
+    }
+    assert_eq!(
+        slots,
+        [1, 2, 3, 4, 4, 4],
+        "Down walks the five slots and clamps on the last"
+    );
+    let mut slots = Vec::new();
+    for _ in 0..6 {
+        press(&mut custom, 20);
+        slots.push(byte(&custom, 0x1b08));
+    }
+    assert_eq!(
+        slots,
+        [3, 2, 1, 0, 0, 0],
+        "Up walks back and clamps on the first slot"
+    );
+    press(&mut custom, 13);
+    assert_eq!(
+        custom.vm().pc(),
+        0x2462,
+        "an empty slot shows the missing-file notice"
+    );
+    capture(&custom, "frog-custom-empty");
+    press(&mut custom, 13);
+    assert!(
+        (0x19d0..0x1a30).contains(&custom.vm().pc()),
+        "a key returns from the notice to the menu"
+    );
+
+    for (offset, pc, name) in [(1usize, 0x252a, "help"), (3, 0x17c4, "about")] {
+        let mut screen = game.clone();
+        for _ in 0..offset {
+            press(&mut screen, 21);
+        }
+        press(&mut screen, 13);
+        assert_eq!(
+            screen.vm().pc(),
+            pc,
+            "the {name} entry opens its text screen"
+        );
+        capture(&screen, &format!("frog-{name}"));
+        press(&mut screen, 13);
+        assert!(
+            (0x19d0..0x1a30).contains(&screen.vm().pc()),
+            "a key returns from {name} to the menu"
+        );
+    }
+
+    let mut editor = game.clone();
+    press(&mut editor, 21);
+    press(&mut editor, 21);
+    press(&mut editor, 13);
+    assert_eq!(editor.vm().pc(), 0x2044, "the map editor opens its grid");
+    assert_eq!(
+        byte(&editor, 0x1b04),
+        0x00,
+        "the editor starts on the top row"
+    );
+    assert_eq!(
+        byte(&editor, 0x1b08),
+        0x18,
+        "the editor starts on the first column"
+    );
+    assert_eq!(
+        byte(&editor, 0x1b0c),
+        0x08,
+        "the editor starts on the first cell row"
+    );
+    let empty_grid = scene(&editor);
+    capture(&editor, "frog-editor");
+
+    let mut walked = editor.clone();
+    let mut rows = Vec::new();
+    for _ in 0..4 {
+        press(&mut walked, 21);
+        rows.push(byte(&walked, 0x1b04));
+    }
+    assert_eq!(
+        rows,
+        [0x08, 0x10, 0x18, 0x20],
+        "Down steps one grid row at a time"
+    );
+    let mut columns = Vec::new();
+    for _ in 0..4 {
+        press(&mut walked, 22);
+        columns.push(byte(&walked, 0x1b08));
+    }
+    assert_eq!(
+        columns,
+        [0x20, 0x28, 0x30, 0x38],
+        "Right steps one grid column at a time"
+    );
+    assert_eq!(walked.vm().pc(), 0x2044, "the walks stay in the editor");
+
+    let mut clamped = editor.clone();
+    for _ in 0..4 {
+        press(&mut clamped, 20);
+    }
+    assert_eq!(byte(&clamped, 0x1b04), 0x00, "Up clamps on the top row");
+    for _ in 0..4 {
+        press(&mut clamped, 23);
+    }
+    assert_eq!(
+        byte(&clamped, 0x1b08),
+        0x18,
+        "Left clamps on the first column"
+    );
+    assert_eq!(
+        scene(&clamped),
+        empty_grid,
+        "the clamps leave the grid untouched"
+    );
+
+    let mut tile = editor.clone();
+    press(&mut tile, 28);
+    assert_eq!(word(&tile, 0x1b10), 1, "F1 opens the tile palette");
+    assert_ne!(scene(&tile), empty_grid, "the palette covers the grid");
+    capture(&tile, "frog-editor-palette");
+    press(&mut tile, 13);
+    assert_eq!(word(&tile, 0x1b10), 0, "Enter closes the tile palette");
+    assert_eq!(tile.vm().pc(), 0x2044, "the editor stays open after adding");
+    assert_ne!(scene(&tile), empty_grid, "the added tile stays on the grid");
+    press(&mut tile, 29);
+    assert_eq!(scene(&tile), empty_grid, "F2 removes the added tile");
+
+    let mut save = editor.clone();
+    press(&mut save, b's');
+    assert_eq!(
+        save.vm().pc(),
+        0x1cdf,
+        "S opens the custom level list from the editor"
+    );
+    capture(&save, "frog-save-list");
+    press(&mut save, 13);
+    assert_eq!(save.vm().pc(), 0x20e4, "Enter stores the edited grid");
+    capture(&save, "frog-saved");
+    let stored = save
+        .files()
+        .file("/lavadata/qingwa0.dat")
+        .expect("the editor stores its level");
+    assert_eq!(stored.len(), 144, "the level file holds the whole grid");
+    let written = save.files_mut().take_dirty_files();
+    assert_eq!(written.len(), 1, "the save is the only pending write");
+    assert_eq!(
+        written[0].0, "/lavadata/qingwa0.dat",
+        "the save lands in the level directory"
+    );
+    assert_eq!(written[0].1.len(), 144, "the whole grid is written");
+
+    press(&mut save, 13);
+    assert!(
+        (0x19d0..0x1a30).contains(&save.vm().pc()),
+        "a key returns from the save notice to the menu"
+    );
+    press(&mut save, 13);
+    press(&mut save, b'n');
+    assert_eq!(
+        save.vm().pc(),
+        0x1cdf,
+        "自建关卡 reopens the custom level list"
+    );
+    assert_eq!(
+        byte(&save, 0x1b08),
+        0,
+        "the saved level sits on the first slot"
+    );
+    press(&mut save, 13);
+    advance(&mut save, 60);
+    assert_eq!(save.vm().pc(), 0x2afa, "the saved level starts the game");
+
+    let mut escape = editor.clone();
+    press(&mut escape, 27);
+    assert_eq!(
+        escape.vm().pc(),
+        0x21ac,
+        "Escape asks before dropping unsaved edits"
+    );
+    capture(&escape, "frog-editor-quit");
+    let mut leave = escape.clone();
+    press(&mut leave, b'y');
+    assert!(
+        (0x19d0..0x1a30).contains(&leave.vm().pc()),
+        "Y leaves the editor for the menu"
+    );
+    for key in [b'n', 13] {
+        let mut stay = escape.clone();
+        press(&mut stay, key);
+        assert_eq!(
+            stay.vm().pc(),
+            0x2044,
+            "key {key} returns from the question to the editor"
+        );
+    }
+
+    let mut play = started.remove(0);
+    assert_eq!(play.vm().pc(), 0x2afa, "the classic level runs its loop");
+    assert_eq!(byte(&play, 0x3753), 0x0b, "the frog starts in its column");
+    assert_eq!(byte(&play, 0x3757), 1, "the frog starts in walking mode");
+    capture(&play, "frog-play");
+
+    let mut quiet = Vec::new();
+    for key in [20u8, 21, 22] {
+        let mut branch = play.clone();
+        let mut shots = Vec::new();
+        for _ in 0..3 {
+            press(&mut branch, key);
+            shots.push(scene(&branch));
+        }
+        assert_eq!(
+            byte(&branch, 0x3753),
+            0x0b,
+            "key {key} leaves the walking frog in place"
+        );
+        quiet.push(shots);
+    }
+    assert!(
+        quiet.windows(2).all(|pair| pair[0] == pair[1]),
+        "Up, Down and Right paint the same idle frames"
+    );
+
+    let mut left = play.clone();
+    let mut columns = Vec::new();
+    let mut moved = Vec::new();
+    for _ in 0..3 {
+        press(&mut left, 23);
+        columns.push(byte(&left, 0x3753));
+        moved.push(scene(&left));
+    }
+    assert_eq!(
+        columns,
+        [0x0a, 0x0a, 0x0a],
+        "Left walks the frog one cell and then stops at the wall"
+    );
+    assert_ne!(
+        moved, quiet[0],
+        "Left paints different frames from the idle keys"
+    );
+
+    let mut toggled = play.clone();
+    press(&mut toggled, 19);
+    assert_eq!(byte(&toggled, 0x3757), 2, "PageUp switches to jumping");
+    press(&mut toggled, 14);
+    assert_eq!(
+        byte(&toggled, 0x3757),
+        1,
+        "PageDown switches back to walking"
+    );
+    press(&mut toggled, 14);
+    assert_eq!(byte(&toggled, 0x3757), 2, "PageDown also toggles the mode");
+
+    let mut quit = play.clone();
+    press(&mut quit, 27);
+    assert_eq!(
+        quit.vm().pc(),
+        0x2ef5,
+        "Escape asks before quitting the level"
+    );
+    capture(&quit, "frog-quit");
+    let mut leave = quit.clone();
+    press(&mut leave, b'y');
+    assert!(
+        (0x19d0..0x1a30).contains(&leave.vm().pc()),
+        "Y returns to the menu"
+    );
+    let mut resume = quit.clone();
+    press(&mut resume, b'n');
+    assert_eq!(resume.vm().pc(), 0x2afa, "N resumes the level");
+
+    let mut sos = play.clone();
+    press(&mut sos, 28);
+    assert_eq!(sos.vm().pc(), 0x2742, "F1 offers the one-time rescue");
+    capture(&sos, "frog-sos");
+    let mut resume = sos.clone();
+    press(&mut resume, b'n');
+    assert_eq!(
+        resume.vm().pc(),
+        0x2afa,
+        "N resumes without spending the rescue"
+    );
+    let mut rescue = sos.clone();
+    press(&mut rescue, b'y');
+    assert_eq!(rescue.vm().pc(), 0x2afa, "Y resumes after the rescue");
+
+    assert!(
+        play.files_mut().take_dirty_files().is_empty(),
+        "playing a classic level writes no files"
+    );
+    let script = |emulator: &Emulator| -> Vec<u64> {
+        let mut emulator = emulator.clone();
+        let mut shots = Vec::new();
+        for key in [23u8, 23, 19, 20, 23, 14, 21, 22] {
+            press(&mut emulator, key);
+            shots.push(scene(&emulator));
+        }
+        shots
+    };
+    assert_eq!(
+        script(&play),
+        script(&play),
+        "the same script repaints identical frames"
+    );
 }
