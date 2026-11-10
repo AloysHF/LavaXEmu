@@ -30854,3 +30854,375 @@ fn flight_chess_covers_menu_config_roll_and_exit() {
         assert_eq!(halted_by(game, b'y'), Some(0));
     }
 }
+
+#[test]
+#[ignore = "requires the local game corpus via LAVAX_GAME_ROOT"]
+fn magic_tower_covers_title_story_map_menu_and_saves() {
+    fn scene(game: &Emulator) -> u64 {
+        let mut hash = 0xcbf29ce484222325u64;
+        for &pixel in game.display().indexed_frame() {
+            hash = (hash ^ u64::from(pixel)).wrapping_mul(0x100000001b3);
+        }
+        hash
+    }
+    fn byte(game: &Emulator, address: usize) -> u8 {
+        game.vm().memory()[address]
+    }
+    fn word(game: &Emulator, address: usize) -> u16 {
+        let memory = game.vm().memory();
+        u16::from_le_bytes([memory[address], memory[address + 1]])
+    }
+    fn halted(game: &mut Emulator, limit: usize) -> Option<i32> {
+        for _ in 0..limit {
+            if let FrameStatus::Halted(code) = game.run_frame().unwrap().status {
+                return Some(code);
+            }
+        }
+        None
+    }
+
+    const LOOSE: &str = "LAVA1 魔塔/魔塔.lav";
+    // Map row, map column, and the last movement key.
+    const ROW: usize = 0x2001;
+    const COLUMN: usize = 0x2002;
+    const KEY: usize = 0x2007;
+    // Hero health is mirrored as 16-bit values and as a 32-bit total.
+    const HEALTH16: [usize; 3] = [0x4e4d, 0x4e8f, 0x4e9b];
+    const HEALTH32: usize = 0x4e9b;
+
+    let mut game = load(LOOSE);
+    advance(&mut game, 300);
+    assert_eq!(game.vm().pc(), 0x01f4);
+    assert_eq!(scene(&game), 0x0538d6f18b7fdc77);
+    capture(&game, "tower-title");
+
+    // The title walks four difficulties and wraps back to the first one.
+    for expected in [
+        0xd9b47860cf009837u64,
+        0x8c935813aa20f097,
+        0xa5389407bbd8225b,
+        0x0538d6f18b7fdc77,
+    ] {
+        hold(&mut game, 21, 6);
+        assert_eq!(scene(&game), expected);
+    }
+    hold(&mut game, 20, 6);
+    assert_eq!(scene(&game), 0xa5389407bbd8225b);
+
+    // The help page is read-only and Escape returns to the same menu row.
+    hold(&mut game, 20, 6);
+    assert_eq!(scene(&game), 0x8c935813aa20f097);
+    hold(&mut game, 13, 6);
+    assert_eq!(game.vm().pc(), 0x0469);
+    assert_eq!(scene(&game), 0x92e56cb0bf47000d);
+    capture(&game, "tower-help");
+    hold(&mut game, 21, 6);
+    assert_eq!(scene(&game), 0x92e56cb0bf47000d);
+    hold(&mut game, 27, 6);
+    assert_eq!(game.vm().pc(), 0x01f4);
+    assert_eq!(scene(&game), 0x8c935813aa20f097);
+
+    // Continuing opens five save slots; empty slots cannot be loaded.
+    hold(&mut game, 20, 6);
+    assert_eq!(scene(&game), 0xd9b47860cf009837);
+    hold(&mut game, 13, 6);
+    assert_eq!(game.vm().pc(), 0x0521);
+    assert_eq!(scene(&game), 0x98f1281caca20052);
+    capture(&game, "tower-title-slots");
+    hold(&mut game, 21, 6);
+    assert_eq!(scene(&game), 0x345e94eab016b72e);
+    hold(&mut game, 13, 6);
+    assert_eq!(scene(&game), 0x345e94eab016b72e, "empty slots stay open");
+    hold(&mut game, 27, 6);
+    assert_eq!(scene(&game), 0xd9b47860cf009837);
+
+    // A new game starts with the story, which Escape skips into the map.
+    hold(&mut game, 20, 6);
+    assert_eq!(scene(&game), 0x0538d6f18b7fdc77);
+    hold(&mut game, 13, 6);
+    assert_eq!(game.vm().pc(), 0x0993);
+    assert_eq!(scene(&game), 0x4886faf9292905f9);
+    capture(&game, "tower-story");
+    hold(&mut game, 27, 6);
+    assert_eq!(game.vm().pc(), 0x0dff);
+    assert_eq!(scene(&game), 0xccbd93048fc6abf7);
+    capture(&game, "tower-map");
+
+    for address in HEALTH16 {
+        assert_eq!(word(&game, address), 1000);
+    }
+    let health = game.vm().memory();
+    assert_eq!(
+        u32::from_le_bytes([
+            health[HEALTH32],
+            health[HEALTH32 + 1],
+            health[HEALTH32 + 2],
+            health[HEALTH32 + 3],
+        ]),
+        1000
+    );
+
+    // Each arrow key moves one step and records the key in the map state.
+    hold(&mut game, 20, 3);
+    assert_eq!(scene(&game), 0x158f85288cc38f63);
+    assert_eq!(byte(&game, ROW), 9);
+    assert_eq!(byte(&game, COLUMN), 5);
+    assert_eq!(byte(&game, KEY), 20);
+    capture(&game, "tower-map-up");
+    hold(&mut game, 21, 3);
+    assert_eq!(scene(&game), 0x3059abd80c59fa26);
+    assert_eq!(byte(&game, ROW), 10);
+    assert_eq!(byte(&game, KEY), 21);
+    hold(&mut game, 22, 3);
+    assert_eq!(scene(&game), 0xaa653b0bed02079f);
+    assert_eq!(byte(&game, COLUMN), 6);
+    assert_eq!(byte(&game, KEY), 22);
+    capture(&game, "tower-map-right");
+    hold(&mut game, 23, 3);
+    assert_eq!(scene(&game), 0x6d6dac64ba15df33);
+    assert_eq!(byte(&game, COLUMN), 4);
+    assert_eq!(byte(&game, KEY), 23);
+    hold(&mut game, 22, 3);
+    assert_eq!(scene(&game), 0xaa653b0bed02079f);
+    assert_eq!(byte(&game, COLUMN), 6);
+    assert_eq!(byte(&game, KEY), 22);
+
+    // Space opens the four-entry menu and Down wraps around it.
+    hold(&mut game, 32, 6);
+    assert_eq!(game.vm().pc(), 0x0e96);
+    assert_eq!(scene(&game), 0x513952d26acc509c);
+    capture(&game, "tower-menu");
+    for expected in [
+        0x9ce213aafe73f870u64,
+        0xc68f66dd9c2c1fbc,
+        0x3299081f41ecd9d4,
+        0x513952d26acc509c,
+    ] {
+        hold(&mut game, 21, 6);
+        assert_eq!(scene(&game), expected);
+    }
+
+    // The in-game help page cannot be navigated and Escape returns to the menu.
+    hold(&mut game, 21, 6);
+    hold(&mut game, 21, 6);
+    hold(&mut game, 13, 6);
+    assert_eq!(game.vm().pc(), 0x1147);
+    assert_eq!(scene(&game), 0x4db1a5ab9ed61ac6);
+    capture(&game, "tower-game-help");
+    hold(&mut game, 21, 6);
+    assert_eq!(scene(&game), 0x4db1a5ab9ed61ac6);
+    hold(&mut game, 27, 6);
+    assert_eq!(game.vm().pc(), 0x0e96);
+    assert_eq!(scene(&game), 0xc68f66dd9c2c1fbc);
+
+    // Saving to slot two writes one dirty save file and returns to the menu.
+    hold(&mut game, 20, 6);
+    hold(&mut game, 20, 6);
+    assert_eq!(scene(&game), 0x513952d26acc509c);
+    hold(&mut game, 13, 6);
+    assert_eq!(game.vm().pc(), 0x1754);
+    assert_eq!(scene(&game), 0x39ae874ce06de14b);
+    capture(&game, "tower-save-slots");
+    hold(&mut game, 21, 6);
+    assert_eq!(scene(&game), 0x8eaffdab46a6badf);
+    hold(&mut game, 13, 6);
+    assert_eq!(game.vm().pc(), 0x0e96);
+    assert_eq!(scene(&game), 0x513952d26acc509c);
+    let dirty = game.files_mut().take_dirty_files();
+    assert_eq!(dirty.len(), 1);
+    assert_eq!(dirty[0].0, "/lavadata/魔塔二.sav");
+    assert_eq!(dirty[0].1.len(), 2689);
+
+    // Escape closes the menu back to the map state saved a moment ago.
+    hold(&mut game, 27, 6);
+    assert_eq!(scene(&game), 0xaa653b0bed02079f);
+    hold(&mut game, 32, 6);
+    hold(&mut game, 21, 6);
+    assert_eq!(scene(&game), 0x9ce213aafe73f870);
+    hold(&mut game, 13, 6);
+    assert_eq!(game.vm().pc(), 0x11fe);
+    assert_eq!(scene(&game), 0xa92c860d116d746a);
+    capture(&game, "tower-load-slots");
+    hold(&mut game, 21, 6);
+    assert_eq!(scene(&game), 0x542b0faeab349ad6);
+    hold(&mut game, 13, 6);
+    assert_eq!(game.vm().pc(), 0x0e96);
+    assert_eq!(scene(&game), 0x4b1b252af69c6f1c);
+    capture(&game, "tower-loaded");
+
+    // Leaving the game plays a wipe and halts with code 0. The restored
+    // session keeps its own menu rendering until the next transition.
+    hold(&mut game, 21, 6);
+    assert_eq!(scene(&game), 0x74c8785d94549668);
+    hold(&mut game, 21, 6);
+    assert_eq!(scene(&game), 0xcf6bb6fdfec8a56c);
+    hold(&mut game, 13, 6);
+    assert_eq!(game.vm().pc(), 0x1081);
+    assert_eq!(scene(&game), 0x934391d174d64de3);
+    assert_eq!(halted(&mut game, 400), Some(0));
+    assert_eq!(game.vm().pc(), 0x1088);
+    assert_eq!(scene(&game), 0x79e6435029510b25);
+
+    // The title menu offers the same exit wipe from a fresh boot.
+    let mut fresh = load(LOOSE);
+    advance(&mut fresh, 300);
+    for _ in 0..3 {
+        hold(&mut fresh, 21, 6);
+    }
+    assert_eq!(scene(&fresh), 0xa5389407bbd8225b);
+    hold(&mut fresh, 13, 6);
+    assert_eq!(fresh.vm().pc(), 0x0376);
+    assert_eq!(scene(&fresh), 0x8402fd1b397dff6b);
+    assert_eq!(halted(&mut fresh, 400), Some(0));
+    assert_eq!(fresh.vm().pc(), 0x037d);
+    assert_eq!(scene(&fresh), 0x79e6435029510b25);
+}
+
+#[test]
+#[ignore = "requires the local game corpus via LAVAX_GAME_ROOT"]
+fn magic_tower_integrated_covers_splash_map_menu_and_saves() {
+    fn scene(game: &Emulator) -> u64 {
+        let mut hash = 0xcbf29ce484222325u64;
+        for &pixel in game.display().indexed_frame() {
+            hash = (hash ^ u64::from(pixel)).wrapping_mul(0x100000001b3);
+        }
+        hash
+    }
+    fn byte(game: &Emulator, address: usize) -> u8 {
+        game.vm().memory()[address]
+    }
+    fn word(game: &Emulator, address: usize) -> u16 {
+        let memory = game.vm().memory();
+        u16::from_le_bytes([memory[address], memory[address + 1]])
+    }
+    fn tap_and_halt(game: &mut Emulator, key: u8, limit: usize) -> Option<i32> {
+        for _ in 0..6 {
+            game.input_mut().set_keys([key]);
+            game.run_frame().unwrap();
+        }
+        game.input_mut().set_keys([]);
+        for _ in 0..limit {
+            if let FrameStatus::Halted(code) = game.run_frame().unwrap().status {
+                return Some(code);
+            }
+        }
+        None
+    }
+
+    const INTEGRATED: &str = "LAVA1 魔塔整合版/魔塔整合版.lav";
+    // Map column, facing index, health, last key, and the menu cursor.
+    const COLUMN: usize = 0x2000;
+    const FACING: usize = 0x2004;
+    const HEALTH: usize = 0x200c;
+    const KEY: usize = 0x3193;
+    const CURSOR: usize = 0x31a7;
+
+    let mut game = load(INTEGRATED);
+    advance(&mut game, 300);
+    assert_eq!(game.vm().pc(), 0x132f);
+    assert_eq!(scene(&game), 0xc313230858e27c08);
+    capture(&game, "tower-int-splash");
+
+    // Enter starts the scripted introduction, which settles into the map.
+    hold(&mut game, 13, 6);
+    advance(&mut game, 300);
+    assert_eq!(game.vm().pc(), 0x38db);
+    assert_eq!(scene(&game), 0x614f03b15d5c733e);
+    assert_eq!(word(&game, HEALTH), 400);
+    capture(&game, "tower-int-map");
+
+    // Turning and stepping update the facing index, column and last key.
+    hold(&mut game, 20, 8);
+    assert_eq!(scene(&game), 0x614f03b15d5c733e);
+    assert_eq!(byte(&game, FACING), 1);
+    assert_eq!(byte(&game, KEY), 20);
+    hold(&mut game, 21, 8);
+    assert_eq!(byte(&game, FACING), 0);
+    assert_eq!(byte(&game, KEY), 21);
+    hold(&mut game, 22, 8);
+    assert_eq!(scene(&game), 0xf345e1cc130ef3de);
+    assert_eq!(byte(&game, COLUMN), 6);
+    assert_eq!(byte(&game, FACING), 4);
+    assert_eq!(byte(&game, KEY), 22);
+    capture(&game, "tower-int-right");
+    hold(&mut game, 23, 8);
+    assert_eq!(scene(&game), 0x614f03b15d5c733e);
+    assert_eq!(byte(&game, COLUMN), 5);
+    assert_eq!(byte(&game, FACING), 3);
+    assert_eq!(byte(&game, KEY), 23);
+
+    // Escape opens the five-entry menu and Down wraps around it.
+    hold(&mut game, 27, 6);
+    assert_eq!(game.vm().pc(), 0x2587);
+    assert_eq!(scene(&game), 0x3d7bef1e4ed6468e);
+    assert_eq!(byte(&game, CURSOR), 0);
+    capture(&game, "tower-int-menu");
+    for (cursor, expected) in [
+        (1u8, 0x5d7c08c35a535fb7u64),
+        (2, 0x1e1f6e661e45070d),
+        (3, 0x5cfb894ecc2ec525),
+        (4, 0x0c428cf6dbd7e521),
+        (0, 0x3d7bef1e4ed6468e),
+    ] {
+        hold(&mut game, 21, 6);
+        assert_eq!(byte(&game, CURSOR), cursor);
+        assert_eq!(scene(&game), expected);
+    }
+
+    // The status entry shows the starting hero sheet.
+    hold(&mut game, 13, 6);
+    assert_eq!(game.vm().pc(), 0x2587);
+    assert_eq!(scene(&game), 0x3d7bef1e4ed6468e);
+    capture(&game, "tower-int-status");
+
+    // The monster list needs the tome item and rejects the request.
+    hold(&mut game, 21, 6);
+    assert_eq!(byte(&game, CURSOR), 1);
+    hold(&mut game, 13, 6);
+    assert_eq!(scene(&game), 0x5d7c08c35a535fb7);
+    capture(&game, "tower-int-monsters");
+    hold(&mut game, 27, 6);
+    assert_eq!(game.vm().pc(), 0x38db);
+    assert_eq!(scene(&game), 0x614f03b15d5c733e);
+
+    // Saving writes one dirty file and closes the menu page on Escape.
+    hold(&mut game, 27, 6);
+    assert_eq!(scene(&game), 0x3d7bef1e4ed6468e);
+    hold(&mut game, 21, 6);
+    hold(&mut game, 21, 6);
+    assert_eq!(byte(&game, CURSOR), 2);
+    assert_eq!(scene(&game), 0x1e1f6e661e45070d);
+    hold(&mut game, 13, 6);
+    assert_eq!(game.vm().pc(), 0x2587);
+    assert_eq!(scene(&game), 0x500a530534b98b1b);
+    capture(&game, "tower-int-save");
+    let dirty = game.files_mut().take_dirty_files();
+    assert_eq!(dirty.len(), 1);
+    assert_eq!(dirty[0].0, "/lavadata/mtsave.dat");
+    assert_eq!(dirty[0].1.len(), 2410);
+    hold(&mut game, 27, 6);
+    assert_eq!(scene(&game), 0x614f03b15d5c733e);
+
+    // Loading the fresh save succeeds and returns straight to the map.
+    hold(&mut game, 27, 6);
+    for _ in 0..3 {
+        hold(&mut game, 21, 6);
+    }
+    assert_eq!(byte(&game, CURSOR), 3);
+    assert_eq!(scene(&game), 0x5cfb894ecc2ec525);
+    hold(&mut game, 13, 6);
+    assert_eq!(game.vm().pc(), 0x38db);
+    assert_eq!(scene(&game), 0x614f03b15d5c733e);
+    capture(&game, "tower-int-loaded");
+
+    // Leaving the game halts with code 0.
+    hold(&mut game, 27, 6);
+    for _ in 0..4 {
+        hold(&mut game, 21, 6);
+    }
+    assert_eq!(byte(&game, CURSOR), 4);
+    assert_eq!(scene(&game), 0x0c428cf6dbd7e521);
+    assert_eq!(tap_and_halt(&mut game, 13, 400), Some(0));
+    assert_eq!(game.vm().pc(), 0x2581);
+    assert_eq!(scene(&game), 0x0c428cf6dbd7e521);
+}
