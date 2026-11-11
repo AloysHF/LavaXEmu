@@ -32524,3 +32524,319 @@ fn wzq_black_white_covers_title_help_about_exit_setup_board_undo_auto_save_and_r
         assert!(loader.files_mut().take_dirty_files().is_empty());
     }
 }
+
+#[test]
+#[ignore = "requires the local game corpus via LAVAX_GAME_ROOT"]
+fn dragonrise_versions_cover_title_creation_campaign_tutorial_grid_and_exit() {
+    const LOOSE: &str = "LAVA1 龙之崛起[十一特别版]/LAVA/G.龙之崛起.lav";
+    const ALT: &str = "LAVA1 龙之崛起[十一特别版]/LAVA/L.龙之崛起.lav";
+    const PACKAGE: &str = "LAVA1 龙之崛起[十一特别版]/Package/龙之崛起.pac";
+    const SAVE_PATH: &str = "/lavadata/rotmk/record.dat";
+
+    fn scene(emulator: &Emulator) -> u64 {
+        let mut hash = 0xcbf29ce484222325u64;
+        for &pixel in emulator.display().indexed_frame() {
+            hash = (hash ^ u64::from(pixel)).wrapping_mul(0x100000001b3);
+        }
+        hash
+    }
+
+    fn check(label: &str, emulator: &Emulator, pc: usize, hash: u64) {
+        assert_eq!(emulator.vm().pc(), pc, "{label} pc");
+        assert_eq!(scene(emulator), hash, "{label} scene");
+        capture(emulator, label);
+    }
+
+    fn check_scene(label: &str, emulator: &Emulator, hash: u64) {
+        assert_eq!(scene(emulator), hash, "{label} scene");
+        capture(emulator, label);
+    }
+
+    fn tap_halt(emulator: &mut Emulator, key: u8, frames: usize) -> Option<i32> {
+        for _ in 0..3 {
+            emulator.input_mut().set_keys([key]);
+            if let FrameStatus::Halted(code) = emulator.run_frame().unwrap().status {
+                return Some(code);
+            }
+        }
+        emulator.input_mut().set_keys([]);
+        for _ in 0..frames {
+            if let FrameStatus::Halted(code) = emulator.run_frame().unwrap().status {
+                return Some(code);
+            }
+        }
+        None
+    }
+
+    // The loose and packaged builds share the same code layout; the alternate
+    // loose build is compiled at different addresses but renders identically.
+    let identical = [
+        0xd563, 0xc148, 0xc148, 0xc148, 0xd32c, 0xc281, 0xc281, 0xd113, 0xd10e, 0x446a, 0x4b55,
+        0x356a, 0xa1d2,
+    ];
+    for (path, prefix, pcs) in [
+        (LOOSE, "dragonrise-lav", identical),
+        (
+            ALT,
+            "dragonrise-lav-alt",
+            [
+                0xd47b, 0xc060, 0xc060, 0xc060, 0xd244, 0xc199, 0xc199, 0xd02b, 0xd026, 0x4452,
+                0x4b3d, 0x3552, 0xa15a,
+            ],
+        ),
+        (PACKAGE, "dragonrise-pac", identical),
+    ] {
+        let [
+            title_pc,
+            create_pc,
+            typed_pc,
+            good_pc,
+            campaign_pc,
+            scenarios_pc,
+            down_pc,
+            briefing_pc,
+            continue_pc,
+            intro_pc,
+            mission_pc,
+            game_pc,
+            panel_pc,
+        ] = pcs;
+
+        let mut game = load(path);
+        advance(&mut game, 600);
+        assert_eq!(game.display().width(), 160);
+        assert_eq!(game.display().height(), 80);
+        check(
+            &format!("{prefix}-title"),
+            &game,
+            title_pc,
+            0x8558dbcb986c127b,
+        );
+
+        // Down wraps through 最好成绩, 开发人员 and 离开游戏 back to 开始游戏.
+        let mut menu = game.clone();
+        hold(&mut menu, 21, 3);
+        check_scene(
+            &format!("{prefix}-best-selected"),
+            &menu,
+            0xe01755422a21ebd7,
+        );
+        hold(&mut menu, 21, 3);
+        check_scene(
+            &format!("{prefix}-credits-selected"),
+            &menu,
+            0x51fdd0df4e2546db,
+        );
+        hold(&mut menu, 21, 3);
+        check_scene(
+            &format!("{prefix}-exit-selected"),
+            &menu,
+            0x3b8721e3b6c5d6ab,
+        );
+        hold(&mut menu, 21, 3);
+        check_scene(&format!("{prefix}-menu-wrap"), &menu, 0x8558dbcb986c127b);
+
+        // 最好成绩 has no recorded result yet, so Enter keeps the title menu.
+        let mut best = game.clone();
+        hold(&mut best, 21, 3);
+        hold(&mut best, 13, 3);
+        check_scene(&format!("{prefix}-best-empty"), &best, 0xe01755422a21ebd7);
+
+        // Creation: type a name, move to 好 and start a campaign record.
+        let mut game = game.clone();
+        hold(&mut game, 13, 3);
+        check(
+            &format!("{prefix}-creation"),
+            &game,
+            create_pc,
+            0x347c16e3db2ff590,
+        );
+        for key in *b"abc" {
+            hold(&mut game, key, 3);
+        }
+        check(
+            &format!("{prefix}-typed"),
+            &game,
+            typed_pc,
+            0x6ce2897e51569ccd,
+        );
+        for _ in 0..3 {
+            hold(&mut game, 21, 3);
+        }
+        check(
+            &format!("{prefix}-good-selected"),
+            &game,
+            good_pc,
+            0x6c18759528e3cc10,
+        );
+        hold(&mut game, 13, 3);
+        check(
+            &format!("{prefix}-campaign"),
+            &game,
+            campaign_pc,
+            0x72d28e224df7b764,
+        );
+        let written = game.files_mut().take_dirty_files();
+        assert_eq!(written.len(), 1, "{prefix} record write");
+        assert_eq!(written[0].0, SAVE_PATH, "{prefix} record path");
+        assert_eq!(written[0].1.len(), 42, "{prefix} record length");
+        assert!(
+            written[0].1.starts_with(b"RotMK.Record."),
+            "{prefix} record header"
+        );
+        assert!(
+            written[0].1.windows(3).any(|window| window == b"abc"),
+            "{prefix} record name"
+        );
+
+        // 历史上的战役 opens the scenario grid; Up/Down move between rows.
+        hold(&mut game, 13, 3);
+        check(
+            &format!("{prefix}-scenarios"),
+            &game,
+            scenarios_pc,
+            0xb1a0a9c47f4fc9bb,
+        );
+        hold(&mut game, 21, 3);
+        check(
+            &format!("{prefix}-scenarios-down"),
+            &game,
+            down_pc,
+            0x7ccca0a817191f1a,
+        );
+        hold(&mut game, 20, 3);
+        check_scene(&format!("{prefix}-scenarios-up"), &game, 0xb1a0a9c47f4fc9bb);
+
+        // The tutorial scenario shows its title card, then 继续 starts the intro.
+        hold(&mut game, 13, 3);
+        advance(&mut game, 1200);
+        check(
+            &format!("{prefix}-briefing"),
+            &game,
+            briefing_pc,
+            0x2f071ad970b7ab1d,
+        );
+        hold(&mut game, 22, 3);
+        check(
+            &format!("{prefix}-continue-selected"),
+            &game,
+            continue_pc,
+            0x9245269e2aa3f4cd,
+        );
+        hold(&mut game, 13, 3);
+        advance(&mut game, 1800);
+        check(
+            &format!("{prefix}-intro"),
+            &game,
+            intro_pc,
+            0xb94e2514187340d6,
+        );
+
+        // Space pages through the objectives into the 住房与生计 build grid.
+        let mut mission = game.clone();
+        for _ in 0..120 {
+            mission.input_mut().set_keys([32]);
+            mission.run_frame().unwrap();
+        }
+        mission.input_mut().set_keys([]);
+        advance(&mut mission, 2000);
+        check(
+            &format!("{prefix}-mission"),
+            &mission,
+            mission_pc,
+            0xed1575c6534d0644,
+        );
+        for _ in 0..120 {
+            mission.input_mut().set_keys([32]);
+            mission.run_frame().unwrap();
+        }
+        mission.input_mut().set_keys([]);
+        advance(&mut mission, 600);
+        check(
+            &format!("{prefix}-grid"),
+            &mission,
+            game_pc,
+            0x9c10123ce83e279e,
+        );
+
+        for (key, hash) in [
+            (20u8, 0x951f5dfe337ebcb2u64),
+            (21, 0x5203ada53545dc5e),
+            (22, 0x1b53adb8dbd009f6),
+            (23, 0x48a4729037cca872),
+        ] {
+            let mut branch = mission.clone();
+            hold(&mut branch, key, 3);
+            check(&format!("{prefix}-grid-key-{key}"), &branch, game_pc, hash);
+        }
+
+        // Escape opens the settlement status panel; Escape does not close it.
+        let mut panel = mission.clone();
+        for _ in 0..120 {
+            panel.input_mut().set_keys([27]);
+            panel.run_frame().unwrap();
+        }
+        panel.input_mut().set_keys([]);
+        advance(&mut panel, 300);
+        check(
+            &format!("{prefix}-panel"),
+            &panel,
+            panel_pc,
+            0x843b5870576dee87,
+        );
+        hold(&mut panel, 27, 3);
+        check_scene(&format!("{prefix}-panel-stays"), &panel, 0x843b5870576dee87);
+        assert!(
+            panel.files_mut().take_dirty_files().is_empty(),
+            "{prefix} tutorial writes no further files"
+        );
+    }
+
+    // 离开游戏 asks for confirmation; n returns, y halts with code 0.
+    let mut exit = load(LOOSE);
+    advance(&mut exit, 600);
+    for _ in 0..3 {
+        hold(&mut exit, 21, 3);
+    }
+    hold(&mut exit, 13, 3);
+    check("dragonrise-exit-confirm", &exit, 0xd4ac, 0xc277a0e442ce5867);
+    hold(&mut exit, b'n', 3);
+    check(
+        "dragonrise-exit-declined",
+        &exit,
+        0xd5fa,
+        0x3b8721e3b6c5d6ab,
+    );
+    hold(&mut exit, 13, 3);
+    check_scene("dragonrise-exit-confirm-again", &exit, 0xc277a0e442ce5867);
+    assert_eq!(tap_halt(&mut exit, b'y', 200), Some(0));
+
+    // 开发人员 shows two credit pages and then returns to the title menu.
+    let mut credits = load(LOOSE);
+    advance(&mut credits, 600);
+    for _ in 0..2 {
+        hold(&mut credits, 21, 3);
+    }
+    hold(&mut credits, 13, 3);
+    advance(&mut credits, 800);
+    check("dragonrise-credits", &credits, 0x9dee, 0x652d90f087fc8002);
+    hold(&mut credits, 13, 3);
+    advance(&mut credits, 800);
+    check(
+        "dragonrise-credits-site",
+        &credits,
+        0x9f4d,
+        0xb84e49757ffe858a,
+    );
+    hold(&mut credits, 13, 3);
+    advance(&mut credits, 800);
+    check_scene("dragonrise-credits-back", &credits, 0x51fdd0df4e2546db);
+    hold(&mut credits, 13, 3);
+    advance(&mut credits, 800);
+    check(
+        "dragonrise-credits-loop",
+        &credits,
+        0x9dee,
+        0x652d90f087fc8002,
+    );
+}
