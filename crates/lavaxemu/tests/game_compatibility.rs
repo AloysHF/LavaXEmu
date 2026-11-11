@@ -33039,3 +33039,191 @@ fn ragnarok_editions_cover_title_intro_battle_slots_and_exit() {
         assert!(exit.files_mut().take_dirty_files().is_empty());
     }
 }
+
+#[test]
+#[ignore = "requires the local game corpus via LAVAX_GAME_ROOT"]
+fn sokoban_131_covers_menus_help_board_undo_map_and_quit() {
+    const GAME: &str = "LAVA2 挑战推箱子1.31/挑战推箱子.lav";
+
+    fn scene(emulator: &Emulator) -> u64 {
+        let mut hash = 0xcbf29ce484222325u64;
+        for &pixel in emulator.display().indexed_frame() {
+            hash = (hash ^ u64::from(pixel)).wrapping_mul(0x100000001b3);
+        }
+        hash
+    }
+
+    fn check(label: &str, emulator: &Emulator, pc: usize, hash: u64) {
+        assert_eq!(emulator.vm().pc(), pc, "{label} pc");
+        assert_eq!(scene(emulator), hash, "{label} scene");
+        capture(emulator, label);
+    }
+
+    fn check_scene(label: &str, emulator: &Emulator, hash: u64) {
+        assert_eq!(scene(emulator), hash, "{label} scene");
+        capture(emulator, label);
+    }
+
+    fn position(emulator: &Emulator) -> (u8, u8) {
+        let memory = emulator.vm().memory();
+        (memory[0x4778], memory[0x4779])
+    }
+
+    fn tap_halt(emulator: &mut Emulator, key: u8, frames: usize) -> Option<i32> {
+        for _ in 0..3 {
+            emulator.input_mut().set_keys([key]);
+            if let FrameStatus::Halted(code) = emulator.run_frame().unwrap().status {
+                return Some(code);
+            }
+        }
+        emulator.input_mut().set_keys([]);
+        for _ in 0..frames {
+            if let FrameStatus::Halted(code) = emulator.run_frame().unwrap().status {
+                return Some(code);
+            }
+        }
+        None
+    }
+
+    let mut game = load(GAME);
+    advance(&mut game, 300);
+    assert_eq!(game.display().width(), 160);
+    assert_eq!(game.display().height(), 80);
+    check("sokoban-title", &game, 0x2d06, 0x83566fb4597750ea);
+
+    // Esc on the title halts the program through the runtime exit path.
+    let mut exit = game.clone();
+    assert_eq!(tap_halt(&mut exit, 27, 0), Some(0));
+
+    // Three fixed difficulty entries; Down wraps forward and Up back.
+    let mut difficulty = game.clone();
+    press(&mut difficulty, 13);
+    check(
+        "sokoban-difficulty",
+        &difficulty,
+        0x2d61,
+        0x99dee35379fd6460,
+    );
+    for (step, hash) in [0x32426989e288f14u64, 0x3e01c9d0e240e9e4, 0x99dee35379fd6460]
+        .into_iter()
+        .enumerate()
+    {
+        hold(&mut difficulty, 21, 3);
+        advance(&mut difficulty, 87);
+        check_scene(
+            &format!("sokoban-difficulty-down-{step}"),
+            &difficulty,
+            hash,
+        );
+    }
+    for (step, hash) in [0x3e01c9d0e240e9e4u64, 0x32426989e288f14, 0x99dee35379fd6460]
+        .into_iter()
+        .enumerate()
+    {
+        hold(&mut difficulty, 20, 3);
+        advance(&mut difficulty, 87);
+        check_scene(&format!("sokoban-difficulty-up-{step}"), &difficulty, hash);
+    }
+
+    // Key 25 opens the help page from the title.
+    let mut help = game.clone();
+    press(&mut help, 25);
+    check("sokoban-help", &help, 0x288e, 0x22fc862804f59909);
+    hold(&mut help, 13, 3);
+    advance(&mut help, 87);
+    check("sokoban-help-return", &help, 0x28a8, 0xce90b3975e0d7336);
+
+    // Enter opens the level list; Left moves the digit cursor and Right
+    // restores it.
+    let mut level = game.clone();
+    press(&mut level, 13);
+    advance(&mut level, 30);
+    press(&mut level, 13);
+    advance(&mut level, 30);
+    check("sokoban-level", &level, 0x2fcf, 0xb010b22817ab696a);
+    hold(&mut level, 23, 3);
+    advance(&mut level, 87);
+    check_scene("sokoban-level-left", &level, 0xc26aea4c556538f6);
+    hold(&mut level, 22, 3);
+    advance(&mut level, 87);
+    check_scene("sokoban-level-right", &level, 0xb010b22817ab696a);
+
+    // Enter shows the level briefing and waits for a key.
+    press(&mut level, 13);
+    advance(&mut level, 60);
+    check("sokoban-intro", &level, 0x1b56, 0x1fa24e0235d1f5f6);
+    assert_eq!(
+        level.clone().run_frame().unwrap().status,
+        FrameStatus::WaitingForInput
+    );
+
+    // A second Enter starts the board in its fixed start position.
+    let mut board = level;
+    press(&mut board, 13);
+    advance(&mut board, 300);
+    check("sokoban-board", &board, 0x2237, 0x7425e8e9a2269c97);
+    assert_eq!(position(&board), (0x70, 0xb0));
+
+    // Arrow keys move one tile and the opposite key returns to start.
+    let mut up = board.clone();
+    hold(&mut up, 20, 3);
+    advance(&mut up, 48);
+    check("sokoban-up", &up, 0x2098, 0x8cc9dfaaf5be92b9);
+    assert_eq!(position(&up), (0x70, 0xa0));
+    let mut down = up.clone();
+    hold(&mut down, 21, 3);
+    advance(&mut down, 48);
+    check("sokoban-down", &down, 0x2098, 0x4275b72cd09cceeb);
+    assert_eq!(position(&down), (0x70, 0xb0));
+
+    let mut right = board.clone();
+    hold(&mut right, 22, 3);
+    advance(&mut right, 48);
+    check_scene("sokoban-right", &right, 0x5e076d6124abb0a5);
+    assert_eq!(position(&right), (0x80, 0xb0));
+    let mut left = right.clone();
+    hold(&mut left, 23, 3);
+    advance(&mut left, 48);
+    check_scene("sokoban-left", &left, 0x6eb9fc379b3df271);
+    assert_eq!(position(&left), (0x70, 0xb0));
+
+    // H undoes the last move, F1 restarts the level.
+    let mut undo = up.clone();
+    hold(&mut undo, b'h', 3);
+    advance(&mut undo, 48);
+    check("sokoban-undo", &undo, 0x2098, 0x212745c6d401eeed);
+    assert_eq!(position(&undo), (0x70, 0xb0));
+
+    let mut restart = up.clone();
+    hold(&mut restart, 28, 3);
+    advance(&mut restart, 96);
+    check("sokoban-restart", &restart, 0x2237, 0x0f8c067fa1a817c3);
+    assert_eq!(position(&restart), (0x70, 0xb0));
+
+    // W toggles the overview map and W again returns to the board.
+    let mut map = board.clone();
+    hold(&mut map, 119, 3);
+    advance(&mut map, 48);
+    check("sokoban-map", &map, 0xc5d, 0x567f13c8682e7b3e);
+    hold(&mut map, 119, 3);
+    advance(&mut map, 48);
+    check("sokoban-map-back", &map, 0x2098, 0x0f8c067fa1a817c3);
+
+    // Esc asks to quit: n resumes the board, y returns to the level list.
+    let mut quit = board.clone();
+    hold(&mut quit, 27, 3);
+    advance(&mut quit, 48);
+    check("sokoban-quit", &quit, 0x221e, 0xed51e44572dcbc27);
+    let mut stay = quit.clone();
+    hold(&mut stay, b'n', 3);
+    advance(&mut stay, 48);
+    check("sokoban-quit-cancel", &stay, 0x2098, 0x0f8c067fa1a817c3);
+    let mut leave = quit;
+    hold(&mut leave, b'y', 3);
+    advance(&mut leave, 48);
+    check("sokoban-quit-level", &leave, 0x2fcf, 0xb010b22817ab696a);
+
+    for emulator in [&mut restart, &mut map, &mut stay, &mut leave] {
+        assert!(emulator.files_mut().take_dirty_files().is_empty());
+    }
+}
