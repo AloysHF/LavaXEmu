@@ -33429,3 +33429,273 @@ fn porter_covers_menu_help_new_game_moves_and_exits() {
     check_scene("porter-leave", &leave, 0x79e6435029510b25);
     assert!(leave.files_mut().take_dirty_files().is_empty());
 }
+
+#[test]
+#[ignore = "requires the local game corpus via LAVAX_GAME_ROOT"]
+fn emstory_covers_intro_story_exploration_menu_save_and_exit() {
+    const GAME: &str = "LAVA2 易码事件簿-寻找CEO/非pac/EMStory.lav";
+    const SAVE_PATH: &str = "/lavadata/emstory.sav";
+
+    fn scene(emulator: &Emulator) -> u64 {
+        let mut hash = 0xcbf29ce484222325u64;
+        for &pixel in emulator.display().indexed_frame() {
+            hash = (hash ^ u64::from(pixel)).wrapping_mul(0x100000001b3);
+        }
+        hash
+    }
+
+    fn check(label: &str, emulator: &Emulator, pc: usize, hash: u64) {
+        assert_eq!(emulator.vm().pc(), pc, "{label} pc");
+        assert_eq!(scene(emulator), hash, "{label} scene");
+        capture(emulator, label);
+    }
+
+    fn check_scene(label: &str, emulator: &Emulator, hash: u64) {
+        assert_eq!(scene(emulator), hash, "{label} scene");
+        capture(emulator, label);
+    }
+
+    fn advance_tolerant(emulator: &mut Emulator, frames: usize) -> Option<i32> {
+        for _ in 0..frames {
+            if let FrameStatus::Halted(code) = emulator.run_frame().unwrap().status {
+                return Some(code);
+            }
+        }
+        None
+    }
+
+    fn page(emulator: &mut Emulator) {
+        hold(emulator, 13, 3);
+        advance(emulator, 15);
+    }
+
+    fn digest(data: &[u8]) -> u64 {
+        let mut hash = 0xcbf29ce484222325u64;
+        for &byte in data {
+            hash = (hash ^ u64::from(byte)).wrapping_mul(0x100000001b3);
+        }
+        hash
+    }
+
+    let mut game = load(GAME);
+    advance(&mut game, 300);
+    assert_eq!(game.display().width(), 160);
+    assert_eq!(game.display().height(), 80);
+    check("emstory-title", &game, 0xecb, 0xd5b7e021708b7b1b);
+    assert_eq!(
+        game.clone().run_frame().unwrap().status,
+        FrameStatus::Delayed
+    );
+
+    // The title creates an empty save slot file while the logo is animating.
+    let startup = game.files_mut().take_dirty_files();
+    assert_eq!(startup.len(), 1);
+    assert_eq!(startup[0].0, SAVE_PATH);
+    assert_eq!(startup[0].1.len(), 4000);
+    assert!(startup[0].1.iter().all(|&byte| byte == 0));
+
+    // The logo animation samples input only after a long delay, so Enter has
+    // to stay down through the whole intro.
+    for _ in 0..620 {
+        game.input_mut().set_keys([13]);
+        advance(&mut game, 1);
+    }
+    game.input_mut().set_keys([]);
+    advance(&mut game, 60);
+    check("emstory-intro", &game, 0x1827, 0xc9c378894bbf7ecb);
+    assert_eq!(
+        game.clone().run_frame().unwrap().status,
+        FrameStatus::WaitingForInput
+    );
+
+    // Enter pages through the splash, the story text, and into the town map.
+    for (step, pc, hash) in [
+        (0usize, 0x2ed5usize, 0x79e6435029510b25u64),
+        (1, 0x6009, 0xef67cfa8d2c390b8),
+        (2, 0x2edf, 0xe5184c0a5031b7d8),
+        (3, 0x2f8, 0x768c4d67c94e9826),
+        (4, 0x313, 0x768c4d67c94e9826),
+        (5, 0x313, 0xca4352f050c2b068),
+        (6, 0x313, 0x3eb4b5e3d0e29590),
+        (7, 0x313, 0xf65894cf77609004),
+        (8, 0x313, 0x4147c2fce026e4a4),
+        (9, 0x313, 0x85bf8869f01e76b6),
+        (10, 0x313, 0x83cd850c9ec5e80f),
+        (11, 0x313, 0xed1767e63d23785d),
+        (12, 0x313, 0x8c36481f5c368b8f),
+        (13, 0x313, 0x163be593bd90bb86),
+        (14, 0xecb, 0x27f20dc2d6ed68),
+        (15, 0xecb, 0xbdd8142f72276bdb),
+        (16, 0x313, 0x5f87363e0da0b358),
+        (17, 0xaa3d, 0x789dc9cfe0c9c65f),
+    ] {
+        page(&mut game);
+        if step == 0 || step == 4 || step == 13 || step == 16 || step == 17 {
+            check(&format!("emstory-page-{step}"), &game, pc, hash);
+        } else {
+            assert_eq!(game.vm().pc(), pc, "emstory-page-{step} pc");
+            assert_eq!(scene(&game), hash, "emstory-page-{step} scene");
+        }
+    }
+
+    // The intro does not touch the save file again.
+    assert!(game.files_mut().take_dirty_files().is_empty());
+
+    // Each arrow moves the character; opposites walk back to the start.
+    let mut walk = game.clone();
+    hold(&mut walk, 20, 20);
+    check("emstory-walk-up", &walk, 0xaa3a, 0xb5c485fbc6e4b1dd);
+    hold(&mut walk, 21, 20);
+    check("emstory-walk-down", &walk, 0xaa3a, 0xe9918dacd49a0522);
+    hold(&mut walk, 23, 20);
+    check("emstory-walk-left", &walk, 0xaa3a, 0x51d6dbca1e1d6850);
+    hold(&mut walk, 22, 20);
+    check("emstory-walk-right", &walk, 0xaa3a, 0x18b59311e6db8bec);
+
+    // Walking into the top edge stops the character and Enter does nothing.
+    let mut edge = game.clone();
+    for _ in 0..4 {
+        hold(&mut edge, 20, 20);
+    }
+    check("emstory-edge-up", &edge, 0xaa47, 0x23a1d766bd9a4278);
+    hold(&mut edge, 13, 3);
+    check_scene("emstory-edge-enter", &edge, 0x23a1d766bd9a4278);
+
+    // Key 25 opens a four-page menu: stats, items, skills, system.
+    let mut menu = game.clone();
+    hold(&mut menu, 25, 3);
+    check("emstory-menu", &menu, 0x1598, 0xdaeb0405051bb2da);
+    for (step, selection, hash) in [
+        (0usize, 0usize, 0x1e1697a312396ad0u64),
+        (1, 1, 0xef47b7c407082f4d),
+        (2, 2, 0xb2420a0afd6ea0f6),
+        (3, 3, 0xde117ba301e96ae5),
+    ] {
+        let mut emulator = menu.clone();
+        for _ in 0..selection {
+            hold(&mut emulator, 21, 3);
+        }
+        if step != 0 {
+            check_scene(
+                &format!("emstory-menu-select-{step}"),
+                &emulator,
+                [
+                    0x6a33df8cae62b650u64,
+                    0xd926b648e57394dd,
+                    0x52f5ed358b62d863,
+                ][step - 1],
+            );
+        }
+        hold(&mut emulator, 13, 3);
+        check(
+            &format!("emstory-menu-page-{step}"),
+            &emulator,
+            0x1598,
+            hash,
+        );
+    }
+
+    // The cursor clamps on the last page.
+    let mut clamp = menu.clone();
+    for _ in 0..5 {
+        hold(&mut clamp, 21, 3);
+    }
+    check_scene("emstory-menu-clamp", &clamp, 0x52f5ed358b62d863);
+
+    // Escape backs out of the system menu to the menu, then to the map.
+    let mut system = menu.clone();
+    for _ in 0..3 {
+        hold(&mut system, 21, 3);
+    }
+    hold(&mut system, 13, 3);
+    check("emstory-system", &system, 0x1598, 0xde117ba301e96ae5);
+    let mut esc = system.clone();
+    hold(&mut esc, 27, 3);
+    check_scene("emstory-system-esc-1", &esc, 0x52f5ed358b62d863);
+    hold(&mut esc, 27, 3);
+    check("emstory-system-esc-2", &esc, 0xaa3d, 0x789dc9cfe0c9c65f);
+
+    // Down reaches 储存 and 帮助, Right reaches 加速, Up returns to 快退.
+    for (label, down, right, hash) in [
+        ("save-entry", 1usize, 0usize, 0x571f75b9ca9ddeeb),
+        ("help-entry", 2, 0, 0xff28d899af00a41c),
+        ("speed-entry", 0, 1, 0x539e38224761df23),
+    ] {
+        let mut emulator = system.clone();
+        for _ in 0..down {
+            hold(&mut emulator, 21, 3);
+        }
+        for _ in 0..right {
+            hold(&mut emulator, 22, 3);
+        }
+        check_scene(&format!("emstory-system-{label}"), &emulator, hash);
+        if label == "speed-entry" {
+            hold(&mut emulator, 13, 3);
+            check("emstory-system-speed", &emulator, 0x313, 0xec291dfd586650f7);
+        }
+    }
+    let mut back = system.clone();
+    hold(&mut back, 21, 3);
+    hold(&mut back, 20, 3);
+    check_scene("emstory-system-back", &back, 0xde117ba301e96ae5);
+
+    // 快退 toggles the text speed label.
+    let mut fast_slow = system.clone();
+    hold(&mut fast_slow, 13, 3);
+    check_scene("emstory-system-fast-slow", &fast_slow, 0xb9ceef72d1b4e4f1);
+
+    // 帮助 shows the control hints.
+    let mut help = system.clone();
+    for _ in 0..2 {
+        hold(&mut help, 21, 3);
+    }
+    hold(&mut help, 13, 3);
+    check("emstory-help", &help, 0x2f8, 0xcc5e6d4f8f6ded70);
+
+    // 储存 writes slot one; the fresh save holds real state.
+    let mut save = system.clone();
+    hold(&mut save, 21, 3);
+    hold(&mut save, 13, 3);
+    check("emstory-save-slots", &save, 0x1598, 0x12e350d634ee7c8d);
+    let _ = save.files_mut().take_dirty_files();
+    hold(&mut save, 13, 3);
+    check("emstory-save-done", &save, 0x313, 0xc3fb10f32d099836);
+    let saved = save.files_mut().take_dirty_files();
+    assert_eq!(saved.len(), 1);
+    assert_eq!(saved[0].0, SAVE_PATH);
+    assert_eq!(saved[0].1.len(), 4000);
+    assert_eq!(saved[0].1.iter().filter(|&&byte| byte != 0).count(), 46);
+    assert_eq!(digest(&saved[0].1), 0x714c_dc40_0def_7fa1);
+
+    // Loading slot one restores it and drops back to the map.
+    let mut load = save;
+    hold(&mut load, 13, 3);
+    check_scene("emstory-save-back", &load, 0x571f75b9ca9ddeeb);
+    hold(&mut load, 22, 3);
+    hold(&mut load, 13, 3);
+    check("emstory-load-slots", &load, 0x1598, 0x2274a97122e11f16);
+    hold(&mut load, 13, 3);
+    check("emstory-load-done", &load, 0x313, 0xb77454a8e71cceda);
+    hold(&mut load, 13, 3);
+    check("emstory-load-back", &load, 0xaa3d, 0x789dc9cfe0c9c65f);
+
+    // 读取 without a save reports missing data.
+    let mut empty_load = system.clone();
+    hold(&mut empty_load, 21, 3);
+    hold(&mut empty_load, 22, 3);
+    hold(&mut empty_load, 13, 3);
+    hold(&mut empty_load, 13, 3);
+    check("emstory-load-empty", &empty_load, 0x313, 0x63d848be95a965f5);
+
+    // 退出 ends the program.
+    let mut quit = system;
+    for _ in 0..2 {
+        hold(&mut quit, 21, 3);
+    }
+    hold(&mut quit, 22, 3);
+    check_scene("emstory-quit-select", &quit, 0xf8b9ba69835a0ba);
+    hold(&mut quit, 13, 3);
+    assert_eq!(advance_tolerant(&mut quit, 600), Some(0));
+    assert_eq!(quit.vm().pc(), 0x4c04);
+    check_scene("emstory-quit", &quit, 0x46cf8e47051fcd25);
+}
