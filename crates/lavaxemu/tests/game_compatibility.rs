@@ -32840,3 +32840,179 @@ fn dragonrise_versions_cover_title_creation_campaign_tutorial_grid_and_exit() {
         0x652d90f087fc8002,
     );
 }
+
+#[test]
+#[ignore = "requires the local game corpus via LAVAX_GAME_ROOT"]
+fn ragnarok_editions_cover_title_intro_battle_slots_and_exit() {
+    const LOOSE: &str = "LAVA2 仙境传说/非pac/仙境.lav";
+    const PACKAGE: &str = "LAVA2 仙境传说/仙境.pac";
+    const SAVE_PATH: &str = "/lavadata/仙境存档.dat";
+
+    fn scene(emulator: &Emulator) -> u64 {
+        let mut hash = 0xcbf29ce484222325u64;
+        for &pixel in emulator.display().indexed_frame() {
+            hash = (hash ^ u64::from(pixel)).wrapping_mul(0x100000001b3);
+        }
+        hash
+    }
+
+    fn check(label: &str, emulator: &Emulator, pc: usize, hash: u64) {
+        assert_eq!(emulator.vm().pc(), pc, "{label} pc");
+        assert_eq!(scene(emulator), hash, "{label} scene");
+        capture(emulator, label);
+    }
+
+    fn check_scene(label: &str, emulator: &Emulator, hash: u64) {
+        assert_eq!(scene(emulator), hash, "{label} scene");
+        capture(emulator, label);
+    }
+
+    fn tap_halt(emulator: &mut Emulator, key: u8, frames: usize) -> Option<i32> {
+        for _ in 0..3 {
+            emulator.input_mut().set_keys([key]);
+            if let FrameStatus::Halted(code) = emulator.run_frame().unwrap().status {
+                return Some(code);
+            }
+        }
+        emulator.input_mut().set_keys([]);
+        for _ in 0..frames {
+            if let FrameStatus::Halted(code) = emulator.run_frame().unwrap().status {
+                return Some(code);
+            }
+        }
+        None
+    }
+
+    for (path, prefix) in [(LOOSE, "ragnarok-lav"), (PACKAGE, "ragnarok-pac")] {
+        let mut game = load(path);
+        advance(&mut game, 600);
+        assert_eq!(game.display().width(), 160);
+        assert_eq!(game.display().height(), 80);
+        check(&format!("{prefix}-title"), &game, 0x89b, 0x2e922c7bcbdf6e73);
+
+        // The packaged build creates an empty 2048-byte save on startup; the
+        // unpacked build already carries the same empty companion file.
+        let startup = game.files_mut().take_dirty_files();
+        if prefix == "ragnarok-pac" {
+            assert_eq!(startup.len(), 1);
+            assert_eq!(startup[0].0, SAVE_PATH);
+            assert_eq!(startup[0].1.len(), 2048);
+            assert!(startup[0].1.iter().all(|&byte| byte == 0));
+        } else {
+            assert!(startup.is_empty());
+        }
+
+        // Right/Left clamp on the three title entries.
+        let mut menu = game.clone();
+        hold(&mut menu, 22, 3);
+        check(
+            &format!("{prefix}-review-selected"),
+            &menu,
+            0x89b,
+            0xd0a657266e934137,
+        );
+        hold(&mut menu, 22, 3);
+        check(
+            &format!("{prefix}-wake-selected"),
+            &menu,
+            0x89b,
+            0xe4417a51af16767,
+        );
+        hold(&mut menu, 22, 3);
+        check_scene(&format!("{prefix}-right-clamp"), &menu, 0xe4417a51af16767);
+        hold(&mut menu, 23, 3);
+        check_scene(&format!("{prefix}-left-back"), &menu, 0xd0a657266e934137);
+        hold(&mut menu, 23, 3);
+        check_scene(&format!("{prefix}-start-back"), &menu, 0x2e922c7bcbdf6e73);
+        hold(&mut menu, 23, 3);
+        check_scene(&format!("{prefix}-left-clamp"), &menu, 0x2e922c7bcbdf6e73);
+
+        // Up during the opening animation steps through six fixed scenes into
+        // the first portrait.
+        let mut intro = game.clone();
+        hold(&mut intro, 13, 3);
+        for (step, (pc, hash)) in [
+            (0x2d39usize, 0x4aee0e9752bead5eu64),
+            (0x2ce5, 0xbd509a29bc1fe164),
+            (0x2ce5, 0x6de65a4bd9da3293),
+            (0x2d3d, 0x13aa47141489e63),
+            (0x40d2, 0x71f5dcd003f551f4),
+            (0x97a, 0xcd5f4922316e63fd),
+        ]
+        .into_iter()
+        .enumerate()
+        {
+            advance(&mut intro, 300);
+            hold(&mut intro, 20, 3);
+            check(&format!("{prefix}-intro-{step}"), &intro, pc, hash);
+        }
+
+        // Enter pages the three speakers into the scripted battle.
+        for (step, (pc, hash)) in [
+            (0x89busize, 0x2ab35b6fc7938cbu64),
+            (0x89b, 0x65b2210db548f3e),
+            (0x89b, 0x7314b04aa66aa363),
+            (0x89b, 0xc6f2e4ea4eac716f),
+            (0x89b, 0x542093ea492984f8),
+            (0x2041, 0xb87efdd1b7ab939),
+            (0x257f, 0xa5a762d66dde87f7),
+        ]
+        .into_iter()
+        .enumerate()
+        {
+            hold(&mut intro, 13, 3);
+            advance(&mut intro, 120);
+            check(&format!("{prefix}-story-{step}"), &intro, pc, hash);
+        }
+        assert!(
+            intro.files_mut().take_dirty_files().is_empty(),
+            "{prefix} intro writes nothing"
+        );
+
+        // 回顾 lists four slots; Down walks them and clamps on the last one.
+        let mut slots = game.clone();
+        hold(&mut slots, 22, 3);
+        hold(&mut slots, 13, 3);
+        advance(&mut slots, 120);
+        check(
+            &format!("{prefix}-slots"),
+            &slots,
+            0x89b,
+            0x753bda2de054449d,
+        );
+        hold(&mut slots, 20, 3);
+        check_scene(&format!("{prefix}-slots-top"), &slots, 0x753bda2de054449d);
+        for (step, hash) in [0x55be8f3d243339f1u64, 0x67c123c57427b29d, 0x5719f9c72d8eead]
+            .into_iter()
+            .enumerate()
+        {
+            hold(&mut slots, 21, 3);
+            check_scene(&format!("{prefix}-slot-{step}"), &slots, hash);
+        }
+        hold(&mut slots, 21, 3);
+        check_scene(&format!("{prefix}-slot-bottom"), &slots, 0x5719f9c72d8eead);
+
+        // Loading the empty slot shows the missing-data page and halts.
+        assert_eq!(tap_halt(&mut slots, 13, 600), Some(0));
+        check(
+            &format!("{prefix}-missing"),
+            &slots,
+            0x3f96,
+            0x9a17f485695ae1b6,
+        );
+        assert!(
+            slots.files_mut().take_dirty_files().is_empty(),
+            "{prefix} failed load writes nothing"
+        );
+
+        // 梦醒 exits on the key press itself, so the last presented frame is
+        // still the title menu and the wake screen is never drawn.
+        let mut exit = game.clone();
+        for _ in 0..2 {
+            hold(&mut exit, 22, 3);
+        }
+        assert_eq!(tap_halt(&mut exit, 13, 0), Some(0));
+        check(&format!("{prefix}-wake"), &exit, 0x2fb8, 0xe4417a51af16767);
+        assert!(exit.files_mut().take_dirty_files().is_empty());
+    }
+}
