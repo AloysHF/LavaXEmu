@@ -31861,6 +31861,295 @@ fn mojie_legend_covers_menu_help_prologue_room_pages_save_load_and_exit() {
 
 #[test]
 #[ignore = "requires the local game corpus via LAVAX_GAME_ROOT"]
+fn niuniu_black_white_covers_title_pages_help_modes_board_scores_and_exit() {
+    const GAME: &str = "LAVA1 黑白牛牛/黑白牛牛.lav";
+    const SAVE_PATH: &str = "/lavadata/niu.sav";
+
+    fn scene(emulator: &Emulator) -> u64 {
+        let mut hash = 0xcbf29ce484222325u64;
+        for &pixel in emulator.display().indexed_frame() {
+            hash = (hash ^ u64::from(pixel)).wrapping_mul(0x100000001b3);
+        }
+        hash
+    }
+
+    fn check(label: &str, emulator: &Emulator, pc: usize, hash: u64) {
+        assert_eq!(emulator.vm().pc(), pc, "{label} pc");
+        assert_eq!(scene(emulator), hash, "{label} scene");
+        capture(emulator, label);
+    }
+
+    fn tap_halt(emulator: &mut Emulator, key: u8, frames: usize) -> Option<i32> {
+        for _ in 0..3 {
+            emulator.input_mut().set_keys([key]);
+            if let FrameStatus::Halted(code) = emulator.run_frame().unwrap().status {
+                return Some(code);
+            }
+        }
+        emulator.input_mut().set_keys([]);
+        for _ in 0..frames {
+            if let FrameStatus::Halted(code) = emulator.run_frame().unwrap().status {
+                return Some(code);
+            }
+        }
+        None
+    }
+
+    // The help screen polls for two key events at once, so exiting it needs a chord.
+    fn chord(emulator: &mut Emulator, keys: [u8; 2]) {
+        for _ in 0..3 {
+            emulator.input_mut().set_keys(keys);
+            advance(emulator, 1);
+        }
+        emulator.input_mut().set_keys([]);
+        advance(emulator, 30);
+    }
+
+    fn cells(emulator: &Emulator) -> Vec<(usize, usize)> {
+        let display = emulator.display();
+        let width = usize::from(display.width());
+        let frame = display.indexed_frame();
+        let mut whites = Vec::new();
+        for row in 0..7 {
+            for col in 0..7 {
+                if frame[(1 + row * 11 + 5) * width + 3 + col * 11 + 5] == 0 {
+                    whites.push((row, col));
+                }
+            }
+        }
+        whites
+    }
+
+    fn score(emulator: &Emulator) -> u8 {
+        emulator.vm().memory()[0x246e]
+    }
+
+    let mut game = load(GAME);
+    advance(&mut game, 200);
+    assert_eq!(game.display().width(), 160);
+    assert_eq!(game.display().height(), 80);
+
+    // A missing save file is created with the default table during startup.
+    let startup = game.files_mut().take_dirty_files();
+    assert_eq!(startup.len(), 1);
+    assert_eq!(startup[0].0, SAVE_PATH);
+    let mut expected = vec![0u8; 88];
+    for slot in 0..4 {
+        expected[slot * 20..slot * 20 + 5].copy_from_slice(b"haydn");
+        expected[80 + slot * 2..82 + slot * 2].copy_from_slice(&20u16.to_le_bytes());
+    }
+    assert_eq!(startup[0].1, expected);
+
+    press(&mut game, 13);
+    check("niuniu-title", &game, 0x99c, 0xc5529543e45d55bc);
+
+    // Up wraps to the last item; Down walks the four entries.
+    let mut up = game.clone();
+    press(&mut up, 20);
+    check("niuniu-title-up-wrap", &up, 0x99c, 0xc9283ad4a6d90408);
+
+    let mut down = game.clone();
+    press(&mut down, 21);
+    check("niuniu-title-down", &down, 0x99c, 0xe4cd2d48ef197c70);
+    press(&mut down, 21);
+    check("niuniu-title-down2", &down, 0x99c, 0x7d69f5d70b62d3d2);
+    press(&mut down, 21);
+    check("niuniu-title-down3", &down, 0x99c, 0x93551f9e6ff90d2e);
+
+    // The leaderboard renders the built-in default table.
+    let mut leaderboard = game.clone();
+    press(&mut leaderboard, 21);
+    press(&mut leaderboard, 13);
+    check(
+        "niuniu-leaderboard",
+        &leaderboard,
+        0x41cc,
+        0x63fe82a6f5348cd4,
+    );
+    press(&mut leaderboard, 27);
+    check(
+        "niuniu-leaderboard-exit",
+        &leaderboard,
+        0x4206,
+        0x807573b9c014f01b,
+    );
+    advance(&mut leaderboard, 180);
+    check(
+        "niuniu-leaderboard-back",
+        &leaderboard,
+        0x99c,
+        0x5a7ff538eb0726a4,
+    );
+
+    let mut about = game.clone();
+    press(&mut about, 21);
+    press(&mut about, 21);
+    press(&mut about, 13);
+    check("niuniu-about", &about, 0x42ba, 0x875729309697f1d9);
+    press(&mut about, 27);
+    advance(&mut about, 240);
+    check("niuniu-about-back", &about, 0x99c, 0x6929172097e315b6);
+
+    let mut quit = game.clone();
+    for _ in 0..3 {
+        press(&mut quit, 21);
+    }
+    press(&mut quit, 13);
+    check("niuniu-thanks", &quit, 0x3a08, 0x2327239e492ef714);
+    press(&mut quit, 13);
+    check("niuniu-bye", &quit, 0x3a40, 0x8dc66946ddb0042);
+    assert_eq!(tap_halt(&mut quit, 13, 400), Some(1));
+    assert!(quit.files_mut().take_dirty_files().is_empty());
+
+    // Enter starts a new game; the difficulty menu animates before it settles.
+    let mut mode = game.clone();
+    press(&mut mode, 13);
+    check("niuniu-mode", &mode, 0x408f, 0xd8938d3b20cf0765);
+    let mut settled = mode.clone();
+    advance(&mut settled, 120);
+    check("niuniu-mode-settled", &settled, 0x3ef0, 0x135ffcca2dff5d3a);
+    let mut mode_down = settled.clone();
+    press(&mut mode_down, 21);
+    check("niuniu-mode-down", &mode_down, 0x3ef0, 0x2f8f22e61b7b3002);
+    press(&mut mode_down, 21);
+    check("niuniu-mode-down2", &mode_down, 0x3ef0, 0xaaaa942d7d093280);
+
+    // The help screen has five pages; the last one clamps instead of wrapping.
+    let mut help = settled.clone();
+    press(&mut help, 21);
+    press(&mut help, 21);
+    press(&mut help, 13);
+    check("niuniu-help-1", &help, 0x3bea, 0xb4e048beaeb7c48e);
+    let help_pages = [
+        (0x3c26usize, 0x26236c2c236e3899u64),
+        (0x3c62, 0xe3c2ea79426bc2b5),
+        (0x3c9e, 0x5f06f8c37bf6af6b),
+        (0x3cda, 0x33fde561c7bafa74),
+    ];
+    for (index, (pc, hash)) in help_pages.into_iter().enumerate() {
+        press(&mut help, 21);
+        check(&format!("niuniu-help-{}", index + 2), &help, pc, hash);
+    }
+    press(&mut help, 21);
+    check("niuniu-help-clamped", &help, 0x3ceb, 0x33fde561c7bafa74);
+    chord(&mut help, [13, 27]);
+    check("niuniu-help-exit", &help, 0x3d2b, 0xd7767efa228aec4);
+    advance(&mut help, 180);
+    check("niuniu-help-back", &help, 0x3ef0, 0x646cb96cb267f600);
+
+    // Easy mode accepts eight directions.
+    let mut easy = settled.clone();
+    press(&mut easy, 13);
+    advance(&mut easy, 100);
+    check("niuniu-easy-board", &easy, 0x130f, 0x72b1f044d42aaeec);
+    assert_eq!(
+        (easy.vm().memory()[0x2458], easy.vm().memory()[0x2456]),
+        (3, 3)
+    );
+    assert_eq!(cells(&easy), vec![(3, 3)]);
+    assert_eq!(score(&easy), b'0');
+    for key in [13u8, 20, 20, 22, 22, 13] {
+        press(&mut easy, key);
+    }
+    check("niuniu-easy-diagonal", &easy, 0x12d2, 0xdb3be91ccbdea249);
+    assert_eq!(score(&easy), b'1');
+    assert_eq!(cells(&easy), vec![(1, 5), (2, 4)]);
+    press(&mut easy, 27);
+    check("niuniu-easy-dialog", &easy, 0xb90, 0x3f70d9fb50a1de88);
+    press(&mut easy, 27);
+    advance(&mut easy, 240);
+    check("niuniu-easy-back", &easy, 0x3ef0, 0x2cbea2a79c69f724);
+
+    // Hard mode only accepts straight jumps, so the diagonal attempt is rejected.
+    let mut hard = settled.clone();
+    press(&mut hard, 21);
+    press(&mut hard, 13);
+    advance(&mut hard, 100);
+    check("niuniu-hard-board", &hard, 0x130f, 0x72b1f044d42aaeec);
+    for key in [13u8, 20, 20, 22, 22, 13] {
+        press(&mut hard, key);
+    }
+    check(
+        "niuniu-hard-diagonal-rejected",
+        &hard,
+        0x12d2,
+        0xce9a63d00136f3c4,
+    );
+    assert_eq!(
+        (hard.vm().memory()[0x2458], hard.vm().memory()[0x2456]),
+        (1, 5)
+    );
+    assert_eq!(hard.vm().memory()[0x2454], 1);
+    assert_eq!(score(&hard), b'0');
+
+    let mut straight = settled.clone();
+    press(&mut straight, 21);
+    press(&mut straight, 13);
+    advance(&mut straight, 100);
+    for key in [13u8, 22, 22, 13] {
+        press(&mut straight, key);
+    }
+    check(
+        "niuniu-hard-straight",
+        &straight,
+        0x12d2,
+        0xab3ffb84ed56c9f9,
+    );
+    assert_eq!(score(&straight), b'1');
+    assert_eq!(cells(&straight), vec![(3, 4), (3, 5)]);
+
+    let mut back = settled.clone();
+    for _ in 0..3 {
+        press(&mut back, 21);
+    }
+    press(&mut back, 13);
+    check("niuniu-back-intro", &back, 0x3b51, 0x3856b38cfcbb9cc7);
+    advance(&mut back, 180);
+    check("niuniu-back-title", &back, 0x99c, 0x4a8e308341fd5486);
+
+    // A run that ends in the game-over dialog does not rewrite the table.
+    let mut saved = load(GAME);
+    advance(&mut saved, 200);
+    saved.files_mut().take_dirty_files();
+    press(&mut saved, 13);
+    press(&mut saved, 13);
+    press(&mut saved, 13);
+    for key in [13u8, 22, 22, 13] {
+        press(&mut saved, key);
+    }
+    check("niuniu-save-board", &saved, 0x12d2, 0xab3ffb84ed56c9f9);
+    press(&mut saved, 27);
+    check("niuniu-save-dialog", &saved, 0xb90, 0x78a60cd19c1ea218);
+    assert!(saved.files_mut().take_dirty_files().is_empty());
+
+    // An imported table is shown as-is and is not rewritten by a low score.
+    let mut custom = Vec::new();
+    for name in ["alice", "bob", "carol", "dave"] {
+        let mut slot = [0u8; 20];
+        slot[..name.len()].copy_from_slice(name.as_bytes());
+        custom.extend_from_slice(&slot);
+    }
+    for value in [9u16, 7, 5, 3] {
+        custom.extend_from_slice(&value.to_le_bytes());
+    }
+    let mut imported = load(GAME);
+    assert!(imported.files_mut().import_file(SAVE_PATH, custom));
+    imported.files_mut().take_dirty_files();
+    advance(&mut imported, 200);
+    press(&mut imported, 13);
+    press(&mut imported, 21);
+    press(&mut imported, 13);
+    check(
+        "niuniu-imported-leaderboard",
+        &imported,
+        0x41cc,
+        0xa30e3c38a24d7c19,
+    );
+    assert!(imported.files_mut().take_dirty_files().is_empty());
+}
+
+#[test]
+#[ignore = "requires the local game corpus via LAVAX_GAME_ROOT"]
 fn wzq_black_white_covers_title_help_about_exit_setup_board_undo_auto_save_and_reload() {
     const LOOSE: &str = "LAVA1 黑白五子连珠/未打包文件/五子连珠.lav";
     const PACKAGE: &str = "LAVA1 黑白五子连珠/已打包文件/五子联珠黑.pac";
