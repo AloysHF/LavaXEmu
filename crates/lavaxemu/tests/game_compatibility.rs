@@ -33699,3 +33699,282 @@ fn emstory_covers_intro_story_exploration_menu_save_and_exit() {
     assert_eq!(quit.vm().pc(), 0x4c04);
     check_scene("emstory-quit", &quit, 0x46cf8e47051fcd25);
 }
+
+#[test]
+#[ignore = "requires the local game corpus via LAVAX_GAME_ROOT"]
+fn chameleon_covers_registration_login_menu_difficulty_and_cards() {
+    const GAME: &str = "LAVA2 玩转变色龙/玩转变色龙.lav";
+    const SAVE_PATH: &str = "/lavadata/a.bsl";
+
+    fn scene(emulator: &Emulator) -> u64 {
+        let mut hash = 0xcbf29ce484222325u64;
+        for &pixel in emulator.display().indexed_frame() {
+            hash = (hash ^ u64::from(pixel)).wrapping_mul(0x100000001b3);
+        }
+        hash
+    }
+
+    fn check(label: &str, emulator: &Emulator, pc: usize, hash: u64) {
+        assert_eq!(emulator.vm().pc(), pc, "{label} pc");
+        assert_eq!(scene(emulator), hash, "{label} scene");
+        capture(emulator, label);
+    }
+
+    fn digest(data: &[u8]) -> u64 {
+        let mut hash = 0xcbf29ce484222325u64;
+        for &byte in data {
+            hash = (hash ^ u64::from(byte)).wrapping_mul(0x100000001b3);
+        }
+        hash
+    }
+
+    let mut game = load(GAME);
+    advance(&mut game, 300);
+    assert_eq!(game.display().width(), 160);
+    assert_eq!(game.display().height(), 80);
+    check("chameleon-login", &game, 0x2dcd, 0xfec982960c12a5be);
+    assert_eq!(
+        game.clone().run_frame().unwrap().status,
+        FrameStatus::WaitingForInput
+    );
+    assert!(game.files_mut().take_dirty_files().is_empty());
+
+    // 注册新账号 asks for the system password first; no system password file
+    // is installed, so an empty answer is accepted.
+    hold(&mut game, 21, 3);
+    hold(&mut game, 21, 3);
+    check(
+        "chameleon-register-select",
+        &game,
+        0x2dcd,
+        0xe9ce1194963dc410,
+    );
+    hold(&mut game, 13, 3);
+    check(
+        "chameleon-system-password",
+        &game,
+        0x2759,
+        0x5ec64d0364e8aaee,
+    );
+    hold(&mut game, 13, 3);
+    check("chameleon-register-form", &game, 0x2942, 0x54a944459730c108);
+
+    for (label, key, pc, hash) in [
+        (
+            "chameleon-register-account",
+            b'a',
+            0x2942usize,
+            0x817d98610a48a79f,
+        ),
+        (
+            "chameleon-register-account-enter",
+            13,
+            0x2942,
+            0x55181630493aa46b,
+        ),
+        (
+            "chameleon-register-password",
+            b'b',
+            0x2942,
+            0x78a52888ee3d27c7,
+        ),
+        (
+            "chameleon-register-password-enter",
+            13,
+            0x2942,
+            0xc2e2113410e60a3b,
+        ),
+        ("chameleon-register-name", b'c', 0x2942, 0x66aeaf11def0be85),
+        (
+            "chameleon-register-name-enter",
+            13,
+            0x71a,
+            0x61146b235356e5dc,
+        ),
+    ] {
+        hold(&mut game, key, 3);
+        check(label, &game, pc, hash);
+    }
+
+    // The account is stored in a fixed-size encrypted save slot keyed by the
+    // account name.
+    let created = game.files_mut().take_dirty_files();
+    assert_eq!(created.len(), 1);
+    assert_eq!(created[0].0, SAVE_PATH);
+    assert_eq!(created[0].1.len(), 181);
+    assert_eq!(digest(&created[0].1), 0x778a9e6c42a32114);
+    let registered = created[0].1.clone();
+
+    // The login screen keeps the last selection, so move back to the account
+    // field before typing the credentials used during registration.
+    hold(&mut game, 13, 3);
+    check("chameleon-login-back", &game, 0x2dcd, 0xe9ce1194963dc410);
+    hold(&mut game, 20, 3);
+    hold(&mut game, 20, 3);
+    check("chameleon-login-account", &game, 0x2dcd, 0xfec982960c12a5be);
+    hold(&mut game, b'a', 3);
+    check(
+        "chameleon-login-account-typed",
+        &game,
+        0x2dcd,
+        0x7b8f83e7c6590335,
+    );
+    hold(&mut game, 13, 3);
+    check(
+        "chameleon-login-password",
+        &game,
+        0x2dcd,
+        0x9ff0f8594fa24e61,
+    );
+    hold(&mut game, b'b', 3);
+    check(
+        "chameleon-login-password-typed",
+        &game,
+        0x2dcd,
+        0x7a2145645552449d,
+    );
+    hold(&mut game, 13, 3);
+    check("chameleon-start-menu", &game, 0x22ea, 0xeac830edd3e983e9);
+    assert_eq!(
+        game.clone().run_frame().unwrap().status,
+        FrameStatus::Delayed
+    );
+    assert!(game.files_mut().take_dirty_files().is_empty());
+
+    // 个人战绩 shows the win/loss/draw table and toggles between the normal
+    // and the challenge columns with Left and Right.
+    hold(&mut game, 21, 3);
+    check("chameleon-menu-stats", &game, 0x22ea, 0x462151a962ceedc1);
+    hold(&mut game, 13, 3);
+    check("chameleon-stats-empty", &game, 0x2197, 0x156b3d863efba14e);
+    hold(&mut game, 22, 3);
+    check("chameleon-stats-special", &game, 0x2197, 0x217d089c2d770735);
+    hold(&mut game, 23, 3);
+    check("chameleon-stats-normal", &game, 0x2197, 0x156b3d863efba14e);
+    hold(&mut game, 27, 3);
+    check("chameleon-stats-back", &game, 0x22ea, 0x462151a962ceedc1);
+
+    // F5 opens the help page.
+    hold(&mut game, 25, 6);
+    check("chameleon-help", &game, 0x1f84, 0x66ee02d49e2f6d3b);
+    hold(&mut game, 13, 3);
+    check("chameleon-help-back", &game, 0x22ea, 0x462151a962ceedc1);
+
+    // 道具商城 is a text page that returns on Esc.
+    hold(&mut game, 21, 3);
+    check("chameleon-menu-shop", &game, 0x22ea, 0x843a8b47979acf18);
+    hold(&mut game, 13, 3);
+    check("chameleon-shop", &game, 0x1f9b, 0x717d8be83408c4b7);
+    hold(&mut game, 27, 3);
+    check("chameleon-shop-back", &game, 0x22ea, 0x843a8b47979acf18);
+
+    // 游戏设置 selects the computer difficulty; confirm 困难 with Enter.
+    hold(&mut game, 21, 3);
+    check("chameleon-menu-option", &game, 0x22ea, 0xb68c0c4ef25c0764);
+    hold(&mut game, 13, 3);
+    check("chameleon-option", &game, 0x2017, 0x6cfc82e87817f342);
+    hold(&mut game, 21, 3);
+    hold(&mut game, 21, 3);
+    check("chameleon-option-hard", &game, 0x2017, 0x6cfc82e87817f342);
+    hold(&mut game, 13, 3);
+    check("chameleon-option-back", &game, 0x22ea, 0xb68c0c4ef25c0764);
+
+    // 开始游戏 deals the deterministic hand and marks the save slot as an
+    // unfinished game by flipping a single marker byte.
+    hold(&mut game, 20, 3);
+    hold(&mut game, 20, 3);
+    hold(&mut game, 20, 3);
+    check("chameleon-menu-play", &game, 0x22ea, 0xa12e6e933819eaae);
+    hold(&mut game, 13, 3);
+    check("chameleon-deal", &game, 0x1bec, 0x8d9697a395e7989a);
+    assert_eq!(
+        game.clone().run_frame().unwrap().status,
+        FrameStatus::WaitingForInput
+    );
+    let in_play = game.files_mut().take_dirty_files();
+    assert_eq!(in_play.len(), 1);
+    assert_eq!(in_play[0].0, SAVE_PATH);
+    assert_eq!(in_play[0].1.len(), 181);
+    assert_eq!(digest(&in_play[0].1), 0x7794cf6c42abc8dc);
+    // The last byte is the unfinished-game marker; the byte before it is a
+    // random index into the decryption key, and everything else is unchanged.
+    assert_eq!(registered[..179], in_play[0].1[..179]);
+    assert_eq!(registered[180], 0);
+    assert_eq!(in_play[0].1[180], 1);
+
+    // Moving the cursor does not repaint the table; Enter plays the first card
+    // and the computer answers immediately.
+    hold(&mut game, 21, 3);
+    check("chameleon-deal-down", &game, 0x1bec, 0x8d9697a395e7989a);
+    hold(&mut game, 20, 3);
+    check("chameleon-deal-up", &game, 0x1bec, 0x8d9697a395e7989a);
+    hold(&mut game, 13, 3);
+    check("chameleon-played", &game, 0x1bec, 0xc662d82db52693ec);
+    advance(&mut game, 60);
+    check("chameleon-cpu-reply", &game, 0x1bec, 0xc662d82db52693ec);
+
+    // K draws from the stock.
+    hold(&mut game, b'k', 3);
+    check("chameleon-draw", &game, 0x1bec, 0x1e058bc703626536);
+
+    // Esc asks before forfeiting; N returns to the table, Y records a loss at
+    // the selected difficulty and resets the in-progress marker.
+    hold(&mut game, 27, 3);
+    check("chameleon-quit-prompt", &game, 0x1e84, 0xa2f520ed40314bb4);
+    hold(&mut game, b'n', 3);
+    check("chameleon-quit-cancel", &game, 0x1bec, 0x1e058bc703626536);
+    hold(&mut game, 27, 3);
+    check(
+        "chameleon-quit-prompt-again",
+        &game,
+        0x1e84,
+        0xa2f520ed40314bb4,
+    );
+    hold(&mut game, b'y', 3);
+    check("chameleon-quit-penalty", &game, 0x1f68, 0xb1fd6a7da50e26e2);
+    assert_eq!(
+        game.clone().run_frame().unwrap().status,
+        FrameStatus::WaitingForInput
+    );
+    let forfeit = game.files_mut().take_dirty_files();
+    assert_eq!(forfeit.len(), 1);
+    assert_eq!(forfeit[0].0, SAVE_PATH);
+    assert_eq!(forfeit[0].1.len(), 181);
+    assert_eq!(digest(&forfeit[0].1), 0x21f6fb266ffa0944);
+    hold(&mut game, 13, 3);
+    check("chameleon-back-to-menu", &game, 0x22ea, 0xa12e6e933819eaae);
+
+    // The forfeit is recorded as a loss in the 困难 row of the normal table.
+    hold(&mut game, 21, 3);
+    hold(&mut game, 13, 3);
+    check("chameleon-stats-loss", &game, 0x2197, 0xbd63a7fc7b5e007f);
+    hold(&mut game, 27, 3);
+    check(
+        "chameleon-stats-loss-back",
+        &game,
+        0x22ea,
+        0x923ac925c0b0727d,
+    );
+
+    // 退出游戏 saves the account and ends the program.
+    hold(&mut game, 21, 3);
+    hold(&mut game, 21, 3);
+    hold(&mut game, 21, 3);
+    check("chameleon-menu-exit", &game, 0x22ea, 0x6b92f657a0243ed);
+    let mut halt = None;
+    for frame in 0..90 {
+        game.input_mut().set_keys((frame < 3).then_some(13u8));
+        if let FrameStatus::Halted(code) = game.run_frame().unwrap().status {
+            halt = Some(code);
+            break;
+        }
+    }
+    game.input_mut().set_keys([]);
+    assert_eq!(halt, Some(0));
+    assert_eq!(game.vm().pc(), 0x23ba);
+    let final_save = game.files_mut().take_dirty_files();
+    assert_eq!(final_save.len(), 1);
+    assert_eq!(final_save[0].0, SAVE_PATH);
+    assert_eq!(final_save[0].1.len(), 181);
+    assert_eq!(digest(&final_save[0].1), 0x21f395266ff7261b);
+}
