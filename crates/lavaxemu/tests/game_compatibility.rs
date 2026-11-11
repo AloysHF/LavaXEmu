@@ -33227,3 +33227,205 @@ fn sokoban_131_covers_menus_help_board_undo_map_and_quit() {
         assert!(emulator.files_mut().take_dirty_files().is_empty());
     }
 }
+
+#[test]
+#[ignore = "requires the local game corpus via LAVAX_GAME_ROOT"]
+fn porter_covers_menu_help_new_game_moves_and_exits() {
+    const GAME: &str = "LAVA2 搬运工/搬运工.lav";
+    const SAVE_PATH: &str = "/lavadava/搬运工.sav";
+
+    fn scene(emulator: &Emulator) -> u64 {
+        let mut hash = 0xcbf29ce484222325u64;
+        for &pixel in emulator.display().indexed_frame() {
+            hash = (hash ^ u64::from(pixel)).wrapping_mul(0x100000001b3);
+        }
+        hash
+    }
+
+    fn check(label: &str, emulator: &Emulator, pc: usize, hash: u64) {
+        assert_eq!(emulator.vm().pc(), pc, "{label} pc");
+        assert_eq!(scene(emulator), hash, "{label} scene");
+        capture(emulator, label);
+    }
+
+    fn check_scene(label: &str, emulator: &Emulator, hash: u64) {
+        assert_eq!(scene(emulator), hash, "{label} scene");
+        capture(emulator, label);
+    }
+
+    fn advance_tolerant(emulator: &mut Emulator, frames: usize) -> Option<i32> {
+        for _ in 0..frames {
+            if let FrameStatus::Halted(code) = emulator.run_frame().unwrap().status {
+                return Some(code);
+            }
+        }
+        None
+    }
+
+    let mut menu = load(GAME);
+    advance(&mut menu, 300);
+    assert_eq!(menu.display().width(), 160);
+    assert_eq!(menu.display().height(), 80);
+    check("porter-menu", &menu, 0x21b, 0x67ac8bdcf5901755);
+
+    // Startup creates an empty save; the menu only appears after it exists.
+    let startup = menu.files_mut().take_dirty_files();
+    assert_eq!(startup.len(), 1);
+    assert_eq!(startup[0].0, SAVE_PATH);
+    assert!(startup[0].1.is_empty());
+
+    // Down/Right and Up/Left walk the four entries in opposite directions.
+    let mut down = menu.clone();
+    for (step, hash) in [
+        0x5d0e5975c20c4445u64,
+        0xa76cc45439e63365,
+        0xf8b3b53e07e80555,
+        0x67ac8bdcf5901755,
+    ]
+    .into_iter()
+    .enumerate()
+    {
+        hold(&mut down, 21, 3);
+        advance(&mut down, 60);
+        check_scene(&format!("porter-menu-down-{step}"), &down, hash);
+    }
+    let mut up = menu.clone();
+    for (step, hash) in [
+        0xf8b3b53e07e80555u64,
+        0xa76cc45439e63365,
+        0x5d0e5975c20c4445,
+        0x67ac8bdcf5901755,
+    ]
+    .into_iter()
+    .enumerate()
+    {
+        hold(&mut up, 20, 3);
+        advance(&mut up, 60);
+        check_scene(&format!("porter-menu-up-{step}"), &up, hash);
+    }
+    let mut left = menu.clone();
+    hold(&mut left, 23, 3);
+    advance(&mut left, 60);
+    check_scene("porter-menu-left", &left, 0xf8b3b53e07e80555);
+    let mut right = menu.clone();
+    hold(&mut right, 22, 3);
+    advance(&mut right, 60);
+    check_scene("porter-menu-right", &right, 0x5d0e5975c20c4445);
+
+    // 游戏说明 opens the bomb and control help; Escape returns to the menu.
+    let mut help = menu.clone();
+    for _ in 0..2 {
+        hold(&mut help, 21, 3);
+        advance(&mut help, 60);
+    }
+    hold(&mut help, 13, 3);
+    advance(&mut help, 120);
+    check("porter-help", &help, 0x54d, 0xc329bc2cf12c381d);
+    hold(&mut help, 27, 3);
+    advance(&mut help, 120);
+    check("porter-help-back", &help, 0x21b, 0xa76cc45439e63365);
+
+    // 旧的回忆 keeps the menu while the save only holds the placeholder.
+    let mut load_old = menu.clone();
+    hold(&mut load_old, 21, 3);
+    advance(&mut load_old, 60);
+    hold(&mut load_old, 13, 3);
+    advance(&mut load_old, 120);
+    check("porter-old-memories", &load_old, 0x21b, 0x5d0e5975c20c4445);
+
+    // 新的开始 asks before overwriting, n cancels and y starts level 1.
+    let mut game = menu.clone();
+    hold(&mut game, 13, 3);
+    check("porter-confirm", &game, 0x35e, 0x20ad6d05e5a57955);
+    let mut cancel = game.clone();
+    hold(&mut cancel, b'n', 3);
+    check("porter-confirm-cancel", &cancel, 0x21b, 0x67ac8bdcf5901755);
+    let mut board = cancel;
+    hold(&mut board, 13, 3);
+    hold(&mut board, b'y', 3);
+    advance(&mut board, 120);
+    check("porter-board", &board, 0xa02, 0xa09d938a60410439);
+    let save = board.files_mut().take_dirty_files();
+    assert_eq!(save.len(), 1);
+    assert_eq!(save[0].0, SAVE_PATH);
+    assert_eq!(save[0].1, [0, 0, 0]);
+
+    // Down and Left move one cell; the opposite arrow returns to start.
+    let mut vertical = board.clone();
+    hold(&mut vertical, 21, 3);
+    advance(&mut vertical, 60);
+    check("porter-down", &vertical, 0xa02, 0x4ad59e12fb7b1439);
+    hold(&mut vertical, 20, 3);
+    advance(&mut vertical, 60);
+    check("porter-down-up", &vertical, 0xa02, 0xa09d938a60410439);
+    let mut horizontal = board.clone();
+    hold(&mut horizontal, 23, 3);
+    advance(&mut horizontal, 60);
+    check("porter-left", &horizontal, 0xa02, 0xd55f8333a46c9e49);
+    hold(&mut horizontal, 22, 3);
+    advance(&mut horizontal, 60);
+    check("porter-left-right", &horizontal, 0xa02, 0xa09d938a60410439);
+
+    // WASD aliases the arrow keys.
+    for (label, key, hash) in [
+        ("w", b'w', 0xa09d938a60410439u64),
+        ("a", b'a', 0xd55f8333a46c9e49),
+        ("s", b's', 0x4ad59e12fb7b1439),
+        ("d", b'd', 0xa09d938a60410439),
+    ] {
+        let mut emulator = board.clone();
+        hold(&mut emulator, key, 3);
+        advance(&mut emulator, 60);
+        check_scene(&format!("porter-board-{label}"), &emulator, hash);
+    }
+
+    // h undoes the last move and r replays the level from the start.
+    let mut undo = board.clone();
+    hold(&mut undo, 21, 3);
+    advance(&mut undo, 60);
+    hold(&mut undo, b'h', 3);
+    advance(&mut undo, 60);
+    check("porter-undo", &undo, 0xa02, 0xa09d938a60410439);
+    let mut replay = board.clone();
+    hold(&mut replay, 21, 3);
+    advance(&mut replay, 60);
+    hold(&mut replay, 23, 3);
+    advance(&mut replay, 60);
+    check("porter-replay-before", &replay, 0xa02, 0x4ad59e12fb7b1439);
+    hold(&mut replay, b'r', 3);
+    advance(&mut replay, 120);
+    check("porter-replay", &replay, 0xa02, 0xa09d938a60410439);
+
+    // b does nothing before a bomb is collected.
+    let mut bomb = board.clone();
+    hold(&mut bomb, b'b', 3);
+    advance(&mut bomb, 120);
+    check_scene("porter-bomb", &bomb, 0xa09d938a60410439);
+
+    // o leaves the level: the screen wipes out over 128 frames and halts.
+    let mut quit = board.clone();
+    hold(&mut quit, b'o', 3);
+    assert_eq!(advance_tolerant(&mut quit, 300), Some(0));
+    assert_eq!(quit.vm().pc(), 0xa66);
+    check_scene("porter-quit", &quit, 0x79e6435029510b25);
+    assert!(quit.files_mut().take_dirty_files().is_empty());
+
+    // Escape on the menu runs the same wipe and halts.
+    let mut esc = menu.clone();
+    hold(&mut esc, 27, 3);
+    assert_eq!(advance_tolerant(&mut esc, 300), Some(0));
+    assert_eq!(esc.vm().pc(), 0x2fd);
+    check_scene("porter-esc", &esc, 0x79e6435029510b25);
+    assert!(esc.files_mut().take_dirty_files().is_empty());
+
+    // 离开游戏 runs the same wipe and halts.
+    let mut leave = menu.clone();
+    for _ in 0..3 {
+        hold(&mut leave, 21, 3);
+    }
+    hold(&mut leave, 13, 3);
+    assert_eq!(advance_tolerant(&mut leave, 300), Some(0));
+    assert_eq!(leave.vm().pc(), 0x5bf);
+    check_scene("porter-leave", &leave, 0x79e6435029510b25);
+    assert!(leave.files_mut().take_dirty_files().is_empty());
+}
