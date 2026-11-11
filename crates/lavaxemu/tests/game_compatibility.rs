@@ -376,41 +376,64 @@ fn puzzled_sheep_loads_levels_moves_the_cursor_and_runs_the_simulation() {
 #[test]
 #[ignore = "requires the local game corpus via LAVAX_GAME_ROOT"]
 fn hit_loads_the_logo_runs_and_pauses_with_the_keyboard() {
-    let mut emulator = load("LAVA2 打地鼠/LAVA2/Hit.lav");
-    advance(&mut emulator, 300);
-    press(&mut emulator, 13);
-    press(&mut emulator, 13);
-    advance(&mut emulator, 120);
-    capture(&emulator, "hit-game");
-    let seconds = emulator.vm().memory()[0x22df];
-    advance(&mut emulator, 120);
-    assert_ne!(
-        seconds,
-        emulator.vm().memory()[0x22df],
-        "GetTime must advance the game timer"
-    );
-    let game = emulator.display().indexed_frame().to_vec();
-    for key in *b"tyughjbnm" {
-        press(&mut emulator, key);
+    fn scene(emulator: &Emulator) -> u64 {
+        let mut hash = 0xcbf29ce484222325u64;
+        for &pixel in emulator.display().indexed_frame() {
+            hash = (hash ^ u64::from(pixel)).wrapping_mul(0x100000001b3);
+        }
+        hash
     }
-    assert!(
-        game != emulator.display().indexed_frame(),
-        "hitting must update the game"
-    );
-    hold(&mut emulator, b'p', 45);
-    let paused = emulator.display().indexed_frame().to_vec();
-    advance(&mut emulator, 120);
-    assert!(
-        paused == emulator.display().indexed_frame(),
-        "pause must freeze gameplay"
-    );
-    press(&mut emulator, 13);
-    advance(&mut emulator, 120);
-    capture(&emulator, "hit-resumed");
-    assert!(
-        paused != emulator.display().indexed_frame(),
-        "resume must restart gameplay"
-    );
+
+    for (path, prefix) in [
+        ("LAVA2 打地鼠/LAVA2/Hit.lav", "hit"),
+        ("LAVA2 打地鼠/Package/HitV1.0.pac", "hit-pac"),
+    ] {
+        let mut emulator = load(path);
+        advance(&mut emulator, 300);
+        assert_eq!(emulator.display().width(), 160);
+        assert_eq!(emulator.display().height(), 80);
+        assert_eq!(emulator.vm().pc(), 0xe00, "{prefix} logo pc");
+        assert_eq!(scene(&emulator), 0xc674fdf3349434ba, "{prefix} logo");
+        press(&mut emulator, 13);
+        assert_eq!(emulator.vm().pc(), 0xb72, "{prefix} menu pc");
+        press(&mut emulator, 13);
+        advance(&mut emulator, 120);
+        assert_eq!(emulator.vm().pc(), 0xd44, "{prefix} game pc");
+        capture(&emulator, &format!("{prefix}-game"));
+        let seconds = emulator.vm().memory()[0x22df];
+        advance(&mut emulator, 120);
+        assert_ne!(
+            seconds,
+            emulator.vm().memory()[0x22df],
+            "{prefix} GetTime must advance the game timer"
+        );
+        let game = emulator.display().indexed_frame().to_vec();
+        for key in *b"tyughjbnm" {
+            press(&mut emulator, key);
+        }
+        assert!(
+            game != emulator.display().indexed_frame(),
+            "{prefix} hitting must update the game"
+        );
+        hold(&mut emulator, b'p', 45);
+        let paused = emulator.display().indexed_frame().to_vec();
+        advance(&mut emulator, 120);
+        assert!(
+            paused == emulator.display().indexed_frame(),
+            "{prefix} pause must freeze gameplay"
+        );
+        press(&mut emulator, 13);
+        advance(&mut emulator, 120);
+        capture(&emulator, &format!("{prefix}-resumed"));
+        assert!(
+            paused != emulator.display().indexed_frame(),
+            "{prefix} resume must restart gameplay"
+        );
+        assert!(
+            emulator.files_mut().take_dirty_files().is_empty(),
+            "{prefix} writes nothing"
+        );
+    }
 }
 
 #[test]

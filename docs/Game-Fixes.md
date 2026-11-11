@@ -83,12 +83,13 @@ without an execution error alone does not establish playability.
 
 ## Hit (打地鼠)
 
-- Content: `LAVA2 打地鼠/LAVA2/Hit.lav`.
+- Content: `LAVA2 打地鼠/LAVA2/Hit.lav` and
+  `LAVA2 打地鼠/Package/HitV1.0.pac`.
 - Problem: the `LAVA2` program folder was not recognized as part of a device
   layout, so `/LavaData/MULogo.dat` could not be loaded and `Read Error` appeared.
 - Fix: recognize `LAVA2` alongside `LAVA` and `GVmaker` in both frontends.
 - Validation: logo, playfield, nine TYUGHJBNM hit controls, P to pause and
-  Enter to resume. The regression checks the framebuffer stays frozen during
+  Enter to resume in both the loose and packaged entries. The regression checks the framebuffer stays frozen during
   a 120-frame pause and changes again after resuming. Also replayed 1,800 frames.
 - Timer follow-up: `GetTime` now advances with the deterministic 60 Hz clock,
   including calendar rollovers. Previously it always returned the initial

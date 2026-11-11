@@ -110,9 +110,10 @@ do not satisfy this status.
 - Black-White Niu Niu checked on 2026-11-11: one dedicated release workflow waits on the title menu, proves Up wraps and Down walks the four entries, opens the default leaderboard and returns to the title, opens the about page and returns to the title, halts with code 1 from the thanks/BYE exit credits, walks the difficulty menu, pages the five help screens with a clamp on the last page and exits them back to the menu, plays easy mode where a diagonal jump clears the marked cells and raises the score to 1, opens and closes the game-over dialog back to the menu, proves hard mode rejects the same diagonal while a straight jump scores, returns to the title, creates the 88-byte `/lavadata/niu.sav` default four-name table with scores of 20 on startup, and shows an imported table without rewriting it.
 - Dragon Rise checked on 2026-11-11: one dedicated release workflow covers the two loose builds and the package with identical frames at every step. It waits on the title menu and wraps Down through 最好成绩, 开发人员 and 离开游戏 back to 开始游戏, proves that the empty 最好成绩 entry keeps the menu, types `abc` into the creation form and reaches 好 to write a 42-byte `/lavadata/rotmk/record.dat` containing the name, moves through the historical scenario list, opens the tutorial title card with 继续, pages the introduction with Space into the mission objectives and the 住房与生计 build grid, moves the grid cursor with all four arrows, opens the settlement status panel with Escape and proves Escape stays there, and confirms that `n` declines the leave question while `y` halts with code 0; 开发人员 cycles two credit pages back to the title menu.
 - Ragnarok checked on 2026-11-11: one dedicated release workflow covers the loose program and the package with identical frames and addresses at every step. It waits on the three-entry title menu and clamps Right on 梦醒 and Left on 启程, enters 启程 and skips the opening animation with Up through six fixed scenes into the first portrait, pages Enter through the 玉帝/天魔/王母 dialogue into the scripted battle, opens 回顾 with its four slot rows, clamps Up on the first row and Down on the fourth, shows the missing-data page when the empty slot is loaded and halts with code 0, and exits 梦醒 with a code-0 halt on the key press itself; the package writes an empty 2048-byte `/lavadata/仙境存档.dat` on startup while the unpacked build carries the same companion file and writes nothing.
-- 222 dedicated release workflows passed in this audit.
-- 318 of 324 entry points were loaded by those successful workflows.
-- 6 entry points still need dedicated workflow verification.
+- Hit checked on 2026-11-11: one dedicated release workflow covers the loose program and the package with identical logo, menu and gameplay frames. It waits on the logo frame, presses Enter twice into the 160×80 playfield, proves the game timer advances over two seconds, hits the nine TYUGHJBNM controls into a changed frame, freezes the frame through a 120-frame pause on `p`, resumes with Enter into a changed frame, and writes no files.
+- 223 dedicated release workflows passed in this audit.
+- 319 of 324 entry points were loaded by those successful workflows.
+- 5 entry points still need dedicated workflow verification.
 - The historical [startup gallery](Game-Compatibility.md) is a separate check
   and must not be interpreted as this workflow audit.
 
@@ -449,7 +450,7 @@ an optional screenshot directory. Keep each test's logs and captures separate.
 | 313 | `LAVA2 冒险岛IV/灰度版/未打包的文件/冒险岛IV.lav` | Game / game package | [Workflow passed: `adventure_island_iv_versions_clear_a_stage_and_restore_custom_controls`](../crates/lavaxemu/tests/game_compatibility.rs#L5108) |
 | 314 | `LAVA2 心跳回忆/心跳回忆.lav` | Game / game package | [Workflow passed: `tokimeki_reaches_the_room_and_selects_an_activity`](../crates/lavaxemu/tests/game_compatibility.rs#L854) |
 | 315 | `LAVA2 打地鼠/LAVA2/Hit.lav` | Game / game package | [Workflow passed: `hit_loads_the_logo_runs_and_pauses_with_the_keyboard`](../crates/lavaxemu/tests/game_compatibility.rs#L378) |
-| 316 | `LAVA2 打地鼠/Package/HitV1.0.pac` | Game / game package | Pending |
+| 316 | `LAVA2 打地鼠/Package/HitV1.0.pac` | Game / game package | [Workflow passed: `hit_loads_the_logo_runs_and_pauses_with_the_keyboard`](../crates/lavaxemu/tests/game_compatibility.rs#L378) |
 | 317 | `LAVA2 挑战推箱子1.31/挑战推箱子.lav` | Game / game package | Pending |
 | 318 | `LAVA2 搬运工/搬运工.lav` | Game / game package | Pending |
 | 319 | `LAVA2 易码事件簿-寻找CEO/非pac/EMStory.lav` | Game / game package | Pending |
