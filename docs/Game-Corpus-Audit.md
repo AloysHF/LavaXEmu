@@ -461,4 +461,4 @@ an optional screenshot directory. Keep each test's logs and captures separate.
 | 320 | `LAVA2 玩转变色龙/玩转变色龙.lav` | Game / game package | [Workflow passed: `chameleon_covers_registration_login_menu_difficulty_and_cards`](../crates/lavaxemu/tests/game_compatibility.rs#L33705) |
 | 321 | `LAVA2 美少女梦工场/非pac/PM4.lav` | Game / game package | [Workflow passed: `princess_maker_4_reaches_gameplay_and_opens_the_status_menu`](../crates/lavaxemu/tests/game_compatibility.rs#L317) |
 | 322 | `LAVA2 魔法纪元/魔法纪元.lav` | Game / game package | [Workflow passed: `magic_era_accepts_the_device_identifier_and_enters_gameplay`](../crates/lavaxemu/tests/game_compatibility.rs#L798) |
-| 323 | `LAVA2 麻将智多星/BoBo_MJ.lav` | Game / game package | [Workflow passed: `mahjong_covers_title_table_guess_feedback_and_exit`](../crates/lavaxemu/tests/game_compatibility.rs#L33983) |
+| 323 | `LAVA2 麻将智多星/BoBo_MJ.lav` | Game / game package | [Workflow passed: `mahjong_covers_title_table_guess_feedback_and_exit`](../crates/lavaxemu/tests/game_compatibility.rs#L33984) |

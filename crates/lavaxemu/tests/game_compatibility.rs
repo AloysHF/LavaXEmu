@@ -33980,6 +33980,7 @@ fn chameleon_covers_registration_login_menu_difficulty_and_cards() {
 }
 
 #[test]
+#[ignore = "requires the local game corpus via LAVAX_GAME_ROOT"]
 fn mahjong_covers_title_table_guess_feedback_and_exit() {
     const GAME: &str = "LAVA2 麻将智多星/BoBo_MJ.lav";
 
