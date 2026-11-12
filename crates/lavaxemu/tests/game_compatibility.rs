@@ -33978,3 +33978,134 @@ fn chameleon_covers_registration_login_menu_difficulty_and_cards() {
     assert_eq!(final_save[0].1.len(), 181);
     assert_eq!(digest(&final_save[0].1), 0x21f395266ff7261b);
 }
+
+#[test]
+fn mahjong_covers_title_table_guess_feedback_and_exit() {
+    const GAME: &str = "LAVA2 麻将智多星/BoBo_MJ.lav";
+
+    fn scene(emulator: &Emulator) -> u64 {
+        let mut hash = 0xcbf29ce484222325u64;
+        for &pixel in emulator.display().indexed_frame() {
+            hash = (hash ^ u64::from(pixel)).wrapping_mul(0x100000001b3);
+        }
+        hash
+    }
+
+    fn check(label: &str, emulator: &Emulator, pc: usize, hash: u64) {
+        assert_eq!(emulator.vm().pc(), pc, "{label} pc");
+        assert_eq!(scene(emulator), hash, "{label} scene");
+        capture(emulator, label);
+    }
+
+    // Lift the tile under the cursor, walk to the OK slot and confirm.
+    fn guess(emulator: &mut Emulator, slot: usize) {
+        for _ in 0..slot {
+            hold(emulator, 22, 3);
+        }
+        hold(emulator, 21, 3);
+        for _ in slot..9 {
+            hold(emulator, 22, 3);
+        }
+        hold(emulator, 13, 3);
+    }
+
+    let mut game = load(GAME);
+    advance(&mut game, 120);
+    assert_eq!(game.display().width(), 160);
+    assert_eq!(game.display().height(), 80);
+    check("mahjong-title", &game, 0x119f, 0x1fad9aa020796106);
+    assert_eq!(
+        game.clone().run_frame().unwrap().status,
+        FrameStatus::WaitingForInput
+    );
+    assert!(game.files_mut().take_dirty_files().is_empty());
+
+    // 结束游戏 is the second title item and returns on Up.
+    hold(&mut game, 21, 3);
+    check("mahjong-title-exit", &game, 0x119f, 0xecc14b8bdd7fd272);
+    hold(&mut game, 20, 3);
+    check("mahjong-title-start", &game, 0x119f, 0x1fad9aa020796106);
+
+    // 开始游戏 deals the first level; the tenth top-row slot is the OK button.
+    hold(&mut game, 13, 3);
+    check("mahjong-deal", &game, 0x1112, 0x26ce6273ea6203f);
+    assert_eq!(
+        game.clone().run_frame().unwrap().status,
+        FrameStatus::Delayed
+    );
+    advance(&mut game, 120);
+    check("mahjong-table", &game, 0x1732, 0x71015c6438368e00);
+    assert_eq!(
+        game.clone().run_frame().unwrap().status,
+        FrameStatus::WaitingForInput
+    );
+    assert!(game.files_mut().take_dirty_files().is_empty());
+
+    // Left and Right move the cursor; Down lifts and lowers the selected
+    // tile, while Up does nothing on the table.
+    hold(&mut game, 22, 3);
+    check("mahjong-right", &game, 0x1732, 0x6b1daa6e3dec1a28);
+    hold(&mut game, 23, 3);
+    check("mahjong-left-back", &game, 0x1732, 0x71015c6438368e00);
+    hold(&mut game, 22, 3);
+    hold(&mut game, 21, 3);
+    check("mahjong-lift", &game, 0x1732, 0x2759f346bf4aa6bb);
+    hold(&mut game, 21, 3);
+    check("mahjong-lower", &game, 0x1732, 0x6b1daa6e3dec1a28);
+    hold(&mut game, 20, 3);
+    check("mahjong-up", &game, 0x1732, 0x6b1daa6e3dec1a28);
+
+    // The second tile completes the winning hand on the first level, so the
+    // guess is accepted and the level advances.
+    hold(&mut game, 21, 3);
+    for _ in 1..9 {
+        hold(&mut game, 22, 3);
+    }
+    hold(&mut game, 13, 3);
+    check("mahjong-correct", &game, 0x1915, 0x4eb977dfdfadb87a);
+    assert_eq!(
+        game.clone().run_frame().unwrap().status,
+        FrameStatus::Delayed
+    );
+    advance(&mut game, 40);
+    check("mahjong-keep-going", &game, 0x197b, 0x7673996f461447f6);
+    advance(&mut game, 40);
+    check("mahjong-level-up", &game, 0x148b, 0x41a7a99637ae0a75);
+    advance(&mut game, 20);
+    check("mahjong-level-two", &game, 0x1732, 0x4df97eed47899745);
+    assert!(game.files_mut().take_dirty_files().is_empty());
+
+    // A wrong guess prints 你猜错了 and deals a fresh hand after dismissal.
+    guess(&mut game, 0);
+    check("mahjong-wrong", &game, 0x19ab, 0x2113bc70546d03ce);
+    hold(&mut game, 13, 3);
+    check("mahjong-wrong-dismiss", &game, 0x1a11, 0xd49a19c04ee3793e);
+    advance(&mut game, 120);
+    check("mahjong-redeal", &game, 0x1732, 0x976d64b446a6ea52);
+
+    // Esc leaves the table and returns to the title screen.
+    hold(&mut game, 27, 3);
+    check("mahjong-leave", &game, 0x1112, 0xd7b5c7f9670f181d);
+    assert_eq!(
+        game.clone().run_frame().unwrap().status,
+        FrameStatus::Delayed
+    );
+    advance(&mut game, 120);
+    check("mahjong-back-to-title", &game, 0x119f, 0x1fad9aa020796106);
+
+    // 结束游戏 ends the program with exit code 0.
+    hold(&mut game, 21, 3);
+    check("mahjong-exit", &game, 0x119f, 0xecc14b8bdd7fd272);
+    let mut halt = None;
+    for frame in 0..90 {
+        game.input_mut().set_keys((frame < 3).then_some(13u8));
+        if let FrameStatus::Halted(code) = game.run_frame().unwrap().status {
+            halt = Some(code);
+            break;
+        }
+    }
+    game.input_mut().set_keys([]);
+    assert_eq!(halt, Some(0));
+    assert_eq!(game.vm().pc(), 0x1516);
+    assert!(game.files_mut().take_dirty_files().is_empty());
+}
