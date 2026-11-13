@@ -49,6 +49,7 @@ lavaxemu [OPTIONS] <PROGRAM> [-- <ARGUMENTS>...]
 | `--frames <COUNT>` | integer | `600` | Number of frames to run in headless mode. |
 | `--screenshot <PATH>` | path | — | Save the last frame to a PNG file. |
 | `--scale <SCALE>` | 1–8 | `3` | Initial integer window scale. |
+| `--theme <THEME>` | `classic`, `white` | `classic` | Color scheme of the monochrome display. `classic` reproduces the green LCD of the original console; `white` shows black text on a white background. Color programs are unaffected. |
 | `--read-only` | flag | off | Do not write virtual file changes back to disk. |
 | `-- <ARGUMENTS>...` | strings | — | Arguments exposed to the guest program. |
 

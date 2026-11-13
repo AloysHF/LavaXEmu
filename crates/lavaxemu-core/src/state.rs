@@ -1,6 +1,6 @@
 use crc32fast::hash;
 
-use crate::{Emulator, Error, GUEST_MEMORY_SIZE, Result};
+use crate::{DisplayTheme, Emulator, Error, GUEST_MEMORY_SIZE, Result};
 
 const STATE_MAGIC: [u8; 4] = *b"LXST";
 const STATE_VERSION: u16 = 5;
@@ -99,11 +99,17 @@ impl Emulator {
             ));
         }
 
+        // The theme is not part of the serialized state; keep the host's
+        // current choice instead of the default the restore would produce.
+        let theme = self.display.theme();
         if version < 5 {
             restored.console.write_memory(restored.vm.memory_mut());
         }
         restored.vm.graphics_memory_dirty = restored.legacy_graphics_memory;
         *self = restored;
+        if theme != DisplayTheme::default() {
+            self.display.set_theme(theme);
+        }
         Ok(())
     }
 }
@@ -204,5 +210,26 @@ mod tests {
         emulator.load_state(&legacy).unwrap();
         assert_eq!(emulator.file_list.flags, 3);
         assert!(!emulator.legacy_graphics_memory);
+    }
+
+    #[test]
+    fn applies_display_theme_and_preserves_guest_palettes() {
+        // A non-default host theme stays in effect after a restore, overriding
+        // whatever palette the state happened to carry.
+        let emulator = Emulator::new(program(0x04));
+        let state = emulator.save_state().unwrap();
+        let mut restored = Emulator::new(program(0x04));
+        restored.set_display_theme(DisplayTheme::White);
+        restored.load_state(&state).unwrap();
+        assert_eq!(restored.display.palette()[0], [255, 255, 255]);
+
+        // Under the default theme a restore is applied verbatim, so guest
+        // palette overrides survive the round trip.
+        let mut guest = Emulator::new(program(0x04));
+        guest.display.set_palette_rgba(0, &[[200, 0, 0, 255]]);
+        let guest_state = guest.save_state().unwrap();
+        let mut restored_guest = Emulator::new(program(0x04));
+        restored_guest.load_state(&guest_state).unwrap();
+        assert_eq!(restored_guest.display.palette()[0], [200, 0, 0]);
     }
 }

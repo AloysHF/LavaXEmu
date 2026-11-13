@@ -127,6 +127,28 @@ impl Transform {
     }
 }
 
+/// User-selectable color scheme for the monochrome display.
+///
+/// `Classic` reproduces the green LCD of the original console; `White` shows
+/// black text on a white background. Color modes are unaffected: their
+/// palettes are part of the content's visual design.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Default)]
+pub enum DisplayTheme {
+    #[default]
+    Classic,
+    White,
+}
+
+impl DisplayTheme {
+    /// Default Mono palette colors: background first, foreground second.
+    const fn mono_colors(self) -> ([u8; 3], [u8; 3]) {
+        match self {
+            Self::Classic => ([0, 192, 0], [0, 0, 0]),
+            Self::White => ([255, 255, 255], [0, 0, 0]),
+        }
+    }
+}
+
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct Display {
     width: u16,
@@ -138,6 +160,10 @@ pub struct Display {
     palette: [[u8; 3]; 256],
     front: Vec<u8>,
     back: Vec<u8>,
+    /// Not serialized: the theme is a host preference and stays in effect
+    /// across save-state loads without changing the state format.
+    #[serde(skip)]
+    theme: DisplayTheme,
 }
 
 impl Display {
@@ -155,6 +181,7 @@ impl Display {
             palette: [[0; 3]; 256],
             front: vec![0; usize::from(width) * usize::from(height)],
             back: vec![0; usize::from(width) * usize::from(height)],
+            theme: DisplayTheme::default(),
         };
         display.reset_palette();
         display
@@ -228,6 +255,23 @@ impl Display {
             self.palette[usize::from(first) + offset] = [color[0], color[1], color[2]];
         }
         count
+    }
+
+    pub(crate) const fn theme(&self) -> DisplayTheme {
+        self.theme
+    }
+
+    /// Select the display theme, recoloring the default Mono palette entries
+    /// right away. Only the defaults change: content that explicitly redefines
+    /// palette entries through SetPalette keeps doing so until the next reset
+    /// or graphics-mode switch.
+    pub fn set_theme(&mut self, theme: DisplayTheme) {
+        self.theme = theme;
+        if self.graphics_mode == GraphicsMode::Mono {
+            let (background, foreground) = theme.mono_colors();
+            self.palette[0] = background;
+            self.palette[1] = foreground;
+        }
     }
 
     pub fn clear(&mut self, target: BufferTarget) {
@@ -736,8 +780,9 @@ impl Display {
         self.palette.fill([0, 0, 0]);
         match self.graphics_mode {
             GraphicsMode::Mono => {
-                self.palette[0] = [0, 192, 0];
-                self.palette[1] = [0, 0, 0];
+                let (background, foreground) = self.theme.mono_colors();
+                self.palette[0] = background;
+                self.palette[1] = foreground;
             }
             GraphicsMode::Color4 => {
                 for index in 0..16 {
@@ -911,6 +956,41 @@ mod tests {
         );
         assert!(font_gbk(0xfd, 0xd9, true).is_some());
         assert!(font_gbk(0xfd, 0xda, true).is_none());
+    }
+
+    #[test]
+    fn mono_palette_follows_the_selected_theme() {
+        let mut display = Display::new(160, 80, GraphicsMode::Mono);
+        assert_eq!(display.palette()[0], [0, 192, 0]);
+        assert_eq!(display.palette()[1], [0, 0, 0]);
+
+        display.set_theme(DisplayTheme::White);
+        assert_eq!(display.palette()[0], [255, 255, 255]);
+        assert_eq!(display.palette()[1], [0, 0, 0]);
+
+        display.set_theme(DisplayTheme::Classic);
+        assert_eq!(display.palette()[0], [0, 192, 0]);
+    }
+
+    #[test]
+    fn theme_survives_reset_and_graphics_mode_switches() {
+        let mut display = Display::new(160, 80, GraphicsMode::Mono);
+        display.set_theme(DisplayTheme::White);
+        display.reset();
+        assert_eq!(display.palette()[0], [255, 255, 255]);
+
+        display.set_graphics_mode(GraphicsMode::Color8);
+        display.set_graphics_mode(GraphicsMode::Mono);
+        assert_eq!(display.palette()[0], [255, 255, 255]);
+        assert_eq!(display.palette()[1], [0, 0, 0]);
+    }
+
+    #[test]
+    fn theme_does_not_touch_color_mode_palettes() {
+        let mut display = Display::new(160, 80, GraphicsMode::Color8);
+        display.set_theme(DisplayTheme::White);
+        assert_eq!(display.palette()[0], [0, 0, 0]);
+        assert_eq!(display.palette()[255], [255, 255, 255]);
     }
 
     #[test]

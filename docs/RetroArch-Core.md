@@ -73,6 +73,18 @@ emulator. Space sends a real space; B or physical 1 sends B. Physical 2–9 reta
 the N/M/G/H/J/T/Y/U aliases, and 0 and period are available for text input.
 Numpad 8, 2, 4 and 6 send the device side keys 37, 15, 39 and 38.
 
+## Core Options
+
+The core exposes one option, available under RetroArch's **Quick Menu → Core
+Options** while content is running:
+
+| Option | Values | Default | Description |
+| --- | --- | --- | --- |
+| Monochrome color scheme | `Classic (green LCD)`, `White (black text)` | `Classic (green LCD)` | Color scheme used by monochrome programs. `White` shows black text on a white background; color programs are unaffected. |
+
+The option is applied immediately when changed and also survives save-state
+loads and resets.
+
 ## Features
 
 - **RGB565 video output** — 160×240 native resolution at 60 Hz

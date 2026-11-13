@@ -1,6 +1,7 @@
 use std::path::PathBuf;
 
 use clap::Parser;
+use lavaxemu_core::DisplayTheme;
 
 #[derive(Debug, Parser)]
 #[command(version, about = "Standalone LavaX virtual machine")]
@@ -28,6 +29,10 @@ pub struct Cli {
     #[arg(long, default_value_t = 3, value_parser = parse_scale)]
     pub scale: usize,
 
+    /// Color scheme of the monochrome display.
+    #[arg(long, default_value = "classic", value_parser = parse_theme)]
+    pub theme: DisplayTheme,
+
     /// Do not write virtual file changes back to disk.
     #[arg(long)]
     pub read_only: bool,
@@ -45,5 +50,13 @@ fn parse_scale(value: &str) -> Result<usize, String> {
         Ok(scale)
     } else {
         Err("scale must be between 1 and 8".to_owned())
+    }
+}
+
+fn parse_theme(value: &str) -> Result<DisplayTheme, String> {
+    match value {
+        "classic" => Ok(DisplayTheme::Classic),
+        "white" => Ok(DisplayTheme::White),
+        _ => Err("theme must be classic or white".to_owned()),
     }
 }
