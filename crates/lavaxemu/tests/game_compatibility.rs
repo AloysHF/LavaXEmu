@@ -27348,13 +27348,9 @@ fn lianliankan_loose_packaged_and_lava2_builds_play_and_save() {
 
         press(&mut game, 13);
         assert_eq!(game.vm().pc(), build.help_pcs[0], "{path} opens the rules");
-        for page in 1..7 {
+        for pc in &build.help_pcs[1..7] {
             press(&mut game, 13);
-            assert_eq!(
-                game.vm().pc(),
-                build.help_pcs[page],
-                "{path} pages through the rules"
-            );
+            assert_eq!(game.vm().pc(), *pc, "{path} pages through the rules");
         }
         press(&mut game, 27);
         assert_eq!(game.vm().pc(), build.menu_pc);

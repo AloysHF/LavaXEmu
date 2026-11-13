@@ -785,9 +785,9 @@ impl Display {
                 self.palette[1] = foreground;
             }
             GraphicsMode::Color4 => {
-                for index in 0..16 {
+                for (index, entry) in self.palette.iter_mut().enumerate().take(16) {
                     let level = (15 - index) as u8 * 0x11;
-                    self.palette[index] = [level, level, level];
+                    *entry = [level, level, level];
                 }
             }
             GraphicsMode::Color8 => {
