@@ -6,11 +6,10 @@ editors and installers are retained as separate entries. The corpus is not
 redistributed with this repository.
 
 A **workflow passed** row means the linked regression finished successfully
-after loading that exact entry. It covers the operations asserted in that test
-and the screenshots reviewed in [Game Fixes](Game-Fixes.md); it does not mean
-every level or optional feature has been verified. **Pending** means there is
-no completed dedicated workflow for that entry. Startup screenshots alone
-do not satisfy this status.
+after loading that exact entry. It covers only the operations asserted in that
+test; it does not mean every level or optional feature has been verified.
+**Pending** means there is no completed dedicated workflow for that entry.
+Startup screenshots alone do not satisfy this status.
 
 ## Current evidence
 
