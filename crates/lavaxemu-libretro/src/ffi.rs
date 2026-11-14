@@ -23,6 +23,7 @@ pub const LOG_ERROR: u32 = 3;
 pub const PIXEL_FORMAT_RGB565: u32 = 2;
 pub const DEVICE_NONE: u32 = 0;
 pub const DEVICE_JOYPAD: u32 = 1;
+pub const DEVICE_KEYBOARD: u32 = 3;
 pub const DEVICE_POINTER: u32 = 6;
 
 pub const JOYPAD_B: u32 = 0;

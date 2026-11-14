@@ -23,7 +23,7 @@ impl Emulator {
             8 => self.system_write_block(),
             9 => {
                 self.display.present();
-                Ok(HostAction::Continue)
+                Ok(HostAction::Present)
             }
             10 => self.system_textout(),
             11 => self.system_rectangle(true),
@@ -102,7 +102,12 @@ impl Emulator {
                 Ok(HostAction::Continue)
             }
             78 => {
-                self.pop_values(2)?;
+                let position = self.vm.pop_value()? as u32;
+                self.file_list.flags = self.vm.pop_value()? as u8;
+                if position != 0 {
+                    self.file_list.selected = (position as u16).saturating_sub(1) as usize;
+                    self.file_list.first = (position >> 16) as usize;
+                }
                 Ok(HostAction::Continue)
             }
             79 => {
@@ -123,7 +128,9 @@ impl Emulator {
 
     fn system_putchar(&mut self) -> Result<HostAction> {
         let value = self.vm.pop_value()? as u8;
+        self.console.read_memory(self.vm.memory());
         self.console.write(value);
+        self.console.write_memory(self.vm.memory_mut());
         self.console.render(&mut self.display);
         Ok(HostAction::Continue)
     }
@@ -144,11 +151,13 @@ impl Emulator {
             return Ok(HostAction::Continue);
         }
         let output = self.format_arguments(&arguments)?;
+        self.console.read_memory(self.vm.memory());
         for byte in output {
             self.console.write(byte);
         }
+        self.console.write_memory(self.vm.memory_mut());
         self.console.render(&mut self.display);
-        Ok(HostAction::Continue)
+        Ok(HostAction::Present)
     }
 
     fn system_strcpy(&mut self) -> Result<HostAction> {
@@ -171,11 +180,13 @@ impl Emulator {
         let small = self.vm.pop_value()? & 0xff != 0;
         self.console
             .set_mode(self.display.width(), self.display.height(), small);
+        self.console.write_memory(self.vm.memory_mut());
         Ok(HostAction::Continue)
     }
 
     fn system_update_lcd(&mut self) -> Result<HostAction> {
         self.vm.pop_value()?;
+        self.console.read_memory(self.vm.memory());
         self.console.render(&mut self.display);
         Ok(HostAction::Present)
     }
@@ -225,7 +236,7 @@ impl Emulator {
             y,
             &text,
             mode & 0x80 != 0,
-            if mode & 0x0f == 2 {
+            if mode & 8 != 0 || mode & 7 == 2 {
                 DrawOperation::Invert
             } else {
                 DrawOperation::Set
@@ -261,6 +272,7 @@ impl Emulator {
             filled,
             DrawOperation::from_lava(mode),
         );
+        self.write_graphics_region(target_from_flag(mode as u8, true), x0, y0, x1, y1);
         Ok(HostAction::Continue)
     }
 
@@ -311,6 +323,7 @@ impl Emulator {
             y,
             DrawOperation::from_lava(mode),
         );
+        self.write_graphics_region(target_from_flag(mode as u8, false), x, y, x, y);
         Ok(HostAction::Continue)
     }
 
@@ -370,6 +383,7 @@ impl Emulator {
             filled,
             DrawOperation::from_lava(mode),
         );
+        self.write_graphics_region(BufferTarget::Front, x0, y0, x1, y1);
         Ok(HostAction::Continue)
     }
 
@@ -528,6 +542,7 @@ impl Emulator {
         let mode = String::from_utf8_lossy(&self.read_c_bytes(mode_address)?).into_owned();
         let path = self.decode_guest_string(path_address)?;
         let handle = self.files.open(&path, &mode).map_or(0, i32::from);
+        log::debug!("fopen({path:?}, {mode:?}) = {handle:#x}");
         self.vm.push_value(handle)?;
         Ok(HostAction::Continue)
     }
@@ -651,11 +666,14 @@ impl Emulator {
         } else {
             // LVM scans physical key codes in ascending order and reports the
             // first one that is pressed (mapped back to a LavaX key code).
+            // Keys without a host mapping, such as device-specific side keys,
+            // still have to be reported so the guest can act on them.
             (0..256u16)
                 .find_map(|vk| {
                     let lava = lava_key_from_vk(vk);
                     (lava != 0 && self.input.is_pressed(lava)).then_some(i32::from(lava))
                 })
+                .or_else(|| self.input.first_pressed().map(i32::from))
                 .unwrap_or(0)
         };
         self.vm.push_value(value)?;
@@ -705,9 +723,9 @@ impl Emulator {
     }
 
     fn system_filelist(&mut self) -> Result<HostAction> {
-        self.vm.pop_value()?;
-        self.vm.push_value(0)?;
-        Ok(HostAction::Continue)
+        log::debug!("FileList requested at pc={:x}", self.vm.pc());
+        let destination = self.pop_guest_address()?;
+        self.begin_file_list(destination)
     }
 
     fn system_gettime(&mut self) -> Result<HostAction> {
@@ -843,7 +861,10 @@ impl Emulator {
     fn system_extended(&mut self) -> Result<HostAction> {
         let function = self.vm.pop_value()?;
         let result = match function {
-            0 | 2..=5 | 7 | 13 | 14 => 0,
+            0 => i32::from_be_bytes([b'L', 0, 0, 1]),
+            2..=5 | 7 | 13 => 0,
+            // Virtual storage has no flash quota; keep capacity positive in 16-bit guests.
+            14 => i32::from(i16::MAX),
             1 | 6 | 8 => {
                 self.vm.pop_value()?;
                 0
@@ -1192,7 +1213,7 @@ impl Emulator {
         Ok(GBK.decode(&bytes).0.into_owned())
     }
 
-    fn write_memory(&mut self, address: u32, data: &[u8]) -> Result<()> {
+    pub(crate) fn write_memory(&mut self, address: u32, data: &[u8]) -> Result<()> {
         let range = self.memory_range(address, data.len())?;
         self.vm.memory_mut()[range].copy_from_slice(data);
         Ok(())
@@ -1340,8 +1361,120 @@ mod tests {
             0x40,
         ]);
         let frame = emulator.run_frame().unwrap();
-        assert_eq!(frame.status, FrameStatus::Halted(0));
+        assert_eq!(frame.status, FrameStatus::Presented);
         assert_eq!(emulator.display().indexed_frame()[3 * 240 + 2], 255);
+        assert_eq!(emulator.run_frame().unwrap().status, FrameStatus::Halted(0));
+    }
+
+    #[test]
+    fn refresh_preserves_each_frame_before_advancing_the_guest() {
+        let mut emulator = emulator(&[
+            0x01, 2, 0x01, 3, 0x01, 0x41, 0x94, 0x89, 0x01, 4, 0x01, 3, 0x01, 0x41, 0x94, 0x89,
+            0x40,
+        ]);
+        assert_eq!(emulator.run_frame().unwrap().status, FrameStatus::Presented);
+        assert_eq!(emulator.display().indexed_frame()[3 * 240 + 2], 255);
+        assert_eq!(emulator.display().indexed_frame()[3 * 240 + 4], 0);
+        assert_eq!(emulator.run_frame().unwrap().status, FrameStatus::Presented);
+        assert_eq!(emulator.display().indexed_frame()[3 * 240 + 4], 255);
+    }
+
+    #[test]
+    fn printf_presents_the_console_before_polling_for_input() {
+        let mut emulator = emulator(&[
+            0x0d, b'S', b'c', b'o', b'r', b'e', 0, 0x01, 1, 0x82, 0x93, 0x38, 0x40,
+        ]);
+        assert_eq!(emulator.run_frame().unwrap().status, FrameStatus::Presented);
+        assert!(
+            emulator
+                .display()
+                .indexed_frame()
+                .iter()
+                .any(|&pixel| pixel != 0)
+        );
+        emulator.input_mut().set_key(13, true);
+        assert_eq!(emulator.run_frame().unwrap().status, FrameStatus::Halted(0));
+        assert_eq!(emulator.vm().result(), 13);
+    }
+
+    #[test]
+    fn checkkey_any_key_reports_side_keys_without_a_host_mapping() {
+        let mut emulator = emulator(&[0x01, 0x80, 0xbc, 0x38, 0x40]);
+        emulator.input_mut().set_key(37, true);
+        assert_eq!(emulator.run_frame().unwrap().status, FrameStatus::Halted(0));
+        assert_eq!(emulator.vm().result(), 37);
+    }
+
+    #[test]
+    fn checkkey_any_key_prefers_a_host_mapped_key() {
+        let mut emulator = emulator(&[0x01, 0x80, 0xbc, 0x38, 0x40]);
+        emulator.input_mut().set_key(37, true);
+        emulator.input_mut().set_key(b'y', true);
+        assert_eq!(emulator.run_frame().unwrap().status, FrameStatus::Halted(0));
+        assert_eq!(emulator.vm().result(), i32::from(b'y'));
+    }
+
+    #[test]
+    fn checkkey_polls_side_keys_directly() {
+        let mut emulator = emulator(&[0x01, 39, 0xbc, 0x38, 0x40]);
+        emulator.input_mut().set_key(39, true);
+        assert_eq!(emulator.run_frame().unwrap().status, FrameStatus::Halted(0));
+        assert_eq!(emulator.vm().result(), -1);
+    }
+
+    #[test]
+    fn textout_inverts_both_font_sizes_when_the_source_inversion_bit_is_set() {
+        let mut e = emulator(&[
+            0x01, 0, 0x01, 0, 0x0d, b'A', 0, 0x01, 1, 0x8a, 0x01, 10, 0x01, 0, 0x0d, b'A', 0, 0x01,
+            9, 0x8a, 0x01, 0, 0x01, 20, 0x0d, b'A', 0, 0x01, 0x81, 0x8a, 0x01, 10, 0x01, 20, 0x0d,
+            b'A', 0, 0x01, 0x89, 0x8a, 0x89, 0x40,
+        ]);
+        assert_eq!(e.run_frame().unwrap().status, FrameStatus::Presented);
+        for (top, width, height) in [(0, 6, 12), (20, 8, 16)] {
+            for y in top..top + height {
+                for x in 0..width {
+                    assert_eq!(
+                        e.display().get_pixel(BufferTarget::Front, x, y).unwrap() ^ 255,
+                        e.display()
+                            .get_pixel(BufferTarget::Front, x + 10, y)
+                            .unwrap(),
+                        "source inversion must affect foreground and background pixels"
+                    );
+                }
+            }
+        }
+    }
+
+    #[test]
+    fn guest_text_buffer_refresh_and_console_output_share_memory() {
+        let mut e = emulator(&[
+            0x01, 1, 0x85, // small text mode
+            0x1a, 0x0d, b'A', b'B', b'C', b'D', 0, 0x83, 0x03, 0x01, 0x14, 0, 0x01, 0x01, 0, 0x35,
+            0x38, // blank the second cell
+            0x01, 0, 0x86, 0x01, b'b', 0x80, 0x0d, b'E', 0, 0x01, 1, 0x82, 0x01, 0, 0x86, 0x01, 0,
+            0x85, 0x01, 0, 0x86, 0x40,
+        ]);
+        assert_eq!(e.run_frame().unwrap().status, FrameStatus::Presented);
+        assert_eq!(&e.vm().memory()[0x1400..0x1404], b"A\0CD");
+        let mut expected = e.display().clone();
+        expected.clear(BufferTarget::Front);
+        expected.draw_text(
+            BufferTarget::Front,
+            6,
+            2,
+            b"A CD",
+            false,
+            DrawOperation::Set,
+        );
+        assert_eq!(e.display().indexed_frame(), expected.indexed_frame());
+        assert_eq!(e.run_frame().unwrap().status, FrameStatus::Presented);
+        assert_eq!(&e.vm().memory()[0x1400..0x1404], b"bECD");
+        let printed = e.display().indexed_frame().to_vec();
+        assert_eq!(e.run_frame().unwrap().status, FrameStatus::Presented);
+        assert_eq!(e.display().indexed_frame(), printed);
+        assert_eq!(e.run_frame().unwrap().status, FrameStatus::Presented);
+        assert!(e.vm().memory()[0x1400..0x1404].iter().all(|&c| c == b' '));
+        assert!(e.display().indexed_frame().iter().all(|&p| p == 0));
     }
 
     #[test]
@@ -1354,6 +1487,34 @@ mod tests {
         emulator.input_mut().set_key(b'A', true);
         assert_eq!(emulator.run_frame().unwrap().status, FrameStatus::Halted(0));
         assert_eq!(emulator.vm().result(), i32::from(b'A'));
+    }
+
+    #[test]
+    fn reports_a_stable_lava_device_identifier() {
+        let mut emulator = emulator(&[0x01, 0, 0xd3, 0x38, 0x40]);
+        assert_eq!(emulator.run_frame().unwrap().status, FrameStatus::Halted(0));
+        assert_eq!(emulator.vm().result(), 0x4c00_0001);
+        emulator.reset();
+        emulator.run_frame().unwrap();
+        assert_eq!(emulator.vm().result(), 0x4c00_0001);
+    }
+
+    #[test]
+    fn disk_check_allows_saving_before_and_after_reclaim() {
+        let mut emulator = emulator(&[0x01, 14, 0xd3, 0x38, 0x40]);
+        emulator.run_frame().unwrap();
+        let available = emulator.vm().result();
+        assert!(available > 0 && available <= i32::from(i16::MAX));
+        emulator
+            .files_mut()
+            .import_file("/data/save.dat", vec![1; 4096]);
+        emulator.vm.push_value(13).unwrap();
+        emulator.system_extended().unwrap();
+        assert_eq!(emulator.vm.pop_value().unwrap(), 0);
+        emulator.vm.push_value(14).unwrap();
+        emulator.system_extended().unwrap();
+        assert_eq!(emulator.vm.pop_value().unwrap(), available);
+        assert_eq!(emulator.files().file("/data/save.dat").unwrap(), &[1; 4096]);
     }
 
     #[test]

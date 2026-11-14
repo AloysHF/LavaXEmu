@@ -1,27 +1,71 @@
-use std::{fs, path::Path};
+use std::{
+    fs,
+    path::{Path, PathBuf},
+};
 
 use anyhow::{Context, Result};
-use lavaxemu_core::{Emulator, Program, VirtualFileSystem};
+use lavaxemu_core::{Emulator, VirtualFileSystem};
 
 pub fn load_emulator(program_path: &Path, arguments: &[String]) -> Result<Emulator> {
+    let absolute_path = std::path::absolute(program_path)
+        .with_context(|| format!("failed to resolve {}", program_path.display()))?;
+    let program_path = absolute_path.as_path();
     let data = fs::read(program_path)
         .with_context(|| format!("failed to read {}", program_path.display()))?;
-    let program = Program::load(&data)
+    let mut emulator = Emulator::load_content(&data)
         .with_context(|| format!("failed to load {}", program_path.display()))?;
-    let mut emulator = Emulator::new(program);
     emulator.set_command_line(arguments.join(" ").into_bytes());
 
-    if let Some(root) = program_path.parent() {
-        import_directory(root, root, program_path, emulator.files_mut())?;
+    let root = content_root(program_path);
+    import_directory(&root, &root, program_path, emulator.files_mut())?;
+    if !data.starts_with(b"PAC ") {
+        import_packaged_resources(program_path, &mut emulator);
     }
     Ok(emulator)
 }
 
+fn import_packaged_resources(program_path: &Path, emulator: &mut Emulator) {
+    let parent = program_path.parent().unwrap_or_else(|| Path::new("."));
+    for directory in parent.ancestors().take(2) {
+        let Ok(entries) = fs::read_dir(directory) else {
+            continue;
+        };
+        let mut packages: Vec<_> = entries
+            .filter_map(Result::ok)
+            .map(|entry| entry.path())
+            .filter(|path| {
+                path.extension()
+                    .is_some_and(|extension| extension.eq_ignore_ascii_case("pac"))
+            })
+            .collect();
+        packages.sort();
+        for path in packages {
+            let Ok(data) = fs::read(&path) else { continue };
+            match emulator.import_matching_package(&data) {
+                Ok(true) => return,
+                Ok(false) => {}
+                Err(error) => log::debug!("ignored companion package {}: {error}", path.display()),
+            }
+        }
+    }
+}
+
 pub fn flush_dirty_files(program_path: &Path, files: &mut VirtualFileSystem) -> Result<()> {
-    let root = program_path.parent().unwrap_or_else(|| Path::new("."));
+    let absolute_path = std::path::absolute(program_path)
+        .with_context(|| format!("failed to resolve {}", program_path.display()))?;
+    let root = content_root(&absolute_path);
     for (virtual_path, data) in files.take_dirty_files() {
         let relative = virtual_path.trim_start_matches('/');
-        let destination = root.join(relative.replace('/', std::path::MAIN_SEPARATOR_STR));
+        let mut destination = root.clone();
+        for component in relative.split('/') {
+            let existing = fs::read_dir(&destination).ok().and_then(|entries| {
+                entries
+                    .filter_map(Result::ok)
+                    .find(|entry| entry.file_name().eq_ignore_ascii_case(component))
+            });
+            destination =
+                existing.map_or_else(|| destination.join(component), |entry| entry.path());
+        }
         if let Some(parent) = destination.parent() {
             fs::create_dir_all(parent)
                 .with_context(|| format!("failed to create {}", parent.display()))?;
@@ -30,6 +74,34 @@ pub fn flush_dirty_files(program_path: &Path, files: &mut VirtualFileSystem) -> 
             .with_context(|| format!("failed to write {}", destination.display()))?;
     }
     Ok(())
+}
+
+fn content_root(program_path: &Path) -> PathBuf {
+    let parent = program_path.parent().unwrap_or_else(|| Path::new("."));
+    parent
+        .ancestors()
+        .take(4)
+        .find(|ancestor| {
+            let device_folder = program_path
+                .strip_prefix(ancestor)
+                .ok()
+                .and_then(|relative| relative.components().next());
+            if !device_folder.is_some_and(|folder| {
+                folder.as_os_str().eq_ignore_ascii_case("GVmaker")
+                    || folder.as_os_str().eq_ignore_ascii_case("LAVA")
+                    || folder.as_os_str().eq_ignore_ascii_case("LAVA2")
+            }) {
+                return false;
+            }
+            fs::read_dir(ancestor).is_ok_and(|entries| {
+                entries.filter_map(Result::ok).any(|entry| {
+                    entry.file_type().is_ok_and(|kind| kind.is_dir())
+                        && entry.file_name().eq_ignore_ascii_case("LavaData")
+                })
+            })
+        })
+        .unwrap_or(parent)
+        .to_path_buf()
 }
 
 fn import_directory(

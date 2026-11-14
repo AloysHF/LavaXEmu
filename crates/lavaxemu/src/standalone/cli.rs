@@ -6,7 +6,7 @@ use lavaxemu_core::DisplayTheme;
 #[derive(Debug, Parser)]
 #[command(version, about = "Standalone LavaX virtual machine")]
 pub struct Cli {
-    /// LAV program to load.
+    /// LAV program or PAC package to load.
     pub program: PathBuf,
 
     /// Parse the program and print its metadata without running it.

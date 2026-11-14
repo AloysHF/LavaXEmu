@@ -21,6 +21,7 @@ impl InputState {
         let key = key & 0x7f;
         if pressed {
             if self.pressed.insert(key) {
+                self.queued.clear();
                 self.queued.push_back(key);
             }
         } else {
@@ -30,6 +31,9 @@ impl InputState {
 
     pub fn set_keys(&mut self, keys: impl IntoIterator<Item = u8>) {
         let next: BTreeSet<u8> = keys.into_iter().map(|key| key & 0x7f).collect();
+        if next.difference(&self.pressed).next().is_some() {
+            self.queued.clear();
+        }
         for &key in next.difference(&self.pressed) {
             self.queued.push_back(key);
         }
@@ -49,7 +53,9 @@ impl InputState {
     }
 
     pub fn release(&mut self, key: u8) {
-        self.pressed.remove(&(key & 0x7f));
+        let key = key & 0x7f;
+        self.pressed.remove(&key);
+        self.queued.retain(|queued| *queued != key);
     }
 
     pub fn release_all(&mut self) {
@@ -69,6 +75,26 @@ impl InputState {
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn guest_release_clears_only_its_pending_key_and_physical_release_keeps_it() {
+        let mut input = InputState::default();
+        input.set_keys([13]);
+        input.set_keys([]);
+        assert_eq!(input.pop_key(), Some(13));
+        input.set_keys([13]);
+        input.set_keys([]);
+        input.set_keys([25]);
+        assert_eq!(input.pop_key(), Some(25));
+        assert_eq!(input.pop_key(), None);
+        input.set_keys([]);
+        input.set_keys([13, 25]);
+        input.release(13);
+        assert!(!input.is_pressed(13));
+        assert!(input.is_pressed(25));
+        assert_eq!(input.pop_key(), Some(25));
+        assert_eq!(input.pop_key(), None);
+    }
 
     #[test]
     fn queues_only_new_key_presses() {
