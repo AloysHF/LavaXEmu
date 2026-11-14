@@ -333,8 +333,8 @@ is in progress.
 
 For verified operations and remaining entries, see the
 [Corpus Workflow Audit](docs/Game-Corpus-Audit.md). The
-[Game Compatibility gallery](docs/Game-Compatibility.md) contains historical
-startup screenshots.
+[Game Compatibility gallery](docs/Game-Compatibility.md) contains startup
+screenshots captured by the batch script.
 
 ## Testing
 
