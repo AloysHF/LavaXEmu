@@ -336,6 +336,65 @@ jobs:
           name: lavaxemu-webos
           path: lavaxemu-webos-libretro.tar.gz
 
+  build-armhf:
+    name: Build libretro (Linux armhf)
+    runs-on: ubuntu-latest
+    env:
+      RUST_TARGET: armv7-unknown-linux-gnueabihf
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v7
+
+      - name: Setup Rust toolchain
+        uses: dtolnay/rust-toolchain@stable
+        with:
+          targets: armv7-unknown-linux-gnueabihf
+
+      - name: Cache Rust artifacts
+        uses: swatinem/rust-cache@v2
+        with:
+          key: armhf
+
+      - name: Install ARM cross toolchain
+        shell: bash
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y --no-install-recommends gcc-arm-linux-gnueabihf
+
+      - name: Build libretro core (armhf)
+        env:
+          CARGO_TARGET_ARMV7_UNKNOWN_LINUX_GNUEABIHF_LINKER: arm-linux-gnueabihf-gcc
+          CC_armv7_unknown_linux_gnueabihf: arm-linux-gnueabihf-gcc
+          AR_armv7_unknown_linux_gnueabihf: arm-linux-gnueabihf-ar
+        run: cargo build -p lavaxemu-libretro --release --target "$RUST_TARGET"
+
+      - name: Verify and stage libretro core (armhf)
+        shell: bash
+        run: |
+          core="target/$RUST_TARGET/release/liblavaxemu.so"
+          arm-linux-gnueabihf-readelf -h "$core"
+          # Hard-float ABI marker; absent from soft-float (gnueabi) builds.
+          arm-linux-gnueabihf-readelf -A "$core" | grep -i Tag_ABI_VFP_args
+
+          out="libretro/lavaxemu-linux-armhf"
+          mkdir -p "$out"
+          cp "$core" "$out/lavaxemu_libretro.so"
+          cp crates/lavaxemu-libretro/lavaxemu_libretro.info "$out/"
+          ls -la "$out"
+
+      - name: Package libretro (armhf)
+        shell: bash
+        run: |
+          cd libretro
+          tar czf ../lavaxemu-linux-armhf-libretro.tar.gz lavaxemu-linux-armhf
+          cd ..
+
+      - name: Upload artifact
+        uses: actions/upload-artifact@v7
+        with:
+          name: lavaxemu-linux-armhf
+          path: lavaxemu-linux-armhf-libretro.tar.gz
+
   build-emulatorjs:
     name: Build EmulatorJS core
     runs-on: ubuntu-latest
@@ -387,7 +446,7 @@ jobs:
 
   release:
     name: Create Release
-    needs: [build, build-android, build-ios, build-webos, build-emulatorjs]
+    needs: [build, build-android, build-ios, build-webos, build-armhf, build-emulatorjs]
     runs-on: ubuntu-latest
     if: startsWith(github.ref, 'refs/tags/')
     steps:
@@ -420,6 +479,9 @@ jobs:
               plus `lavaxemu_libretro.info`, ready to drop into RetroArch.
             - 32-bit builds ship the core only: `lavaxemu-linux-i686-libretro.tar.gz`
               and `lavaxemu-windows-i686-libretro.zip`.
+            - **Linux armhf (ARMv7 hard-float)**: `lavaxemu-linux-armhf-libretro.tar.gz`
+              contains `lavaxemu_libretro.so` for 32-bit armhf RetroArch builds
+              (Debian, Raspberry Pi OS).
 
             ### Android libretro core (for RetroArch on Android)
             - `lavaxemu-android-libretro.tar.gz` contains
